@@ -705,14 +705,14 @@ responsibility for understanding and being able to defend every part of this wor
 
 ## 9. Data and Code Availability
 
-All code, the full statistical output underlying every number in this manuscript,
-and the analysis and figure generation scripts are maintained in a version
-controlled repository at github.com/Atytmr07/eeg-fusion-benchmark. The repository
-is currently private while this work is under advisor review; it will be made
-public, or shared on request in the interim, once that review is complete. Raw EEG
-data (Bonn, CHB-MIT) is not redistributed in the repository, both corpora are
-publicly available from their original sources (Andrzejak et al. 2001; PhysioNet)
-and the repository documents how to obtain and verify them
+All code, the per fold results underlying every number in this manuscript, and the
+analysis and figure generation scripts are publicly available at
+github.com/Atytmr07/eeg-fusion-benchmark. `docs/PIPELINE.md` in that repository
+documents the full pipeline and the command that reproduces each table and figure;
+the statistics and figures regenerate identically from the stored results with the
+pinned package versions. Raw EEG data (Bonn, CHB-MIT) is not redistributed; both
+corpora are publicly available from their original sources (Andrzejak et al. 2001;
+PhysioNet), and the repository documents how to obtain and verify them
 (`src/chbmit.py`, `src/verify_chbmit.py`, `docs/11_CHBMIT_PLANI.md`).
 
 ## References
