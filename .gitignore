@@ -1,0 +1,28 @@
+# Raw data (CHB-MIT ~43 GB, Bonn ~19 MB). Downloadable from the original sources;
+# see README.md and docs/PIPELINE.md for how to obtain and verify it.
+data/
+
+# Run logs
+logs/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+~$*
+
+# Temporary files
+*.tmp
+*.log.gz

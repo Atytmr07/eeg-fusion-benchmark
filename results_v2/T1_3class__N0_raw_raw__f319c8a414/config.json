@@ -1,0 +1,33 @@
+{
+  "task": "T1_3class",
+  "norm_mode": "N0_raw_raw",
+  "apply_lowpass": false,
+  "lowpass_hz": 40.0,
+  "lowpass_order": 4,
+  "nfft": 256,
+  "win": 256,
+  "hop": 128,
+  "fmax": 40.0,
+  "embed_dim": 128,
+  "dropout": 0.3,
+  "batch_size": 32,
+  "epochs": 60,
+  "min_epochs": 20,
+  "patience": 12,
+  "lr": 0.001,
+  "weight_decay": 0.0001,
+  "class_weighted_loss": true,
+  "n_folds": 5,
+  "n_repeats": 5,
+  "val_ratio": 0.2,
+  "base_seed": 20260727,
+  "models": [
+    "raw1d",
+    "spec2d",
+    "early",
+    "late",
+    "gated",
+    "attention",
+    "score"
+  ]
+}

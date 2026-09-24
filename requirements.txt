@@ -1,0 +1,9 @@
+# Versions the reported experiments were run with (Python 3.12.7, Windows 11, CPU only).
+# torch is the CPU build; install it from the PyTorch CPU wheel index:
+#   pip install torch==2.8.0 --index-url https://download.pytorch.org/whl/cpu
+numpy==1.26.4
+scipy==1.16.1
+scikit-learn==1.7.2
+torch==2.8.0
+pandas==2.3.2
+matplotlib==3.10.5

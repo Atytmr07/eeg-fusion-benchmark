@@ -1,0 +1,4 @@
+metric,pairs,sig_naive,sig_corrected,fusion_pairs,fusion_sig_corrected
+f1_macro,55,0,0,10,0
+log_loss,55,5,0,10,0
+brier,55,3,0,10,0
