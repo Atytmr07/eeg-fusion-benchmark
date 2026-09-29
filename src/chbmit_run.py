@@ -1,25 +1,23 @@
-"""CHB-MIT üzerinde füzyon operatörü karşılaştırması, denek bazlı değerlendirme.
+"""CHB-MIT fusion operator comparison with person-wise evaluation.
 
-Bonn koşusundan üç farkı var:
+Three differences from the Bonn runs:
 
-  1. **Bölme kişi bazlı.** Dış katmanlar leave-one-subject-out veya kişi bazlı
-     gruplu k-kat. İç doğrulama bölmesi de kişi bazlıdır: eğitim kişilerinin bir
-     kısmı tamamen ayrılır. Pencere düzeyinde iç bölme yapılsaydı aynı hastanın
-     pencereleri hem eğitimde hem doğrulamada olur, erken durdurma kararı şişerdi.
-     Kişi = `group` (chb01 ve chb21 aynı kişi, bkz. chbmit_corpus.SAME_SUBJECT),
-     bu yüzden LOSO 24 değil 23 katmandır.
-  2. **Sınıf dengesizliği** 1:4 (alt örnekleme sonrası), kayıp fonksiyonu sınıf
-     ağırlıklı.
-  3. **Metrikler** pencere düzeyi doğruluk ve F1'in yanında olasılık tabanlı
-     (Brier, log loss) ve klinik yönlü (duyarlılık, özgüllük, saatte yanlış alarm).
+  1. Splits are person-wise. Outer folds are leave-one-subject-out (or grouped
+     k-fold) over persons, and the inner validation split also holds out whole
+     persons. A window-wise inner split would put windows of the same patient in both
+     training and validation and inflate the early-stopping decision. A person is the
+     `group` field (chb01 and chb21 are the same person, see
+     chbmit_corpus.SAME_SUBJECT), so LOSO has 23 folds, not 24.
+  2. Class imbalance is 1:4 after subsampling; the loss is class weighted.
+  3. Besides window-level accuracy and F1, probabilistic (Brier, log loss) and
+     clinically oriented metrics (sensitivity, specificity, false alarms) are recorded.
 
-`score` modeli ayrı eğitilmez: raw1d ve spec2d'nin doğrulama logit'leriyle
-harmanlama ağırlığı seçilir ve aynı katmanda hesaplanır, bu yüzden istenirse
-raw1d ve spec2d de listede olmalıdır.
+`score` is not trained separately: its blend weight is chosen from raw1d's and
+spec2d's validation logits in the same fold, so raw1d and spec2d must be in the list.
 
-Kullanım:
+Usage:
     python -m src.chbmit_run --split loso --models late raw1d spec2d --limit-folds 2
-    python -m src.chbmit_run --split loso --tag loso_grouped   # tam koşu
+    python -m src.chbmit_run --split loso --threads 8 --tag loso_grouped   # full run
 """
 from __future__ import annotations
 
@@ -27,7 +25,6 @@ import argparse
 import json
 import sys
 import time
-from dataclasses import asdict
 from pathlib import Path
 
 import numpy as np
@@ -44,7 +41,7 @@ from .chbmit_corpus import (build_corpus, grouped_kfold_by_subject,
                             leave_one_subject_out)
 from .chbmit_prep import prepare
 from .config import RESULTS_ROOT, fold_seed, runtime_env
-from .evaluate import metrics
+from .evaluate import clinical_metrics, metrics
 from .models import build, count_params
 from .train import best_blend_weight, set_seed, softmax_np
 
@@ -54,25 +51,24 @@ DEFAULT_MODELS = ("raw1d", "spec2d", "raw1d_wide", "spec2d_wide",
 
 
 def inner_split(subject: np.ndarray, tr: np.ndarray, y: np.ndarray,
-                val_frac: float = 0.2, seed: int = 0) -> tuple[np.ndarray, np.ndarray]:
-    """Eğitim katmanını denek bazlı olarak eğitim ve doğrulamaya ayırır.
+                val_frac: float = 0.2) -> tuple[np.ndarray, np.ndarray]:
+    """Split a training fold into training and validation by whole persons.
 
-    Denekler ictal sayısına göre sıralanıp dönüşümlü dağıtılır; böylece doğrulama
-    kümesi ictal içermeden kalmaz. En az bir denek doğrulamaya ayrılır.
+    Persons are sorted by ictal window count and picked at evenly spaced positions of
+    that list, so the validation set covers the range of seizure burdens and always
+    contains ictal windows. The choice is deterministic. At least one person is held
+    out.
     """
     subs = sorted(set(subject[tr]))
     if len(subs) < 2:
-        raise ValueError("iç doğrulama için en az iki eğitim deneği gerekir")
+        raise ValueError("an inner validation split needs at least two training persons")
     counts = {s: int(y[tr][subject[tr] == s].sum()) for s in subs}
     order = sorted(subs, key=lambda s: (-counts[s], s))
     n_val = max(1, int(round(val_frac * len(subs))))
-    rng = np.random.default_rng(seed)
-    # ictal bakımından dengeli seçim: sıralı listeden eşit aralıklarla al
     picks = list(np.linspace(0, len(order) - 1, n_val).round().astype(int))
     val_subs = {order[i] for i in dict.fromkeys(picks)}
-    if not any(counts[s] > 0 for s in val_subs):          # hiç ictal yoksa düzelt
+    if not any(counts[s] > 0 for s in val_subs):          # no ictal windows: fix that
         val_subs = {max(order, key=lambda s: counts[s])}
-    rng.random()
     m = np.isin(subject[tr], list(val_subs))
     return tr[~m], tr[m]
 
@@ -83,14 +79,16 @@ def train_fold(model_name: str, X1: torch.Tensor, X2: torch.Tensor, Y: torch.Ten
                batch: int = 32, lr: float = 1e-3, wd: float = 1e-4,
                return_val_logits: bool = False,
                verbose: bool = False) -> tuple[np.ndarray, dict] | tuple[np.ndarray, dict, np.ndarray]:
-    """Bir modeli bir katmanda eğitir, test olasılıklarını döndürür.
+    """Train one model on one fold and return its test-set probabilities.
 
-    return_val_logits=True ise üçüncü değer olarak doğrulama kümesi ham logitlerini
-    (softmax öncesi) döndürür. Bu, score-level füzyon ağırlığının yalnızca doğrulama
-    kümesinde seçilmesi için gerekir (bkz. src/train.py best_blend_weight).
+    With return_val_logits=True the raw validation logits (before softmax) are
+    returned as a third value; score fusion needs them to choose its blend weight on
+    the validation set only.
     """
     set_seed(seed)
     model = build(model_name, ncls, in_ch=in_ch)
+    # Note: Adam with L2 weight decay, whereas the Bonn loop uses AdamW (decoupled
+    # weight decay). Documented as an open item in docs/PIPELINE.md.
     opt = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=wd)
 
     ytr = Y[tr].numpy()
@@ -130,9 +128,8 @@ def train_fold(model_name: str, X1: torch.Tensor, X2: torch.Tensor, Y: torch.Ten
             bad = 0
         else:
             bad += 1
-        # min_epochs koruması: model henüz tek sınıf çözümündeyken erken durdurma
-        # tetiklenip çökmüş ağırlıkları "en iyi" diye saklayabiliyordu (Bonn'da
-        # 55 koşunun 6'sında olmuştu).
+        # min_epochs guard: before it, a model can still sit in the trivial
+        # single-class solution and early stopping would keep collapsed weights.
         if ep + 1 >= min_epochs and bad >= patience:
             break
         if verbose and ep % 10 == 0:
@@ -147,33 +144,12 @@ def train_fold(model_name: str, X1: torch.Tensor, X2: torch.Tensor, Y: torch.Ten
     return prob, info
 
 
-def clinical_metrics(y_true: np.ndarray, prob: np.ndarray, hours: float) -> dict:
-    """Duyarlılık, özgüllük ve saatte yanlış alarm.
-
-    UYARI: saatte yanlış alarm burada **alt örneklenmiş** zaman ekseninden
-    hesaplanır, yani gerçek klinik oranı temsil etmez. Gerçek oran için
-    alt örneklenmemiş non-ictal pencerelerin tamamı üzerinde tahmin gerekir.
-    Bu değer yalnızca modeller arası karşılaştırma içindir.
-    """
-    pred = prob.argmax(1)
-    tp = int(((pred == 1) & (y_true == 1)).sum())
-    fn = int(((pred == 0) & (y_true == 1)).sum())
-    fp = int(((pred == 1) & (y_true == 0)).sum())
-    tn = int(((pred == 0) & (y_true == 0)).sum())
-    return {
-        "sensitivity": tp / max(tp + fn, 1),
-        "specificity": tn / max(tn + fp, 1),
-        "false_alarms": fp,
-        "fa_per_hour_subsampled": fp / hours if hours > 0 else float("nan"),
-    }
-
-
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--split", choices=["loso", "kfold"], default="loso")
     ap.add_argument("--folds", type=int, default=5)
     ap.add_argument("--limit-folds", type=int, default=None,
-                    help="yalnızca ilk N katmanı koş (duman testi için)")
+                    help="run only the first N folds (for timing or quick checks)")
     ap.add_argument("--models", nargs="*", default=list(DEFAULT_MODELS))
     ap.add_argument("--norm", default="window", choices=["none", "window", "channel"])
     ap.add_argument("--notch", type=float, default=None)
@@ -182,9 +158,9 @@ def main() -> None:
     ap.add_argument("--outdir", default=None)
     ap.add_argument("--tag", default="")
     ap.add_argument("--resume", action="store_true",
-                    help="outdir'daki perfold.csv'de tamamlanmış katmanları atla, "
-                         "kaldığı yerden devam et. Bir katman yalnızca istenen "
-                         "modellerin hepsi mevcutsa tamamlanmış sayılır.")
+                    help="skip folds already complete in the outdir's perfold.csv and "
+                         "continue from there. A fold counts as complete only if every "
+                         "requested model is present. Use the same --threads.")
     args = ap.parse_args()
 
     torch.set_num_threads(args.threads)
@@ -192,8 +168,7 @@ def main() -> None:
 
     want_score = "score" in args.models
     if want_score and not {"raw1d", "spec2d"} <= set(args.models):
-        raise SystemExit("score, raw1d ve spec2d'nin çıktılarından hesaplanır; "
-                         "ikisini de --models listesine ekleyin")
+        raise SystemExit("score is computed from raw1d and spec2d; add both to --models")
 
     d = build_corpus(verbose=False)
     X, y, subject, group = d["X"], d["y"], d["subject"], d["group"]
@@ -201,8 +176,8 @@ def main() -> None:
     ncls, in_ch = 2, X.shape[1]
 
     if args.norm == "channel":
-        raise SystemExit("norm='channel' katman başına eğitim istatistiği gerektirir; "
-                         "bu koşucuda henüz bağlanmadı, 'window' kullanın")
+        raise SystemExit("norm='channel' needs per-fold training statistics, which this "
+                         "driver does not wire up yet; use 'window'")
     x1, x2, prep_meta = prepare(X, norm=args.norm, notch_hz=args.notch)
     X1, X2, Y = torch.from_numpy(x1), torch.from_numpy(x2), torch.from_numpy(y)
     del x1, x2
@@ -227,23 +202,22 @@ def main() -> None:
         have = prev.groupby("fold")["model"].apply(set)
         want = set(args.models)
         done_folds = {int(f) for f, ms in have.items() if want <= ms}
-        print(f"--resume: {csv_path} okundu, {len(rows)} satır, "
-              f"{len(done_folds)} katman zaten tam (atlanacak): "
+        print(f"--resume: read {csv_path}, {len(rows)} rows, "
+              f"{len(done_folds)} folds already complete (skipped): "
               f"{sorted(done_folds)}\n")
 
-    print(f"korpus {X.shape}, {len(splits)} katman, {len(args.models)} model, "
-          f"spektrogram {X2.shape[1:]}, thread={args.threads}\n")
+    print(f"corpus {X.shape}, {len(splits)} folds, {len(args.models)} models, "
+          f"spectrogram {X2.shape[1:]}, threads={args.threads}\n")
 
     for fi, (key, tr_all, te) in enumerate(splits):
         if fi in done_folds:
-            print(f"[{fi+1}/{len(splits)}] atlandı (resume, zaten tam)")
+            print(f"[{fi+1}/{len(splits)}] skipped (resume, already complete)")
             continue
-        seed_f = fold_seed(20260727, 0, fi, "split")
-        tr, va = inner_split(group, tr_all, y, seed=seed_f)
-        te_subs = sorted(set(subject[te]))              # case'ler: chb01 katmanında chb01,chb21
+        tr, va = inner_split(group, tr_all, y)
+        te_subs = sorted(set(subject[te]))              # cases; the chb01 fold has chb01,chb21
         hrs = sum(hours_of.get(s, 0.0) for s in te_subs)
         print(f"[{fi+1}/{len(splits)}] test={','.join(te_subs)} "
-              f"eğitim={len(tr)} doğrulama={len(va)} test={len(te)} "
+              f"train={len(tr)} val={len(va)} test={len(te)} "
               f"(test ictal={int(y[te].sum())})")
 
         probs, val_logits = {}, {}
@@ -270,7 +244,7 @@ def main() -> None:
             print(f"    {m:12s} f1={mm['f1_macro']:.3f} auc={mm['auc']:.3f} "
                   f"brier={mm['brier']:.3f} sens={mm['sensitivity']:.3f} "
                   f"spec={mm['specificity']:.3f} ({mm['sec']:.0f}s, "
-                  f"{tinfo['epochs_run']} epoch)")
+                  f"{tinfo['epochs_run']} epochs)")
 
         if want_score:
             w = best_blend_weight(val_logits["raw1d"], val_logits["spec2d"],
@@ -288,6 +262,7 @@ def main() -> None:
             print(f"    {'score':12s} f1={mm['f1_macro']:.3f} auc={mm['auc']:.3f} "
                   f"brier={mm['brier']:.3f} blend_w={w:.2f}")
 
+        # Saved after every fold, so an interrupted run can be resumed.
         np.savez(outdir / "preds" / f"fold{fi}.npz",
                  idx_te=te, y_te=y[te], **probs)
         pd.DataFrame(rows).to_csv(outdir / "perfold.csv", index=False)
@@ -297,8 +272,8 @@ def main() -> None:
     (outdir / "meta.json").write_text(json.dumps(meta, indent=2, ensure_ascii=False),
                                       encoding="utf-8")
     df = pd.DataFrame(rows)
-    print(f"\ntoplam {meta['elapsed_s']/60:.1f} dakika, kaydedildi: {outdir}")
-    print("\nmodel ortalamaları:")
+    print(f"\ntotal {meta['elapsed_s']/60:.1f} minutes, saved: {outdir}")
+    print("\nmodel means:")
     cols = ["f1_macro", "auc", "brier", "sensitivity", "specificity"]
     print(df.groupby("model")[cols].mean().round(4).sort_values("f1_macro",
                                                                ascending=False).to_string())

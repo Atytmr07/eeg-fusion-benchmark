@@ -1,29 +1,26 @@
-"""CHB-MIT LOSO sonuçlarını Faz 0'daki düzeltilmiş çerçeveyle analiz eder.
+"""CHB-MIT statistics: the corrected framework of src/phase0.py applied to LOSO.
 
-Bonn'daki phase0.py 5 kat x 5 tekrarlı CV için yazılmıştı (repeat, fold) çiftleri
-üzerinden pivot alıyordu. CHB-MIT LOSO'da yapı farklı: 24 katman var, her biri farklı
-bir *denek* dışarıda bırakılarak üretiliyor, tekrar yok. Bu yüzden ayrı bir modül.
+phase0.py pairs measurements by (repeat, fold) for 5x5 CV. CHB-MIT LOSO has one
+measurement per fold, each fold holding out a different person, and no repeats, so it
+has its own module.
 
-Test/eğitim oranı: LOSO'da her katmanda 1 denek test, kalan 23 denek eğitimde (iç
-doğrulama ayrıldıktan sonra biraz daha az). docs/11_CHBMIT_PLANI.md §10.4'te
-belirtildiği gibi oran 1/(n_katman-1) = 1/23 alınır. Bu, k-katlı CV için türetilen
-Nadeau-Bengio formülünün doğrudan uzantısıdır: k yerine denek sayısı girer, çünkü
-düzeltmenin kaynağı katmanların eğitim verisini paylaşması, düzeltme spesifik olarak
-"k-fold" biçimine değil bu paylaşıma bağlıdır.
+Test/train ratio. In LOSO each fold tests one person and trains on the rest, so the
+ratio is 1/(n_folds - 1): 1/22 with the 23 person-wise folds. This is the direct
+extension of the Nadeau-Bengio correction, whose source is the overlap between the
+folds' training sets, not the k-fold form as such. A conservative ratio that also
+removes the inner validation persons from training is reported alongside.
 
-ROPE (pratik denklik bölgesi) sabitleri Faz 0 ile aynı tutuldu ki iki korpus
-karşılaştırılabilir kalsın.
+The ROPE constants match the Bonn analysis so the two corpora stay comparable.
 
-Kullanım:  python -m src.chbmit_stats                     # loso_main (24 katman)
-           python -m src.chbmit_stats --run loso_grouped  # chb01+chb21 birleşik, 23 katman
-Çıktı:     results_v2/chbmit/phase0/*.csv (loso_main) veya phase0_<run>/*.csv
+Usage:   python -m src.chbmit_stats                     # stored loso_main run (24 folds)
+         python -m src.chbmit_stats --run loso_grouped  # chb01+chb21 merged, 23 folds
+Output:  results_v2/chbmit/phase0/*.csv (loso_main) or phase0_<run>/*.csv
 """
 from __future__ import annotations
 
 import argparse
 import sys
 from itertools import combinations
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -45,12 +42,12 @@ ROPE_BY_METRIC = {
     "brier": (0.01, 0.02),
 }
 LOWER_IS_BETTER = {"log_loss", "brier"}
-# chbmit_run.inner_split'in val_frac'ı ile aynı olmalı.
+# Must match val_frac in chbmit_run.inner_split.
 VAL_FRAC = 0.2
 
 
 def ratios(n_folds: int, val_frac: float = VAL_FRAC) -> tuple[float, float]:
-    """Birincil 1/(k-1); temkinli oran iç doğrulamaya ayrılan denekleri eğitimden düşer."""
+    """Primary 1/(k-1); the conservative ratio drops the validation persons from training."""
     n_train = n_folds - 1
     n_val = max(1, int(round(val_frac * n_train)))
     return 1.0 / n_train, 1.0 / (n_train - n_val)
@@ -58,6 +55,7 @@ def ratios(n_folds: int, val_frac: float = VAL_FRAC) -> tuple[float, float]:
 
 def analyze_metric(df: pd.DataFrame, metric: str, ratio: float,
                    ratio_con: float) -> pd.DataFrame:
+    """All pairwise comparisons for one metric. Rows are paired by fold (person)."""
     piv = df.pivot_table(index="fold", columns="model", values=metric).sort_index()
     ropes = ROPE_BY_METRIC[metric]
     rows = []
@@ -120,40 +118,40 @@ def main() -> None:
     out = RESULTS_ROOT / "chbmit" / ("phase0" if args.run == "loso_main"
                                      else f"phase0_{args.run}")
     if not in_csv.exists():
-        print(f"bulunamadı: {in_csv}")
+        print(f"not found: {in_csv}")
         return
     df = pd.read_csv(in_csv)
     n_folds = df.fold.nunique()
     ratio, ratio_con = ratios(n_folds)
-    print(f"CHB-MIT LOSO: {len(df)} satır, {n_folds} katman (denek), "
-          f"{df.model.nunique()} model, test/eğitim oranı = 1/{n_folds - 1} "
-          f"(temkinli: 1/{round(1 / ratio_con)})\n")
+    print(f"CHB-MIT LOSO: {len(df)} rows, {n_folds} folds, "
+          f"{df.model.nunique()} models, test/train ratio = 1/{n_folds - 1} "
+          f"(conservative: 1/{round(1 / ratio_con)})\n")
 
     out.mkdir(parents=True, exist_ok=True)
     all_res, summary_rows = [], []
 
     for metric in ("f1_macro", "log_loss", "brier"):
         s = per_model_summary(df, metric)
-        print(f"=== {metric} (küçük daha iyi: {metric in LOWER_IS_BETTER}) ===")
+        print(f"=== {metric} (lower is better: {metric in LOWER_IS_BETTER}) ===")
         print(s.round(4).to_string())
         spread_all = s["mean"].max() - s["mean"].min()
         fus = s.loc[[m for m in FUSION if m in s.index], "mean"]
         spread_fus = fus.max() - fus.min() if len(fus) else float("nan")
-        print(f"tüm modeller yayılımı: {spread_all:.4f}   "
-              f"füzyon operatörleri yayılımı: {spread_fus:.4f}")
+        print(f"spread over all models: {spread_all:.4f}   "
+              f"spread over fusion operators: {spread_fus:.4f}")
 
         res = analyze_metric(df, metric, ratio, ratio_con)
         if res.empty:
-            print("(çift yok, atlanıyor)\n")
+            print("(no pairs, skipped)\n")
             continue
         res.to_csv(out / f"chbmit_{metric}.csv", index=False)
         all_res.append(res)
 
         sig = res[res.sig_corrected]
-        print(f"çift={len(res)}  anlamlı: naif={int(res.sig_naive.sum())}  "
-              f"düzeltilmiş={int(res.sig_corrected.sum())}")
+        print(f"pairs={len(res)}  significant: naive={int(res.sig_naive.sum())}  "
+              f"corrected={int(res.sig_corrected.sum())}")
         if len(sig):
-            print("düzeltilmiş testte anlamlı çiftler:")
+            print("pairs significant under the corrected test:")
             print(sig[["model_a", "model_b", "mean_diff", "p_corrected_holm"]]
                   .round(4).to_string(index=False))
 
@@ -161,11 +159,11 @@ def main() -> None:
         rope_lo = ROPE_BY_METRIC[metric][0]
         tag = f"{int(rope_lo * 100):02d}"
         if len(fus_pairs):
-            print(f"füzyon çiftleri: n={len(fus_pairs)}  "
-                  f"düzeltilmiş anlamlı={int(fus_pairs.sig_corrected.sum())}  "
-                  f"delta_min aralığı=[{fus_pairs.delta_min_corrected.min():.4f}, "
+            print(f"fusion pairs: n={len(fus_pairs)}  "
+                  f"corrected significant={int(fus_pairs.sig_corrected.sum())}  "
+                  f"delta_min range=[{fus_pairs.delta_min_corrected.min():.4f}, "
                   f"{fus_pairs.delta_min_corrected.max():.4f}]  "
-                  f"P(ROPE {rope_lo} içinde denk) aralığı="
+                  f"P(equivalent within ROPE {rope_lo}) range="
                   f"[{fus_pairs[f'bayes_p_equiv_r{tag}'].min():.2f}, "
                   f"{fus_pairs[f'bayes_p_equiv_r{tag}'].max():.2f}]")
         print()
@@ -181,13 +179,7 @@ def main() -> None:
     if all_res:
         pd.concat(all_res).to_csv(out / "chbmit_all.csv", index=False)
     pd.DataFrame(summary_rows).to_csv(out / "summary.csv", index=False)
-
-    # Bonn ile yan yana konabilecek kısa karşılaştırma notu
-    print("=== Bonn (T1, N2) ile karşılaştırma referansı ===")
-    print("Bonn'da (25 ölçüm, 5x5 CV): T1 füzyon çiftlerinde düzeltilmiş anlamlı=1/10, "
-          "delta_min [0.022, 0.130] (bkz. results_v2/phase0/probscores_f1_macro.csv)")
-    print(f"CHB-MIT'te (24 ölçüm, LOSO): yukarıdaki tabloya bakın")
-    print(f"\nkaydedildi: {out}")
+    print(f"saved: {out}")
 
 
 if __name__ == "__main__":

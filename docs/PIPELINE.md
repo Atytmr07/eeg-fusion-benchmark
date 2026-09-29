@@ -302,12 +302,16 @@ the statistics and figures can be regenerated without the raw data or a GPU.
 | CHB-MIT classical baselines, corrected grouping | `python -m src.chbmit_baselines --run loso_grouped` | appended to the same file |
 | CHB-MIT statistics, corrected grouping | `python -m src.chbmit_stats --run loso_grouped` | `results_v2/chbmit/phase0_loso_grouped/` |
 | CHB-MIT statistics, stored pre-correction run (current Table 3) | `python -m src.chbmit_stats` | `results_v2/chbmit/phase0/` |
+| Manuscript figures | `python -m src.make_manuscript_figures` | `paper/figures_manuscript/` |
+| Parameter counts (Section 3.3) | `python -m src.models` | printed |
 
 The CHB-MIT runs need only the cached corpus
 `data/chbmit/_cache/corpus_w10_s10_n4_g0_seed20260727_24subj.npz` and its `.json` (about
 1.2 GB), not the 43 GB of raw EDF files: the correction changes which windows count as the
-same person, not which windows are selected. `src/chbmit_score.py` is kept only to
-reproduce the score rows of the pre-correction `loso_main` run.
+same person, not which windows are selected. The score rows of the stored pre-correction
+`loso_main` run were produced by a separate script, `src/chbmit_score.py`, which was
+removed in the code cleanup because score fusion is now computed inside `chbmit_run`; it
+remains available in the repository history (commit `804709c`).
 
 ### Running the CHB-MIT experiments on another machine
 
@@ -322,7 +326,6 @@ reproduce the score rows of the pre-correction `loso_main` run.
    (Section 7), so an interrupted run must be resumed with `--resume` and the same `<N>`,
    and nothing else heavy should run on the machine meanwhile.
 6. Then run the baselines and statistics commands above with `--run loso_grouped`.
-| Manuscript figures | `python -m src.make_manuscript_figures` | `paper/figures_manuscript/` |
 
 ## 9. Known issues and open items
 
@@ -345,5 +348,5 @@ These are also listed in the manuscript's Limitations section.
    base would not be clinically meaningful; computing it on the true recording duration is
    still to do.
 6. **Mixed thread counts** within the CHB-MIT run (Section 7).
-7. **Code comments are in Turkish**, and the detailed working notes in `docs/` are
-   Turkish. The manuscript, this document, and the README are in English.
+7. **The detailed working notes in `docs/` (other than this file) are in Turkish.** The
+   code, its comments, the manuscript, this document, and the README are in English.

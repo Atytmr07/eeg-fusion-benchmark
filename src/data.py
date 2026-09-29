@@ -1,15 +1,4 @@
-"""Bonn EEG veri yükleme, ön işleme ve spektrogram üretimi.
-
-Projenin ilk (notebook tabanlı) sürümüne göre üç düzeltme içerir:
-
-1. Spektrogram önbelleği kaldırıldı. Eski `cached_spec_for`, cache varsa z-score'lanmış
-   sinyali sessizce atıp normalize edilmemiş sinyalden üretilmiş spektrogramı
-   döndürüyordu. Burada spektrogram her zaman aynı ön işleme zincirinden üretilir.
-2. Tüm veri seti tek seferde belleğe alınır (500 x 4097 float32 = 8 MB). Eski kod her
-   __getitem__ çağrısında np.loadtxt ile 4097 satırlık metin dosyası okuyordu; eğitim
-   süresinin neredeyse tamamı buna gidiyordu.
-3. Normalizasyon, ablasyon yapılabilecek şekilde açık bir parametre.
-"""
+"""Bonn EEG loading, preprocessing, and spectrogram computation."""
 from __future__ import annotations
 
 import numpy as np
@@ -17,16 +6,17 @@ from scipy.signal import butter, filtfilt, get_window, stft
 
 from .config import DATA_ROOT, FS, NORM_MODES, PROJECT_ROOT, SET_NAMES, TASKS, Config
 
+# The 500 text files are parsed once and cached as .npy (about 8 MB).
 _CACHE_NPY = PROJECT_ROOT / "data" / "_bonn_raw.npy"
 _CACHE_KEY = PROJECT_ROOT / "data" / "_bonn_keys.npy"
 
 
 def load_raw() -> tuple[np.ndarray, np.ndarray]:
-    """Tüm Bonn segmentlerini döndürür.
+    """All Bonn segments.
 
     Returns:
-        X: (500, 4097) float32 ham sinyaller
-        sets: (500,) '<U1' her segmentin ait olduğu set harfi (A..E)
+        X: (500, 4097) float32 raw signals
+        sets: (500,) set letter (A..E) of each segment
     """
     if _CACHE_NPY.exists() and _CACHE_KEY.exists():
         return np.load(_CACHE_NPY), np.load(_CACHE_KEY)
@@ -44,7 +34,7 @@ def load_raw() -> tuple[np.ndarray, np.ndarray]:
 
 
 def select_task(X: np.ndarray, sets: np.ndarray, task: str):
-    """Görev tanımına göre alt küme ve etiketleri çıkarır."""
+    """Subset and labels for a task definition (see config.TASKS)."""
     mapping = TASKS[task]
     mask = np.isin(sets, list(mapping.keys()))
     y = np.array([mapping[s] for s in sets[mask]], dtype=np.int64)
@@ -63,7 +53,7 @@ def zscore(x: np.ndarray, axis: int = -1) -> np.ndarray:
 
 
 def make_spec(x: np.ndarray, cfg: Config) -> np.ndarray:
-    """log(1+|STFT|) spektrogramı. x: (N, T) -> (N, F, T')"""
+    """log(1 + |STFT|) spectrogram, cropped at cfg.fmax. x: (N, T) -> (N, F, T')."""
     f, _, Z = stft(
         x, fs=FS, nperseg=cfg.win, noverlap=cfg.win - cfg.hop, nfft=cfg.nfft,
         window=get_window("hann", cfg.win), boundary=None, padded=False, axis=-1,
@@ -73,10 +63,10 @@ def make_spec(x: np.ndarray, cfg: Config) -> np.ndarray:
 
 
 def build_arrays(cfg: Config):
-    """Görev + normalizasyon moduna göre (X1d, X2d, y) üretir.
+    """Model inputs for a task and normalisation mode.
 
-    X1d: (N, 1, T)  1D dal girdisi
-    X2d: (N, 1, F, T')  2D dal girdisi
+    Returns X1d (N, 1, T) for the raw branch, X2d (N, 1, F, T') for the spectrogram
+    branch, the labels, and the set letter of each segment.
     """
     mode = NORM_MODES[cfg.norm_mode]
     X, sets = load_raw()
@@ -88,14 +78,11 @@ def build_arrays(cfg: Config):
 
     x_z = zscore(x)
 
-    # 1D dal
     sig = x_z if mode["sig_z"] else x
-
-    # 2D dal: spektrogram hangi sinyalden üretilecek?
     spec_src = x_z if mode["spec_from_z"] else x
     spec = make_spec(spec_src.astype(np.float32), cfg)
     if mode["spec_z"]:
-        # örnek başına standardizasyon (tüm zaman-frekans düzlemi üzerinden)
+        # per example, over the whole time-frequency plane
         m = spec.mean(axis=(1, 2), keepdims=True)
         s = spec.std(axis=(1, 2), keepdims=True)
         spec = (spec - m) / (s + 1e-6)
@@ -103,15 +90,3 @@ def build_arrays(cfg: Config):
     X1d = sig.astype(np.float32)[:, None, :]
     X2d = spec.astype(np.float32)[:, None, :, :]
     return X1d, X2d, y, sets
-
-
-def log_variance_features(cfg: Config) -> tuple[np.ndarray, np.ndarray]:
-    """Shortcut baseline için tek öznitelik: ham sinyalin log-varyansı.
-
-    Normalizasyondan ÖNCE hesaplanır — amaç zaten mutlak genliğin ne kadar bilgi
-    taşıdığını ölçmek.
-    """
-    X, sets = load_raw()
-    X, y, _ = select_task(X, sets, cfg.task)
-    v = np.log(X.astype(np.float64).var(axis=1) + 1e-9)
-    return v[:, None].astype(np.float64), y

@@ -1,29 +1,24 @@
-"""CHB-MIT pencerelerinden model girdisi: spektrogram ve normalizasyon.
+"""CHB-MIT model inputs: normalisation and spectrogram.
 
-Bonn'dan ayrılan iki karar ve gerekçeleri:
+Three decisions differ from Bonn:
 
-**Frekans tavanı.** Bonn kayıt sırasında 0.53-40 Hz'e sınırlandırılmıştı, bu yüzden
-orada fmax=40 bilgi kaybı değildi. CHB-MIT band sınırlı değil. Üstelik bu projede
-yapılan ölçüm (chb01_03, nöbet dönemi ile 20 nöbetsiz dönem karşılaştırması) gama
-bandında (30-70 Hz) ictal/interictal güç oranını **18.3 kat** buldu; delta 7.7,
-theta 6.5, beta 4.8 katta kalıyordu. 40 Hz'de kesmek en ayırt edici bandı atmak
-olurdu. Varsayılan tavan bu yüzden 64 Hz.
+Frequency ceiling. Bonn was band-limited to 0.53-40 Hz at acquisition, so fmax = 40
+lost nothing there. CHB-MIT is not band-limited, and a measurement in this project
+(chb01_03, seizure period vs 20 seizure-free periods) found the largest ictal /
+interictal power ratio in the gamma band (30-70 Hz): 18.3x, against 7.7x for delta,
+6.5x for theta and 4.8x for beta. Cutting at 40 Hz would discard the most
+discriminative band, so the default ceiling is 64 Hz.
 
-**Şebeke gürültüsü.** CHB-MIT Boston'da kaydedilmiştir, şebeke frekansı 60 Hz ve bu
-gama bandının içine düşer. Gürültü sabit olduğu için ictal/interictal oranını tek
-başına açıklayamaz, ancak spektrogramda güçlü bir şerit oluşturur. `notch_hz`
-verilirse o frekans ve harmonikleri bastırılır. Varsayılan kapalıdır ve bu bir
-duyarlılık ekseni olarak koşulmalıdır.
+Mains noise. CHB-MIT was recorded in Boston; 60 Hz mains falls inside the gamma band.
+Being constant it cannot explain the ictal/interictal ratio on its own, but it draws a
+strong line in the spectrogram. With notch_hz set, that frequency and its harmonics are
+suppressed. Off by default; meant to be run as a sensitivity axis.
 
-**Normalizasyon.** Denekler arasında genlik ölçeği değişir; denek bazlı
-değerlendirmede bu doğrudan genellemeyi etkiler. Üç seçenek sunulur ve seçim
-kaydedilir:
-  none     : dokunma
-  window   : her pencere, her kanal kendi içinde z-score (varsayılan)
-  channel  : denek içinde kanal başına z-score, eğitim katmanından hesaplanır
-
-`channel` modu eğitim istatistiğini gerektirdiği için fonksiyon eğitim maskesi alır;
-test katmanının istatistiği asla kullanılmaz.
+Normalisation. Amplitude scale varies between subjects, which matters directly for
+subject-wise evaluation. Three options, and the choice is recorded:
+  none     leave as is
+  window   z-score each channel of each window on its own (default)
+  channel  z-score each channel with statistics from the training windows only
 """
 from __future__ import annotations
 
@@ -36,7 +31,7 @@ FMAX_DEFAULT = 64.0
 
 def notch_filter(x: np.ndarray, fs: float = FS, f0: float = 60.0,
                  q: float = 30.0, harmonics: int = 2) -> np.ndarray:
-    """f0 ve harmoniklerini bastırır. x: (..., T)."""
+    """Suppress f0 and its harmonics. x: (..., T)."""
     out = x.astype(np.float64)
     for k in range(1, harmonics + 1):
         f = f0 * k
@@ -49,7 +44,7 @@ def notch_filter(x: np.ndarray, fs: float = FS, f0: float = 60.0,
 
 def spectrogram(x: np.ndarray, fs: float = FS, win: int = 256, hop: int = 128,
                 nfft: int = 256, fmax: float = FMAX_DEFAULT) -> np.ndarray:
-    """log(1+|STFT|). x: (N, C, T) -> (N, C, F, T')."""
+    """log(1 + |STFT|), cropped at fmax. x: (N, C, T) -> (N, C, F, T')."""
     f, _, Z = stft(x, fs=fs, nperseg=win, noverlap=win - hop, nfft=nfft,
                    window=get_window("hann", win), boundary=None, padded=False,
                    axis=-1)
@@ -58,7 +53,7 @@ def spectrogram(x: np.ndarray, fs: float = FS, win: int = 256, hop: int = 128,
 
 
 def zscore_window(x: np.ndarray, eps: float = 1e-8) -> np.ndarray:
-    """Her pencerenin her kanalını kendi içinde standartlaştırır. x: (N, C, T)."""
+    """Standardise each channel of each window on its own. x: (N, C, T)."""
     m = x.mean(axis=-1, keepdims=True)
     s = x.std(axis=-1, keepdims=True)
     return ((x - m) / (s + eps)).astype(np.float32)
@@ -66,13 +61,13 @@ def zscore_window(x: np.ndarray, eps: float = 1e-8) -> np.ndarray:
 
 def zscore_channel_from_train(x: np.ndarray, train_mask: np.ndarray,
                               eps: float = 1e-8) -> np.ndarray:
-    """Kanal başına z-score; istatistik **yalnızca eğitim pencerelerinden** gelir.
+    """Per-channel z-score with statistics from the TRAINING windows only.
 
-    Test katmanının istatistiğini kullanmak sızıntıdır ve bu tür normalizasyon
-    sızıntısı literatürde sık görülür.
+    Using test-fold statistics would be leakage, a common form of it in this
+    literature.
     """
     if train_mask.sum() == 0:
-        raise ValueError("eğitim maskesi boş, normalizasyon istatistiği hesaplanamaz")
+        raise ValueError("empty training mask, cannot compute normalisation statistics")
     tr = x[train_mask]
     m = tr.mean(axis=(0, 2), keepdims=True)
     s = tr.std(axis=(0, 2), keepdims=True)
@@ -82,13 +77,13 @@ def zscore_channel_from_train(x: np.ndarray, train_mask: np.ndarray,
 def prepare(X: np.ndarray, norm: str = "window", train_mask: np.ndarray | None = None,
             notch_hz: float | None = None, fmax: float = FMAX_DEFAULT,
             fs: float = FS) -> tuple[np.ndarray, np.ndarray, dict]:
-    """Ham pencerelerden (X1d, X2d) üretir.
+    """Model inputs from raw windows.
 
-    Dönen X1d: (N, C, T), X2d: (N, C, F, T'). Üçüncü dönen değer, yapılan seçimlerin
-    kaydıdır; sonuçla birlikte saklanmalıdır.
+    Returns X1d (N, C, T), X2d (N, C, F, T'), and a record of the choices made, which
+    should be stored with the results.
     """
     if norm not in ("none", "window", "channel"):
-        raise ValueError(f"bilinmeyen normalizasyon: {norm}")
+        raise ValueError(f"unknown normalisation: {norm}")
     x = X
     if notch_hz:
         x = notch_filter(x, fs=fs, f0=notch_hz)
@@ -96,8 +91,8 @@ def prepare(X: np.ndarray, norm: str = "window", train_mask: np.ndarray | None =
         x = zscore_window(x)
     elif norm == "channel":
         if train_mask is None:
-            raise ValueError("norm='channel' için train_mask gerekir; test "
-                             "istatistiğinin kullanılması sızıntı olur")
+            raise ValueError("norm='channel' needs train_mask; using test statistics "
+                             "would be leakage")
         x = zscore_channel_from_train(x, train_mask)
 
     spec = spectrogram(x, fs=fs, fmax=fmax)

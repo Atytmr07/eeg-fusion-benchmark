@@ -1,21 +1,20 @@
-"""Duyarlılık analizi: ana sonuç, tasarım kararlarımızın artefaktı mı?
+"""Bonn sensitivity analysis: is the main result an artefact of our design choices?
 
-Ana bulgu — "eşit bütçe altında füzyon operatörleri ayrışmıyor" — iki itiraza açıktır:
+The main finding (fusion operators do not separate at a matched budget) is open to
+two objections, and this script tests both:
 
-1. *"Seçtiğin spektrogram konfigürasyonu operatörleri denk yapıyor olabilir."*
-2. *"Seçtiğin parametre bütçesi çok küçük; daha büyük bütçede ayrışırlar."*
+1. "Your spectrogram configuration makes the operators equivalent."  -> axis stft
+2. "Your parameter budget is too small; they would separate at a larger one."
+                                                                     -> axis budget
 
-Bu script her iki ekseni de tarar. Sonuç bütün noktalarda ayakta kalırsa iddia
-tasarım seçimlerine bağlı değildir.
+Early/intermediate fusion is left out: it is structurally different, so its parameter
+matching breaks as the budget changes (16 to 30 percent off), and it is already shown
+to be in a separate performance class.
 
-Early/intermediate füzyon dışarıda bırakılır: yapısal olarak farklı olduğu için
-bütçe değiştikçe parametre eşlemesi bozulur (%16–30 sapma) ve zaten ayrı bir
-performans sınıfında olduğu gösterilmiştir.
-
-Kullanım:
+Usage:
+    python -m src.run_sensitivity --list
     python -m src.run_sensitivity --axis stft   --variant fine
     python -m src.run_sensitivity --axis budget --variant large
-    python -m src.run_sensitivity --list
 """
 from __future__ import annotations
 
@@ -33,17 +32,17 @@ from . import baselines
 from .config import RESULTS_ROOT, TASKS, Config, fold_seed
 from .data import build_arrays, load_raw, select_task
 from .evaluate import metrics
-from .models import build, count_params
+from .models import count_params
 from .train import best_blend_weight, predict, softmax_np, train_one
 
 MODELS = ["raw1d", "spec2d", "raw1d_wide", "spec2d_wide", "late", "gated", "attention"]
 
-# Eksen -> varyant -> Config üzerine uygulanacak değişiklikler
+# axis -> variant -> changes applied on top of the main Config
 VARIANTS = {
     "stft": {
-        "fine":     dict(nfft=128, win=128, hop=32),    # zamanda ince, frekansta kaba
-        "baseline": dict(nfft=256, win=256, hop=128),   # ana koşu
-        "coarse":   dict(nfft=512, win=512, hop=256),   # frekansta ince, zamanda kaba
+        "fine":     dict(nfft=128, win=128, hop=32),    # finer in time, coarser in frequency
+        "baseline": dict(nfft=256, win=256, hop=128),   # main run
+        "coarse":   dict(nfft=512, win=512, hop=256),   # finer in frequency, coarser in time
     },
     "budget": {
         "small":    dict(fusion_budget=15_000),
@@ -63,7 +62,7 @@ def run(cfg: Config, budget: int, axis: str, variant: str, verbose=True) -> pd.D
     ncls = len(set(TASKS[cfg.task].values()))
     X1d, X2d, y, _ = build_arrays(cfg)
     if verbose:
-        print(f"spektrogram boyutu: {X2d.shape[2]} frekans x {X2d.shape[3]} zaman", flush=True)
+        print(f"spectrogram size: {X2d.shape[2]} frequency x {X2d.shape[3]} time", flush=True)
 
     X_all, sets_all = load_raw()
     X_raw, _, _ = select_task(X_all, sets_all, cfg.task)
@@ -76,6 +75,7 @@ def run(cfg: Config, budget: int, axis: str, variant: str, verbose=True) -> pd.D
 
     rows = []
     for repeat in range(cfg.n_repeats):
+        # Same splits and seeds as run_benchmark, so variants pair with the main run.
         skf = StratifiedKFold(n_splits=cfg.n_folds, shuffle=True,
                               random_state=cfg.base_seed + repeat)
         for fold, (idx_trval, idx_te) in enumerate(skf.split(np.zeros(len(y)), y)):
@@ -84,7 +84,7 @@ def run(cfg: Config, budget: int, axis: str, variant: str, verbose=True) -> pd.D
             a, b = next(sss.split(np.zeros(len(idx_trval)), y[idx_trval]))
             idx_tr, idx_va = idx_trval[a], idx_trval[b]
             assert not (set(idx_tr) & set(idx_va) or set(idx_tr) & set(idx_te)
-                        or set(idx_va) & set(idx_te)), "bölme çakışması"
+                        or set(idx_va) & set(idx_te)), "split overlap"
 
             tr = (t1[idx_tr], t2[idx_tr], ty[idx_tr])
             va = (t1[idx_va], t2[idx_va], ty[idx_va])
@@ -114,6 +114,10 @@ def run(cfg: Config, budget: int, axis: str, variant: str, verbose=True) -> pd.D
                      params=np.nan, sec=0.0)
             rows.append(m)
 
+            # Note: unlike run_benchmark, the baselines here are fit on the training
+            # part only (idx_tr, not idx_trval). Kept as is so the stored sensitivity
+            # results remain reproducible; the claims drawn from this analysis concern
+            # the fusion operators, not the baselines.
             for name, feat in feats.items():
                 prob = baselines.fit_predict(feat[idx_tr], y[idx_tr], feat[idx_te])
                 m = metrics(y_te, prob, ncls)
@@ -123,7 +127,7 @@ def run(cfg: Config, budget: int, axis: str, variant: str, verbose=True) -> pd.D
 
         pd.DataFrame(rows).to_csv(outdir_for(axis, variant) / "perfold.csv", index=False)
         if verbose:
-            print(f"[repeat {repeat} bitti] {axis}/{variant}", flush=True)
+            print(f"[repeat {repeat} done] {axis}/{variant}", flush=True)
 
     return pd.DataFrame(rows)
 
@@ -149,8 +153,8 @@ def main():
     cfg = replace(Config(task="T1_3class", norm_mode="N2_z_zspec",
                          n_repeats=args.repeats), **kw)
 
-    print(f"eksen={args.axis} varyant={args.variant} butce={budget:,} "
-          f"stft(nfft={cfg.nfft},win={cfg.win},hop={cfg.hop}) tekrar={cfg.n_repeats}")
+    print(f"axis={args.axis} variant={args.variant} budget={budget:,} "
+          f"stft(nfft={cfg.nfft},win={cfg.win},hop={cfg.hop}) repeats={cfg.n_repeats}")
     df = run(cfg, budget, args.axis, args.variant)
 
     s = (df.groupby("model").agg(f1=("f1_macro", "mean"), sd=("f1_macro", "std"),

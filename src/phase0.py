@@ -1,21 +1,23 @@
-"""Faz 0: mevcut sonuçların tekrarlı CV korelasyonunu hesaba katarak yeniden analizi.
+"""Bonn statistics: re-analyse stored runs with tests that respect repeated-CV dependence.
 
-Yeni deney koşmaz. Her koşunun perfold.csv dosyasındaki model çiftlerini şu testlerle
-yeniden değerlendirir:
+Runs no experiments. For every model pair in each run's perfold.csv it computes:
 
-  naive_wilcoxon   : eski analiz (bağımsızlık varsayar, yanlış pozitif oranı şişik)
-  corrected_t      : düzeltilmiş tekrarlı k-fold t testi (birincil)
-  bayes            : korelasyonlu Bayesçi t testi, ROPE içinde/dışında olasılıklar
-  sign             : işaret testi (simetri varsaymaz, duyarlılık kontrolü)
-  delta_min        : düzeltilmiş varyansla denklik sınırı
+  p_naive_wilcoxon    the common but invalid test (assumes independent folds); kept
+                      only to show how many "differences" it produces
+  p_corrected         corrected resampled t test (primary)
+  bayes_p_*           correlated Bayesian t test: P(a better), P(equivalent), P(b better)
+  p_sign              sign test (robustness check; no symmetry assumption)
+  delta_min_corrected equivalence bound with the corrected variance
 
-Test/eğitim oranı:
-  birincil  : 1/(k-1)            (yöntemin literatürdeki standart kullanımı)
-  duyarlılık: n_test / n_fit     (iç doğrulama ayrıldıktan sonra fiilen eğitime giren
-                                  örnek sayısıyla; daha temkinli)
+Test/train ratio:
+  primary       1/(k-1), the standard choice for k-fold CV
+  conservative  n_test / n_fit, counting only the data actually used for fitting after
+                the inner validation split is removed (sensitivity check)
 
-Kullanım:  python -m src.phase0
-Çıktı:     results_v2/phase0/*.csv
+(The name "phase0" is historical: this was phase 0 of the project's revision plan.)
+
+Usage:   python -m src.phase0
+Output:  results_v2/phase0/*.csv
 """
 from __future__ import annotations
 
@@ -42,13 +44,14 @@ ROPES = (0.01, 0.02)
 
 def ratios(n_folds: int, val_ratio: float) -> tuple[float, float]:
     primary = 1.0 / (n_folds - 1)
-    fit_frac = (1 - 1 / n_folds) * (1 - val_ratio)     # eğitime fiilen giren oran
+    fit_frac = (1 - 1 / n_folds) * (1 - val_ratio)     # share of data actually fitted on
     conservative = (1 / n_folds) / fit_frac
     return primary, conservative
 
 
 def analyze(df: pd.DataFrame, n_folds: int, val_ratio: float = 0.2,
-            metric: str = "f1_macro") -> pd.DataFrame:
+            metric: str = "f1_macro", ropes: tuple = ROPES) -> pd.DataFrame:
+    """All pairwise comparisons for one run. Rows are paired by (repeat, fold)."""
     r_pri, r_con = ratios(n_folds, val_ratio)
     piv = df.pivot_table(index=["repeat", "fold"], columns="model", values=metric).sort_index()
     rows = []
@@ -77,7 +80,7 @@ def analyze(df: pd.DataFrame, n_folds: int, val_ratio: float = 0.2,
                                * d.std(ddof=1) / np.sqrt(len(d)),
             "delta_min_corrected": corrected_equivalence_bound(a, b, r_pri),
         }
-        for rope in ROPES:
+        for rope in ropes:
             pl, pr, pg = correlated_bayes(a, b, r_pri, rope)
             tag = f"{int(rope*100):02d}"
             row[f"bayes_p_b_better_r{tag}"] = pl
@@ -94,18 +97,18 @@ def analyze(df: pd.DataFrame, n_folds: int, val_ratio: float = 0.2,
 
 
 def load(glob: str) -> pd.DataFrame | None:
-    """Kalıba uyan koşuyu yükler.
+    """Load the run matching a directory pattern.
 
-    Config'e alan eklendiğinde hash değiştiği için aynı görev/normalizasyon kalıbına
-    birden fazla dizin uyabilir. Sessizce birini seçmek yanlış sonucu analiz etme
-    riski taşıdığı için burada en yeni koşu seçilir ve durum bildirilir.
+    Adding a Config field changes the hash, so several directories can match the same
+    task/normalisation pattern. The most recent one is used and this is reported, so
+    a stale run is never analysed silently.
     """
     cands = [d for d in sorted(RESULTS_ROOT.glob(glob)) if (d / "perfold.csv").exists()]
     if not cands:
         return None
     if len(cands) > 1:
         cands.sort(key=lambda d: (d / "perfold.csv").stat().st_mtime, reverse=True)
-        print(f"uyarı: {glob} kalıbına {len(cands)} koşu uyuyor, en yenisi seçildi: "
+        print(f"warning: {len(cands)} runs match {glob}, using the most recent: "
               f"{cands[0].name}")
     return pd.read_csv(cands[0] / "perfold.csv")
 
@@ -126,7 +129,7 @@ def main():
     for name, (glob, k) in runs.items():
         df = load(glob)
         if df is None:
-            print(f"atlandı: {name}")
+            print(f"skipped (not found): {name}")
             continue
         res = analyze(df, k)
         res.to_csv(OUT / f"{name}.csv", index=False)
@@ -135,11 +138,11 @@ def main():
                         "sig_corrected": int(res.sig_corrected.sum()),
                         "sig_corrected_conservative":
                             int((res.p_corrected_conservative_holm < 0.05).sum())})
-        print(f"{name:20s} çift={len(res):3d}  anlamlı: naif={int(res.sig_naive.sum()):3d}  "
-              f"düzeltilmiş={int(res.sig_corrected.sum()):3d}")
+        print(f"{name:20s} pairs={len(res):3d}  significant: naive={int(res.sig_naive.sum()):3d}  "
+              f"corrected={int(res.sig_corrected.sum()):3d}")
     pd.DataFrame(summary).to_csv(OUT / "summary.csv", index=False)
 
-    # Normalizasyon ablasyonu: iki kol aynı bölmeleri paylaşır, eşleştirilmiş karşılaştırma
+    # Normalisation ablation N1 vs N2: both arms share splits and seeds, so paired.
     n1, n2 = load("T1_3class__N1_z_rawspec__*"), load("T1_3class__N2_z_zspec__*")
     if n1 is not None and n2 is not None:
         r_pri, _ = ratios(cfg.n_folds, cfg.val_ratio)
@@ -149,6 +152,8 @@ def main():
         for m in p1.columns:
             a, b = p1[m].to_numpy(float), p2[m].to_numpy(float)
             d = a - b
+            # Models that never see the spectrogram must come out identical: a
+            # determinism check for free.
             if np.allclose(d, 0):
                 rows.append({"model": m, "mean_diff": 0.0, "identical": True})
                 continue
@@ -165,10 +170,10 @@ def main():
         ab.loc[t, "p_naive_holm"] = holm(ab.loc[t, "p_naive_wilcoxon"].to_numpy())
         ab.loc[t, "p_corrected_holm"] = holm(ab.loc[t, "p_corrected"].to_numpy())
         ab.to_csv(OUT / "ablation_N1_vs_N2.csv", index=False)
-        print("\nNormalizasyon ablasyonu (N1 - N2):")
+        print("\nNormalisation ablation (N1 - N2):")
         print(ab.round(4).to_string(index=False))
 
-    print(f"\nkaydedildi: {OUT}")
+    print(f"\nsaved: {OUT}")
 
 
 if __name__ == "__main__":

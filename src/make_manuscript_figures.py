@@ -1,20 +1,16 @@
-"""Manuscript için figürler: Bonn ve CHB-MIT, İngilizce, düzeltilmiş istatistikle.
+"""Manuscript figures for Bonn and CHB-MIT, drawn from the corrected statistics.
 
-Bilerek kullanılmayan şey: `fig_significance` / `pairwise_table`. O yol naif
-Wilcoxon+Holm hesaplıyor (bkz. src/figures.py'deki not), ve bu manuscript'in tam
-tersini iddia eder. Onun yerine `fig_significance_corrected`, zaten düzeltilmiş
-testten geçmiş `results_v2/phase0/*.csv` ve `results_v2/chbmit/phase0/*.csv`
-dosyalarını doğrudan çizer, kendi hesaplama yapmaz.
+The significance matrices only draw tables that already went through the corrected
+test (results_v2/phase0/*.csv and results_v2/chbmit/phase0/*.csv); nothing is
+recomputed here.
 
-Denklik eşiği (equiv_margin) her iki korpus için de **0.03** olarak sabitlendi.
-Bonn bu eşik altında çoğu füzyon çiftini "denk" (≡) gösterecek; CHB-MIT'te aynı
-eşikle hiçbir çift "≡" görünmeyecek, çünkü delta_min zaten 0.055'in üzerinde
-(bkz. docs/13). Bu bilinçli bir seçim: aynı eşik iki korpusta farklı sonuç
-üreterek "Bonn'da denklik kanıtlanmış, CHB-MIT'te kanıtlanamamış" ayrımını
-görsel olarak da doğru yansıtıyor.
+The equivalence margin is fixed at 0.03 macro F1 for both corpora. Under the same
+margin Bonn shows most fusion pairs as equivalent (≡) while CHB-MIT shows none, since
+its delta_min values are all above 0.055. That is the intended picture: equivalence
+is established on Bonn and not on CHB-MIT.
 
-Kullanım:  python -m src.make_manuscript_figures
-Çıktı:     paper/figures_manuscript/*.png, *.pdf
+Usage:   python -m src.make_manuscript_figures
+Output:  paper/figures_manuscript/*.png, *.pdf
 """
 from __future__ import annotations
 
@@ -35,11 +31,10 @@ OUT = Path("paper/figures_manuscript")
 EQUIV_MARGIN = 0.03
 
 MODEL_ORDER = ["late", "gated", "attention", "score", "early",
-              "spec2d_wide", "raw1d_wide", "spec2d", "raw1d", "shallow", "logvar"]
+               "spec2d_wide", "raw1d_wide", "spec2d", "raw1d", "shallow", "logvar"]
 
 
 def main() -> None:
-    figures.set_lang("en")
     OUT.mkdir(parents=True, exist_ok=True)
 
     # --- Bonn T1 ---
@@ -63,7 +58,7 @@ def main() -> None:
         chb_stats, OUT, equiv_margin=EQUIV_MARGIN, models=MODEL_ORDER,
         metric_label="macro F1 (CHB-MIT LOSO)", name="chbmit_significance_corrected")
 
-    print(f"\ntamamı kaydedildi: {OUT}")
+    print(f"\nall saved: {OUT}")
 
 
 if __name__ == "__main__":

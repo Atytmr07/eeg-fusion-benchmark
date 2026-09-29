@@ -78,11 +78,11 @@ Full training commands for every result are in `docs/PIPELINE.md`, Section 8.
 | `src/config.py` | Configuration, task and normalisation definitions, per run hashing, seeds |
 | `src/data.py`, `src/chbmit.py` | Bonn loading and spectrograms; CHB-MIT EDF reader and annotation parser |
 | `src/chbmit_corpus.py`, `src/chbmit_prep.py` | CHB-MIT windowing, subsampling, leakage safe splits and checks, preprocessing |
-| `src/models.py` | Backbones and fusion operators, parameter matched |
-| `src/train.py`, `src/evaluate.py` | Training loop, early stopping, score fusion weight, metrics |
+| `src/models.py` | Backbones and fusion operators, parameter matched (`python -m src.models` prints the counts) |
+| `src/train.py`, `src/evaluate.py` | Bonn training loop, score fusion weight; metrics shared by both corpora |
 | `src/baselines.py`, `src/chbmit_baselines.py` | Classical logistic regression baselines |
 | `src/run_benchmark.py`, `src/run_sensitivity.py` | Bonn experiment drivers |
-| `src/chbmit_run.py`, `src/chbmit_score.py` | CHB-MIT experiment drivers |
+| `src/chbmit_run.py` | CHB-MIT experiment driver (training loop, deep models, score fusion) |
 | `src/stats.py`, `src/sim_cv_correlation.py` | Corrected tests, equivalence, Bayesian analysis; false positive simulation |
 | `src/phase0.py`, `src/phase0_probscores.py`, `src/chbmit_stats.py` | Statistical analysis of stored results |
 | `src/figures.py`, `src/make_manuscript_figures.py` | Figures |

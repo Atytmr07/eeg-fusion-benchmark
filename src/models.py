@@ -1,18 +1,17 @@
-"""Omurgalar ve füzyon operatörleri — parametre bütçesi eşlenmiş.
+"""Backbones and fusion operators, sized to a common parameter budget.
 
-Tasarım ilkesi: füzyon operatörleri yalnızca *nasıl birleştirdikleriyle* ayrışmalı,
-kapasiteleriyle değil. Bu yüzden:
+Design principle: fusion operators should differ only in *how* they combine the two
+branches, not in capacity. Therefore:
 
-- Her iki-dallı model aynı CNN1D + CNN2D omurgasını kullanır.
-- Her füzyon modülü aynı parametre bütçesine (`FUSION_BUDGET`) ayarlanır; gizli katman
-  genişliği operatöre göre çözülür.
-- Dropout, sınıflandırma başlığı ve gömme boyutu tüm modellerde aynıdır.
-- Ayrıca `raw1d_wide` / `spec2d_wide` kontrolleri vardır: tek modaliteli ama füzyon
-  modelleriyle *aynı toplam parametreye* sahip. Bu, "füzyon mu yardım etti yoksa
-  fazladan parametre mi" sorusunu ayırır.
+- Every two-branch model uses the same CNN1D + CNN2D backbones.
+- Every fusion head is sized to the same budget (FUSION_BUDGET); its hidden width is
+  solved per operator so that the total parameter count matches.
+- Dropout, classifier head and embedding size are identical across models.
+- raw1d_wide / spec2d_wide are single-branch controls widened to the same total
+  parameter count as the fusion models. They separate "fusion helped" from "more
+  parameters helped".
 
-İlk (notebook tabanlı) sürümde Late 0.038M, Attention 0.054M, Gated 0.087M parametreye sahipti ve
-Dropout yalnızca LateFusion'da vardı; bu haliyle füzyon operatörünün etkisi ölçülemiyordu.
+Run `python -m src.models` to print the parameter count of every model.
 """
 from __future__ import annotations
 
@@ -20,16 +19,20 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-FUSION_BUDGET = 40_000  # füzyon modülü başına hedef parametre sayısı
+FUSION_BUDGET = 40_000  # target parameter count of each fusion head
 
 
 def _solve_hidden(kind: str, dim: int, ncls: int, budget: int) -> int:
-    """Verilen bütçeye en yakın gizli katman genişliğini çözer."""
+    """Hidden width that brings a fusion head closest to `budget` parameters.
+
+    Each formula is the head's parameter count written as a linear function of the
+    hidden width h and solved for h.
+    """
     if kind == "late":      # 2d -> h -> ncls
         h = (budget - ncls) / (2 * dim + 1 + ncls)
-    elif kind == "gated":   # 2d -> h -> d (sigmoid), d -> ncls
+    elif kind == "gated":   # 2d -> h -> d (sigmoid gate), then d -> ncls
         h = (budget - dim - (dim * ncls + ncls)) / (2 * dim + 1 + dim)
-    elif kind == "attention":  # 2d -> h -> 2 (softmax), d -> ncls
+    elif kind == "attention":  # 2d -> h -> 2 (softmax weights), then d -> ncls
         h = (budget - 2 - (dim * ncls + ncls)) / (2 * dim + 1 + 2)
     else:
         raise ValueError(kind)
@@ -37,8 +40,12 @@ def _solve_hidden(kind: str, dim: int, ncls: int, budget: int) -> int:
 
 
 class CNN1D(nn.Module):
-    """in_ch: girdi kanal sayisi. Bonn tek kanalli (1), CHB-MIT 18 kanalli.
-    Yalnizca ilk evrisim katmani degisir; in_ch=1 iken davranis oncekiyle ayni."""
+    """Raw-signal backbone: 3 x (Conv1d k=7, BatchNorm, ReLU, MaxPool 2), then a
+    linear projection to a `dim`-dimensional embedding.
+
+    in_ch is the number of input channels (1 for Bonn, 18 for CHB-MIT). Only the first
+    convolution depends on it, so Bonn parameter counts are unchanged at in_ch=1.
+    """
     def __init__(self, dim: int = 128, width: int = 16, in_ch: int = 1):
         super().__init__()
         def blk(ci, co, k=7):
@@ -53,8 +60,9 @@ class CNN1D(nn.Module):
 
 
 class CNN2D(nn.Module):
-    """in_ch: spektrogramin kanal sayisi. Bonn 1, CHB-MIT icin kanal basina
-    bir spektrogram dusunuldugunde 18."""
+    """Spectrogram backbone: 3 x (Conv2d 3x3, BatchNorm, ReLU, MaxPool 2x2), then a
+    linear projection to a `dim`-dimensional embedding. in_ch as in CNN1D (CHB-MIT
+    stacks one spectrogram per EEG channel)."""
     def __init__(self, dim: int = 128, width: int = 16, in_ch: int = 1):
         super().__init__()
         def blk(ci, co):
@@ -68,7 +76,7 @@ class CNN2D(nn.Module):
         return self.head(self.net(x))
 
 
-# --- Tek modaliteli modeller -------------------------------------------------
+# --- Single-branch models -------------------------------------------------------
 
 class Unimodal1D(nn.Module):
     def __init__(self, dim=128, ncls=3, p_drop=0.3, width=16, in_ch=1):
@@ -90,10 +98,11 @@ class Unimodal2D(nn.Module):
         return self.head(self.f(x2d))
 
 
-# --- Füzyon operatörleri -----------------------------------------------------
+# --- Fusion operators -------------------------------------------------------------
+# z1 = raw-branch embedding, z2 = spectrogram-branch embedding.
 
 class LateFusion(nn.Module):
-    """Öznitelik düzeyinde birleştirme: concat -> MLP -> sınıf."""
+    """Feature-level fusion: concatenate [z1, z2] -> MLP -> classifier."""
     def __init__(self, dim=128, ncls=3, p_drop=0.3, budget=FUSION_BUDGET, in_ch=1):
         super().__init__()
         h = _solve_hidden("late", dim, ncls, budget)
@@ -107,7 +116,7 @@ class LateFusion(nn.Module):
 
 
 class GatedFusion(nn.Module):
-    """Öğrenilebilir kapı: g = sigma(MLP([z1,z2])), z = g*z1 + (1-g)*z2."""
+    """Learned per-dimension gate: g = sigmoid(MLP([z1, z2])), z = g*z1 + (1-g)*z2."""
     def __init__(self, dim=128, ncls=3, p_drop=0.3, budget=FUSION_BUDGET, in_ch=1):
         super().__init__()
         h = _solve_hidden("gated", dim, ncls, budget)
@@ -127,7 +136,8 @@ class GatedFusion(nn.Module):
 
 
 class AttentionFusion(nn.Module):
-    """Modalite düzeyinde softmax dikkat: z = a1*z1 + a2*z2."""
+    """Modality-level softmax attention: (a1, a2) = softmax(MLP([z1, z2])),
+    z = a1*z1 + a2*z2 (one weight per branch, not per dimension)."""
     def __init__(self, dim=128, ncls=3, p_drop=0.3, budget=FUSION_BUDGET, in_ch=1):
         super().__init__()
         h = _solve_hidden("attention", dim, ncls, budget)
@@ -147,19 +157,22 @@ class AttentionFusion(nn.Module):
 
 
 class EarlyFusion(nn.Module):
-    """Girdi düzeyine yakın birleştirme.
+    """Fusion close to the input.
 
-    Not: 1D sinyal ile 2D spektrogramı gerçek anlamda "ham düzeyde" birleştirmek mümkün
-    değildir (farklı boyutlar). Literatürde 'early fusion' diye anılan bu kurgu aslında
-    *intermediate* füzyondur: sinyal sığ bir kodlayıcıdan geçirilip frekans ekseninde
-    yayılarak spektrograma ek kanal olarak eklenir. Makalede bu şekilde adlandırılmalıdır.
+    A 1D signal and a 2D spectrogram cannot be concatenated at the raw input level
+    (different shapes), so what the literature calls "early fusion" is strictly
+    intermediate fusion: the signal passes through a shallow strided encoder, is
+    aligned to the spectrogram's time axis, broadcast along frequency, and appended
+    to the spectrogram as extra channels. One 2D CNN then processes both. The
+    manuscript names it accordingly. width=26 is calibrated so the total parameter
+    count matches the other fusion models.
     """
     def __init__(self, dim=128, ncls=3, p_drop=0.3, wave_ch=8, width=26,
                  budget=FUSION_BUDGET, in_ch=1):
         super().__init__()
-        # Sinyal, spektrogramın zaman çözünürlüğüne indirgenir. Aksi hâlde 4097 uzunluk
-        # frekans ekseninde yayıldığında (B, 9, 59, 2048) boyutunda dev bir tensör oluşur;
-        # bu hem yavaştır hem de spektrogramı bilinçsizce yukarı örneklemek demektir.
+        # Downsample the signal towards the spectrogram's time resolution first.
+        # Broadcasting all 4097 samples along frequency would create a huge tensor
+        # (B, 9, 59, 2048) and implicitly upsample the spectrogram.
         self.wave_enc = nn.Sequential(
             nn.Conv1d(in_ch, 8, 7, stride=4, padding=3), nn.BatchNorm1d(8), nn.ReLU(),
             nn.Conv1d(8, 8, 5, stride=4, padding=2), nn.BatchNorm1d(8), nn.ReLU(),
@@ -178,25 +191,24 @@ class EarlyFusion(nn.Module):
     def forward(self, x1d, x2d):
         B, _, Fdim, T = x2d.shape
         wf = self.wave_enc(x1d)                              # [B, wave_ch, T'']
-        wf = F.adaptive_avg_pool1d(wf, T)                    # spektrogramın T'sine hizala
+        wf = F.adaptive_avg_pool1d(wf, T)                    # align to spectrogram time axis
         wf2d = wf.unsqueeze(2).expand(B, wf.shape[1], Fdim, T)
         return self.cls(self.proj(self.backbone(torch.cat([x2d, wf2d], dim=1))))
 
 
-# --- Fabrika -----------------------------------------------------------------
+# --- Factory ------------------------------------------------------------------------
 
-# Genişlik çarpanları, tek modaliteli "wide" kontrollerin toplam parametre sayısını
-# iki-dallı füzyon modelleriyle eşitlemek için kalibre edilmiştir (bkz. report_params).
+# Width multipliers calibrated so the widened single-branch controls have the same
+# total parameter count as the two-branch fusion models (see report_params).
 WIDE_WIDTH_1D = 34
 WIDE_WIDTH_2D = 30
-EARLY_WIDTH = 26
 
 
 def build(name: str, ncls: int, dim: int = 128, p_drop: float = 0.3,
           fusion_budget: int | None = None, in_ch: int = 1) -> nn.Module:
-    """`fusion_budget` verilirse füzyon modüllerinin parametre bütçesini değiştirir.
-
-    Duyarlılık analizinde kullanılır: sonuç, seçilen bütçeye bağlı mı?
+    """Build a model by name. `fusion_budget` overrides the fusion head budget; it is
+    used by the sensitivity analysis to ask whether conclusions depend on the budget.
+    Score fusion is not a network: it is built from raw1d and spec2d by the drivers.
     """
     b = FUSION_BUDGET if fusion_budget is None else fusion_budget
     if name == "raw1d":
@@ -215,22 +227,25 @@ def build(name: str, ncls: int, dim: int = 128, p_drop: float = 0.3,
         return AttentionFusion(dim, ncls, p_drop, budget=b, in_ch=in_ch)
     if name == "early":
         return EarlyFusion(dim, ncls, p_drop, budget=b, in_ch=in_ch)
-    raise ValueError(f"bilinmeyen model: {name}")
+    raise ValueError(f"unknown model: {name}")
 
 
 def count_params(m: nn.Module) -> int:
     return sum(p.numel() for p in m.parameters())
 
 
-def report_params(ncls: int = 3, dim: int = 128) -> dict[str, int]:
+def report_params(ncls: int = 3, dim: int = 128, in_ch: int = 1) -> dict[str, int]:
     names = ["raw1d", "spec2d", "raw1d_wide", "spec2d_wide",
              "late", "gated", "attention", "early"]
-    out = {n: count_params(build(n, ncls, dim)) for n in names}
-    # score fusion tek bir ağ değildir: iki tek-modaliteli modelin toplamı
+    out = {n: count_params(build(n, ncls, dim, in_ch=in_ch)) for n in names}
+    # score fusion is not a single network: it is the sum of the two unimodal models
     out["score"] = out["raw1d"] + out["spec2d"]
     return out
 
 
 if __name__ == "__main__":
-    for k, v in report_params().items():
-        print(f"{k:14s} {v:>9,d}")
+    for label, ncls, in_ch in (("Bonn T1 (3 classes, 1 channel)", 3, 1),
+                               ("CHB-MIT (2 classes, 18 channels)", 2, 18)):
+        print(label)
+        for k, v in report_params(ncls, in_ch=in_ch).items():
+            print(f"  {k:14s} {v:>9,d}")

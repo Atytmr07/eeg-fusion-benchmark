@@ -1,11 +1,10 @@
-"""Eğitim döngüsü — deterministik ve tüm modeller için birebir aynı protokol.
+"""Bonn training loop: deterministic, and the same protocol for every model.
 
-Notebook'a göre farklar:
-- Seed her model kurulmadan hemen önce (tekrar, fold, model) üçlüsünden türetilerek
-  set edilir; hücre/çağrı sırasına bağımlılık yoktur.
-- Veri bellekte tensör olarak durur; DataLoader ve dosya okuma yükü yoktur.
-- Early stopping yalnızca validation macro-F1 üzerinde; test setine hiçbir aşamada
-  bakılmaz.
+- The seed is set right before each model is built, from (repeat, fold, model), so no
+  result depends on call order.
+- Data stays in memory as tensors; there is no DataLoader or file reading.
+- Early stopping looks only at validation macro F1. The test fold is never used for
+  any decision.
 """
 from __future__ import annotations
 
@@ -29,6 +28,7 @@ def set_seed(seed: int) -> None:
 
 
 def class_weights(y: np.ndarray, ncls: int) -> torch.Tensor:
+    """Inverse-frequency class weights, normalised to sum to ncls."""
     counts = np.bincount(y, minlength=ncls).astype(np.float64)
     w = 1.0 / np.maximum(counts, 1.0)
     w = w / w.sum() * ncls
@@ -38,6 +38,7 @@ def class_weights(y: np.ndarray, ncls: int) -> torch.Tensor:
 @torch.no_grad()
 def predict(model: nn.Module, x1d: torch.Tensor, x2d: torch.Tensor,
             batch_size: int = 128) -> np.ndarray:
+    """Raw logits (before softmax)."""
     model.eval()
     outs = []
     for i in range(0, len(x1d), batch_size):
@@ -53,7 +54,10 @@ def softmax_np(z: np.ndarray) -> np.ndarray:
 
 def train_one(model_name: str, cfg: Config, ncls: int, seed: int,
               tr: tuple, va: tuple, fusion_budget: int | None = None) -> nn.Module:
-    """tr/va: (x1d, x2d, y) tensör üçlüleri."""
+    """Train one model and return it with its best-validation weights.
+
+    tr, va: (x1d, x2d, y) tensor triples.
+    """
     set_seed(seed)
     model = build(model_name, ncls, cfg.embed_dim, cfg.dropout,
                   fusion_budget=fusion_budget).to(DEVICE)
@@ -88,9 +92,8 @@ def train_one(model_name: str, cfg: Config, ncls: int, seed: int,
             wait = 0
         else:
             wait += 1
-        # Erken durdurma yalnızca min_epochs'tan sonra devreye girer. Aksi hâlde model
-        # henüz önemsiz çözümdeyken (tek sınıf tahmini) doğrulama F1'i düz kalır, sayaç
-        # dolar ve çökmüş ağırlıklar "en iyi" olarak dondurulur.
+        # Early stopping only after min_epochs: before that, a model can still be in
+        # the trivial single-class solution with flat validation F1 (see Config).
         if ep >= cfg.min_epochs and wait >= cfg.patience:
             break
 
@@ -101,7 +104,10 @@ def train_one(model_name: str, cfg: Config, ncls: int, seed: int,
 
 def best_blend_weight(logit1: np.ndarray, logit2: np.ndarray, y: np.ndarray,
                       ncls: int, grid=None) -> float:
-    """Score-level füzyon ağırlığı — YALNIZCA validation üzerinde seçilir."""
+    """Score-fusion weight w for p = w*softmax(logit1) + (1-w)*softmax(logit2).
+
+    Chosen on the VALIDATION set only, by minimising log loss over a 41-point grid.
+    """
     from sklearn.metrics import log_loss
     if grid is None:
         grid = np.linspace(0.0, 1.0, 41)

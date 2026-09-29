@@ -1,34 +1,32 @@
-"""CHB-MIT üzerinde sığ referans modeller: logvar (tek öznitelik) ve shallow.
+"""Classical baselines on CHB-MIT: logvar (one feature) and shallow.
 
-Bonn'daki `src/baselines.py` tek kanallı sinyal bekliyordu (N, T). CHB-MIT çok
-kanallı (N, C, T), bu yüzden aynı özellik matematiği **kanal başına** uygulanıp
-kanallar boyunca birleştirilir. logvar'da bu 18 kanal x 1 öznitelik = 18 boyut,
-shallow'da 18 kanal x 7 öznitelik = 126 boyut demektir.
+The Bonn features in src/baselines.py expect one channel (N, T). CHB-MIT has 18
+(N, C, T), so the same features are computed per channel and concatenated: 18 x 1 =
+18 dimensions for logvar, 18 x 7 = 126 for shallow.
 
-Frekans bantları Bonn'daki 40 Hz tavanından farklı: CHB-MIT için 64 Hz tavan ve
-gama bandı (30-64 Hz) kullanılır, çünkü `src/chbmit_prep.py`'de bu projede ölçülen
-en büyük ictal/interictal güç oranının gama bandında olduğu belgelenmiştir
-(bkz. docs/11_CHBMIT_PLANI.md §10.2).
+The frequency bands extend to the 64 Hz ceiling used for CHB-MIT (gamma = 30-64 Hz),
+because the largest ictal/interictal power ratio measured in this project is in the
+gamma band (see src/chbmit_prep.py).
 
-Bölme: aynı LOSO katmanları, ama iç doğrulama ayrımı yok. Erken durdurma
-gerekmediği için tüm eğitim deneklerine (tr_all) doğrudan fit edilir; bu, Bonn'daki
-`run_benchmark.py`'nin idx_trval kullanımıyla aynı ilkedir.
+Splits: the same person-wise LOSO folds as the deep models, but without an inner
+validation split. Nothing needs early stopping, so each model is fit on all training
+persons of the fold, the same principle as Bonn's use of idx_trval.
 
-Amaç: Bonn'daki en önemli bulgulardan biri, tek öznitelikli bir modelin klasik
-görevde 0.954 F1 alması, yani ölçütün doygun olmasıydı. CHB-MIT'te aynı testi
-yapmadan "bu görev zor/kolay" diye bir şey söylenemez.
+Why: on Bonn a single-feature model reached 0.954 macro F1 on the classic task, i.e.
+the benchmark was saturated. Whether CHB-MIT is hard or easy cannot be claimed without
+the same check.
 
-Sonuçlar, derin modellerle aynı katmanlara denk gelsin diye `--run` ile verilen
-chbmit_run koşusunun perfold.csv dosyasına eklenir.
+Results are appended to the perfold.csv of the chbmit_run run given by --run, so the
+baselines line up with the deep models fold by fold.
 
-Kullanım:  python -m src.chbmit_baselines --run loso_grouped
+Usage:  python -m src.chbmit_baselines --run loso_grouped
 """
 from __future__ import annotations
 
 import argparse
+import shutil
 import sys
 import time
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -39,17 +37,17 @@ except (AttributeError, ValueError):
     pass
 
 from . import baselines
+from .chbmit import FS_CHB
 from .chbmit_corpus import build_corpus, leave_one_subject_out
 from .config import RESULTS_ROOT
-from .evaluate import metrics
+from .evaluate import clinical_metrics, metrics
 
-FS_CHB = 256.0
-BANDS = [(0.5, 4), (4, 8), (8, 13), (13, 30), (30, 64)]     # delta..gama, 64 Hz tavan
+BANDS = [(0.5, 4), (4, 8), (8, 13), (13, 30), (30, 64)]     # delta .. gamma, 64 Hz ceiling
 
 
 def _per_channel(fn, X: np.ndarray) -> np.ndarray:
-    """fn: (N, T) -> (N, k) şeklinde tek kanallık öznitelik fonksiyonu.
-    X: (N, C, T). Dönen: (N, C*k), kanal başına öznitelikler yan yana."""
+    """Apply a single-channel feature function fn: (N, T) -> (N, k) to every channel
+    of X (N, C, T) and concatenate: (N, C*k)."""
     n, c, t = X.shape
     out = [fn(X[:, ch, :]) for ch in range(c)]
     return np.concatenate(out, axis=1)
@@ -60,27 +58,13 @@ def logvar_features(X: np.ndarray) -> np.ndarray:
 
 
 def shallow_features(X: np.ndarray) -> np.ndarray:
-    def fn(x1: np.ndarray) -> np.ndarray:
-        x = x1.astype(np.float64)
-        logvar = np.log(x.var(axis=1) + 1e-9)
-        line_len = np.abs(np.diff(x, axis=1)).mean(axis=1)
-        log_ll = np.log(line_len + 1e-9)
-        n = x.shape[1]
-        freqs = np.fft.rfftfreq(n, d=1.0 / FS_CHB)
-        psd = (np.abs(np.fft.rfft(x, axis=1)) ** 2) / n
-        total = psd.sum(axis=1) + 1e-12
-        feats = [logvar, log_ll]
-        for lo, hi in BANDS:
-            m = (freqs >= lo) & (freqs < hi)
-            feats.append(np.log(psd[:, m].sum(axis=1) / total + 1e-9))
-        return np.stack(feats, axis=1)
-    return _per_channel(fn, X)
+    return _per_channel(lambda x: baselines.shallow_features(x, fs=FS_CHB, bands=BANDS), X)
 
 
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--run", required=True,
-                    help="sonuçların ekleneceği chbmit_run koşusu (örn. loso_grouped)")
+                    help="chbmit_run run to append to (e.g. loso_grouped)")
     args = ap.parse_args()
     out_dir = RESULTS_ROOT / "chbmit" / args.run
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -92,7 +76,7 @@ def main() -> None:
     hours_of = {s: info["per_subject"][s]["hours"] for s in info["per_subject"]}
     ncls = 2
 
-    print("öznitelik çıkarımı...")
+    print("computing features...")
     t0 = time.time()
     feat_logvar = logvar_features(X)
     feat_shallow = shallow_features(X)
@@ -108,16 +92,8 @@ def main() -> None:
             t0 = time.time()
             prob = baselines.fit_predict(feat[tr], y[tr], feat[te])
             mm = metrics(y[te], prob, ncls)
-            pred = prob.argmax(1)
-            tp = int(((pred == 1) & (y[te] == 1)).sum())
-            fn_ = int(((pred == 0) & (y[te] == 1)).sum())
-            fp = int(((pred == 1) & (y[te] == 0)).sum())
-            tn = int(((pred == 0) & (y[te] == 0)).sum())
-            mm.update(sensitivity=tp / max(tp + fn_, 1),
-                      specificity=tn / max(tn + fp, 1),
-                      false_alarms=fp,
-                      fa_per_hour_subsampled=fp / hrs if hrs > 0 else float("nan"),
-                      model=name, fold=fi, test_subjects=",".join(te_subs),
+            mm.update(clinical_metrics(y[te], prob, hrs))
+            mm.update(model=name, fold=fi, test_subjects=",".join(te_subs),
                       n_test=len(te), n_test_ictal=int(y[te].sum()),
                       params=feat.shape[1], sec=round(time.time() - t0, 2),
                       best_epoch=-1, epochs_run=0, val_f1=float("nan"))
@@ -129,22 +105,23 @@ def main() -> None:
 
     if csv_path.exists():
         old_df = pd.read_csv(csv_path)
+        # Refuse to mix fold structures (e.g. appending 23 person-wise folds to a
+        # 24-fold case-wise run): fold indices would no longer mean the same test set.
         if old_df.fold.nunique() != len(splits):
-            raise SystemExit(f"{csv_path} {old_df.fold.nunique()} katman içeriyor, bu "
-                             f"bölme {len(splits)} katman üretiyor; farklı gruplamayla "
-                             f"üretilmiş sonuçlara eklenmiyor")
+            raise SystemExit(f"{csv_path} has {old_df.fold.nunique()} folds but this "
+                             f"split has {len(splits)}; not appending to results "
+                             f"produced with a different grouping")
         backup = out_dir / "perfold_before_baselines.csv"
         if not backup.exists():
-            import shutil
             shutil.copy(csv_path, backup)
-            print(f"yedeklendi: {backup}")
-        old_df = old_df[~old_df.model.isin(("logvar", "shallow"))]     # tekrar koşuya karşı
+            print(f"backup written: {backup}")
+        old_df = old_df[~old_df.model.isin(("logvar", "shallow"))]     # safe to re-run
         merged = pd.concat([old_df, new_df], ignore_index=True)
     else:
         merged = new_df
 
     merged.to_csv(csv_path, index=False)
-    print(f"\nkaydedildi: {csv_path} ({len(merged)} satır)")
+    print(f"\nsaved: {csv_path} ({len(merged)} rows)")
     print(new_df.groupby("model")[["f1_macro", "auc", "brier"]].mean().round(4).to_string())
 
 

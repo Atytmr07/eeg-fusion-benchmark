@@ -1,21 +1,22 @@
-"""Tekrarlı CV'de bağımsızlık varsayımının yanlış pozitif oranına etkisi.
+"""How much does assuming independence inflate false positives under repeated CV?
 
-Bu projenin tasarımını birebir taklit eden bir simülasyon: n = 500, 5 fold x 5 tekrar,
-tabakalı bölme, test/eğitim oranı 100/400.
+A simulation that mirrors this project's Bonn design: n = 500, 5 folds x 5 repeats,
+stratified splits, test/train ratio 100/400.
 
-Kesin sıfır hipotezi kurulur: iki sınıflandırıcı, istatistiksel olarak özdeş ama farklı
-iki öznitelik kullanır. Beklenen genelleme performansları tanım gereği eşittir. Dolayısıyla
-her "anlamlı fark" bir yanlış pozitiftir.
+The null hypothesis is exactly true: two classifiers use two different but
+statistically identical features, so their expected performance is equal by
+construction and every "significant difference" is a false positive.
 
-Her veri seti için dört test uygulanır ve alpha = 0.05'te reddetme oranları ölçülür:
-  - Wilcoxon (bağımsızlık varsayar)
-  - eşleştirilmiş t testi (bağımsızlık varsayar)
-  - işaret testi (bağımsızlık varsayar, simetri varsaymaz)
-  - düzeltilmiş tekrarlı k-fold t testi (Nadeau-Bengio / Bouckaert-Frank)
+Four tests are applied to each simulated dataset and their rejection rates at
+alpha = 0.05 are measured:
+  - Wilcoxon signed-rank (assumes independence)
+  - paired t test (assumes independence)
+  - sign test (assumes independence, not symmetry)
+  - corrected resampled t test (Nadeau and Bengio / Bouckaert and Frank)
 
-Doğru kalibre edilmiş bir test yaklaşık yüzde 5 reddetmelidir.
+A well-calibrated test rejects about 5 percent of the time.
 
-Kullanım:  python -m src.sim_cv_correlation --sims 1000
+Usage:  python -m src.sim_cv_correlation --sims 1000
 """
 from __future__ import annotations
 
@@ -41,7 +42,7 @@ def make_dataset(rng: np.random.Generator, n: int = 500, signal: float = 0.9):
     y = np.r_[np.zeros(n // 2, int), np.ones(n - n // 2, int)]
     rng.shuffle(y)
     s = (2 * y - 1) * signal
-    # İki öznitelik aynı sinyali, bağımsız ama özdeş dağılımlı gürültüyle taşır.
+    # Both features carry the same signal with independent, identically distributed noise.
     x1 = s + rng.normal(0, 1, n)
     x2 = s + rng.normal(0, 1, n)
     return x1[:, None], x2[:, None], y
@@ -90,20 +91,20 @@ def main():
         if (i + 1) % 200 == 0:
             print(f"  {i+1}/{args.sims}  ({time.perf_counter()-t0:.0f}s)", flush=True)
 
-    print(f"\nTasarim: n={args.n}, {args.k} fold x {args.r} tekrar, "
-          f"test/egitim = 1/{args.k-1}, {args.sims} simulasyon")
-    print("Gercek fark: KESIN SIFIR. Dogru kalibre edilmis test yaklasik %5 reddetmeli.\n")
-    print(f"{'test':<30s} {'yanlis pozitif orani':>22s}")
-    print("-" * 54)
-    labels = {"wilcoxon": "Wilcoxon (bagimsiz sayar)",
-              "paired_t": "Eslestirilmis t (bagimsiz sayar)",
-              "sign": "Isaret testi (bagimsiz sayar)",
-              "corrected_t": "Duzeltilmis tekrarli CV t"}
+    print(f"\nDesign: n={args.n}, {args.k} folds x {args.r} repeats, "
+          f"test/train = 1/{args.k-1}, {args.sims} simulations")
+    print("True difference: exactly zero. A well-calibrated test rejects about 5%.\n")
+    print(f"{'test':<34s} {'false positive rate':>20s}")
+    print("-" * 56)
+    labels = {"wilcoxon": "Wilcoxon (assumes independence)",
+              "paired_t": "Paired t (assumes independence)",
+              "sign": "Sign test (assumes independence)",
+              "corrected_t": "Corrected resampled t"}
     se = np.sqrt(0.05 * 0.95 / args.sims)
     for k, lab in labels.items():
         rate = rejects[k] / args.sims
-        print(f"{lab:<30s} {rate:>21.1%}")
-    print(f"\n(nominal %5 icin simulasyon hatasi yaklasik +-{1.96*se:.1%})")
+        print(f"{lab:<34s} {rate:>19.1%}")
+    print(f"\n(simulation error for a nominal 5%: about +-{1.96*se:.1%})")
 
 
 if __name__ == "__main__":

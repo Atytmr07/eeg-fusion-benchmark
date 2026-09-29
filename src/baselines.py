@@ -1,14 +1,11 @@
-"""Sığ (shallow) referans modeller.
+"""Classical reference models, run on exactly the same splits as the deep models so
+they can enter the paired statistical comparison.
 
-Bunlar derin modellerle *aynı* CV bölmeleri üzerinde koşulur, böylece istatistiksel
-karşılaştırmaya eşleştirilmiş biçimde girebilirler.
-
-`logvar`: tek öznitelik — sinyalin log-varyansı. Amacı, bildirilen başarının ne kadarının
-mutlak genlik farkından (amplitude shortcut) geldiğini ölçmektir. Bonn'da iktal
-segmentlerin varyansı diğerlerinden ~30x büyüktür.
-
-`shallow`: küçük ve klasik bir öznitelik kümesi (log-varyans, line-length, bant güçleri).
-"Derin model gerçekten gerekli mi" sorusunun referansı.
+logvar:  a single feature, the log variance of the signal. It measures how much of
+         the reported performance comes from absolute amplitude alone (on Bonn the
+         ictal segments have about 30x the variance of the others).
+shallow: a small classical feature set (log variance, log line length, relative band
+         powers). The reference for "is a deep model needed at all?".
 """
 from __future__ import annotations
 
@@ -19,28 +16,32 @@ from sklearn.preprocessing import StandardScaler
 
 from .config import FS
 
+# delta, theta, alpha, beta, and gamma up to the Bonn acquisition limit of 40 Hz
 BANDS = [(0.5, 4), (4, 8), (8, 13), (13, 30), (30, 40)]
 
 
 def logvar_features(X_raw: np.ndarray) -> np.ndarray:
+    """(N, T) -> (N, 1)"""
     return np.log(X_raw.astype(np.float64).var(axis=1) + 1e-9)[:, None]
 
 
-def shallow_features(X_raw: np.ndarray) -> np.ndarray:
+def shallow_features(X_raw: np.ndarray, fs: float = FS, bands=BANDS) -> np.ndarray:
+    """(N, T) -> (N, 2 + len(bands)): log variance, log line length, and the log of
+    each band's power relative to total power."""
     x = X_raw.astype(np.float64)
     logvar = np.log(x.var(axis=1) + 1e-9)
     line_len = np.abs(np.diff(x, axis=1)).mean(axis=1)
     log_ll = np.log(line_len + 1e-9)
 
     n = x.shape[1]
-    freqs = np.fft.rfftfreq(n, d=1.0 / FS)
+    freqs = np.fft.rfftfreq(n, d=1.0 / fs)
     psd = (np.abs(np.fft.rfft(x, axis=1)) ** 2) / n
     total = psd.sum(axis=1) + 1e-12
 
     feats = [logvar, log_ll]
-    for lo, hi in BANDS:
+    for lo, hi in bands:
         m = (freqs >= lo) & (freqs < hi)
-        feats.append(np.log(psd[:, m].sum(axis=1) / total + 1e-9))  # göreli bant gücü
+        feats.append(np.log(psd[:, m].sum(axis=1) / total + 1e-9))
     return np.stack(feats, axis=1)
 
 

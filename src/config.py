@@ -1,9 +1,7 @@
-"""Deney konfigürasyonu ve içerik-tabanlı çıktı dizini isimlendirmesi.
+"""Experiment configuration and content-addressed output directories.
 
-Her koşunun çıktısı, konfigürasyonun hash'iyle isimlendirilmiş bir dizine yazılır.
-Böylece farklı ayarlarla üretilmiş sonuçlar birbirine karışamaz. Projenin ilk
-(notebook tabanlı) sürümünde SEED=42 ve SEED=1337 koşularının aynı klasöre yazması
-bu yüzden sorun oluyordu.
+Every Bonn run writes to a directory named after a hash of its full configuration,
+so results produced with different settings can never overwrite each other.
 """
 from __future__ import annotations
 
@@ -17,35 +15,29 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DATA_ROOT = PROJECT_ROOT / "data"
 RESULTS_ROOT = PROJECT_ROOT / "results_v2"
 
-# Bonn veri seti sabitleri (Andrzejak ve ark. 2001).
-# Kayıt sırasında 0.53-40 Hz band-pass uygulanmıştır; segmentler 23.6 s / 4097 örnek.
+# Bonn corpus (Andrzejak et al. 2001): 173.61 Hz, 4097 samples (23.6 s) per segment,
+# already band-limited to 0.53-40 Hz at acquisition. Sets A and B are scalp EEG from
+# healthy volunteers; C, D and E are intracranial recordings from patients.
 FS = 173.61
-SEGMENT_LEN = 4097
 SET_NAMES = ("A", "B", "C", "D", "E")
 
-# A/B yüzey (scalp) EEG; C/D/E intrakraniyal derinlik elektrodu.
-RECORDING_TYPE = {"A": "scalp", "B": "scalp", "C": "intracranial",
-                  "D": "intracranial", "E": "intracranial"}
-
-# --- Görev tanımları ---------------------------------------------------------
-# T1: 3 sınıf. Zorluk Normal<->Interictal ayrımında.
-# T2: intrakraniyal ikili. Elektrot tipi karıştırıcısından arınmış.
-# T3: literatürdeki klasik ikili kurgu. Yalnızca referans olarak tutulur; log-varyans
-#     baseline'ı bunu tek öznitelikle çözdüğü için ana deney değildir.
+# Task definitions: set letter -> class index.
+#   T1: three classes; the hard part is normal vs interictal.
+#   T2: intracranial sets only, which removes the scalp vs intracranial confound.
+#   T3: the binary split most used in the literature. Kept as a reference only: a
+#       single log-variance feature already reaches 0.954 macro F1 on it.
 TASKS = {
     "T1_3class": {"A": 0, "B": 0, "C": 1, "D": 1, "E": 2},
     "T2_intracranial_binary": {"C": 0, "D": 0, "E": 1},
     "T3_classic_binary": {"A": 0, "B": 0, "C": 0, "D": 0, "E": 1},
 }
-CLASS_NAMES = {
-    "T1_3class": ["Normal", "Interictal", "Ictal"],
-    "T2_intracranial_binary": ["Interictal", "Ictal"],
-    "T3_classic_binary": ["Non-seizure", "Seizure"],
-}
 
-# --- Normalizasyon ablasyonu -------------------------------------------------
-# İlk (notebook tabanlı) sürümün fiilen çalıştırdığı kol N1'dir: 1D dal z-score'lu, 2D dal
-# normalize edilmemiş sinyalden üretilmiş spektrogram görüyordu (cache hatası).
+# Normalisation ablation (which signal each branch sees).
+#   sig_z:       the raw branch sees the z-scored signal
+#   spec_from_z: the spectrogram is computed from the z-scored signal
+#   spec_z:      the spectrogram is additionally z-scored
+# N2 is the main configuration. N1 is what the original notebook implementation ran
+# by accident: a caching bug fed the spectrogram branch the unnormalised signal.
 NORM_MODES = {
     "N0_raw_raw":       {"sig_z": False, "spec_from_z": False, "spec_z": False},
     "N1_z_rawspec":     {"sig_z": True,  "spec_from_z": False, "spec_z": False},
@@ -61,45 +53,41 @@ class Config:
     task: str = "T1_3class"
     norm_mode: str = "N2_z_zspec"
 
-    # Ön işleme. Bonn zaten 0.53-40 Hz band-limitli olduğu için ek filtre
-    # varsayılan olarak kapalıdır; ablasyon için açılabilir.
+    # Bonn is already band-limited at acquisition, so no extra filter by default.
     apply_lowpass: bool = False
     lowpass_hz: float = 40.0
     lowpass_order: int = 4
 
-    # STFT
+    # STFT for the spectrogram branch
     nfft: int = 256
     win: int = 256
     hop: int = 128
     fmax: float = 40.0
 
-    # Eğitim
+    # Training
     embed_dim: int = 128
     dropout: float = 0.3
     batch_size: int = 32
     epochs: int = 60
-    # Erken durdurma, model henüz önemsiz çözümdeyken (tüm örneklere tek sınıf)
-    # tetiklenebiliyordu: doğrulama macro-F1'i düz kaldığı için sayaç dolup eğitim
-    # ~11. epoch'ta kesiliyor ve çökmüş ağırlıklar "en iyi" olarak saklanıyordu.
-    # AUC 0.96 iken F1 0.40 olan koşular bu yüzden oluşuyordu. min_epochs bunu önler.
+    # Without a minimum, early stopping could fire while a model still predicted a
+    # single class: validation F1 stayed flat, patience ran out around epoch 11, and
+    # the collapsed weights were kept as "best" (runs with AUC 0.96 but macro F1 0.40).
     min_epochs: int = 20
     patience: int = 12
     lr: float = 1e-3
     weight_decay: float = 1e-4
     class_weighted_loss: bool = True
 
-    # Değerlendirme
+    # Evaluation: n_repeats x n_folds stratified CV, with a stratified validation
+    # split carved out of each training fold for early stopping and score fusion.
     n_folds: int = 5
     n_repeats: int = 5
     val_ratio: float = 0.2
     base_seed: int = 20260727
 
-    # Çalışma zamanı thread sayısı. Deney tasarımının parçası gibi görünmese de
-    # sonuçları değiştirdiği ölçüldü: kayan nokta toplama sırası thread sayısıyla
-    # değişiyor ve fold başına makro F1 0.09'a kadar, model ortalaması 0.01'e kadar
-    # kayıyor (bkz. docs/10_OLASILIK_VE_TEKRARLANABILIRLIK.md). Bu büyüklük
-    # karşılaştırılan operatörler arası farklarla aynı mertebede olduğu için
-    # koşu kimliğine dahil edilir.
+    # CPU thread count. It is part of the run identity because it changes results:
+    # floating point summation order depends on it, which moves per-fold macro F1 by
+    # up to 0.09 (see docs/10_OLASILIK_VE_TEKRARLANABILIRLIK.md).
     threads: int = 2
 
     models: tuple = field(default=MODELS)
@@ -109,7 +97,7 @@ class Config:
         return hashlib.sha1(payload.encode()).hexdigest()[:10]
 
     def outdir(self) -> Path:
-        """Koşunun çıktı dizini. Yan etkisizdir, dizini açmaz."""
+        """Output directory of this run. Has no side effects (does not create it)."""
         return RESULTS_ROOT / f"{self.task}__{self.norm_mode}__{self.hash()}"
 
     def save(self, outdir: Path | None = None) -> Path:
@@ -122,11 +110,10 @@ class Config:
 
 
 def runtime_env() -> dict:
-    """Sonuçları etkileyebilecek ortam bilgisi. Hash'e girmez, yanına yazılır.
+    """Environment facts that can affect results; saved next to every run.
 
-    threads alanı config'te tutulur; burada fiilen yürürlükte olan değer kaydedilir,
-    çünkü OMP_NUM_THREADS süreç başlamadan ayarlanmazsa istenen ile gerçekleşen
-    ayrışabilir.
+    The effective thread count is recorded separately from Config.threads, because
+    the two can differ if OMP_NUM_THREADS was not set before the process started.
     """
     import platform
     import sys
@@ -154,11 +141,10 @@ def runtime_env() -> dict:
 
 
 def fold_seed(base_seed: int, repeat: int, fold: int, model: str) -> int:
-    """Her (tekrar, fold, model) üçlüsü için deterministik ve bağımsız seed.
+    """Deterministic, independent seed for each (repeat, fold, model) triple.
 
-    Notebook'ta seed yalnızca en başta bir kez set ediliyordu; her model kurulumu
-    ilerleyen global RNG akışından çekiyordu. Hücre sırası değişince sonuçlar
-    değişiyordu. Bu fonksiyon o bağımlılığı ortadan kaldırır.
+    Deriving the seed from the triple, rather than from a global RNG stream, makes
+    every model's result independent of the order in which models are trained.
     """
     key = f"{base_seed}|{repeat}|{fold}|{model}".encode()
     return int(hashlib.sha1(key).hexdigest()[:8], 16) % (2**31 - 1)
