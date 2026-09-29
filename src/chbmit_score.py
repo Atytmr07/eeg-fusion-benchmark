@@ -1,5 +1,9 @@
 """CHB-MIT LOSO'ya score-level füzyonu ekler.
 
+Yalnızca eski `loso_main` koşusunun (klasör bazlı 24 katman, chb01/chb21
+birleştirilmeden önce) score satırlarını yeniden üretmek için tutuluyor. Yeni
+koşularda score, `chbmit_run.py` içinde aynı katmanda hesaplanır.
+
 `chbmit_run.py`'nin ana koşusu 8 derin modeli kapsıyordu ama `score` (raw1d ve
 spec2d'nin doğrulama kümesinde seçilen ağırlıkla harmanlanması) dahil değildi.
 Bunu eklemek raw1d ve spec2d'yi yeniden eğitmeyi gerektiriyor, çünkü asıl koşu

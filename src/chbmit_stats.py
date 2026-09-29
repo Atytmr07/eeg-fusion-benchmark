@@ -14,11 +14,13 @@ düzeltmenin kaynağı katmanların eğitim verisini paylaşması, düzeltme spe
 ROPE (pratik denklik bölgesi) sabitleri Faz 0 ile aynı tutuldu ki iki korpus
 karşılaştırılabilir kalsın.
 
-Kullanım:  python -m src.chbmit_stats
-Çıktı:     results_v2/chbmit/phase0/*.csv
+Kullanım:  python -m src.chbmit_stats                     # loso_main (24 katman)
+           python -m src.chbmit_stats --run loso_grouped  # chb01+chb21 birleşik, 23 katman
+Çıktı:     results_v2/chbmit/phase0/*.csv (loso_main) veya phase0_<run>/*.csv
 """
 from __future__ import annotations
 
+import argparse
 import sys
 from itertools import combinations
 from pathlib import Path
@@ -36,8 +38,6 @@ from .config import RESULTS_ROOT
 from .stats import (corrected_equivalence_bound, corrected_ttest, correlated_bayes,
                     holm, sign_test)
 
-IN_CSV = RESULTS_ROOT / "chbmit" / "loso_main" / "perfold.csv"
-OUT = RESULTS_ROOT / "chbmit" / "phase0"
 FUSION = ("early", "late", "gated", "attention", "score")
 ROPE_BY_METRIC = {
     "f1_macro": (0.01, 0.02),
@@ -113,17 +113,23 @@ def per_model_summary(df: pd.DataFrame, metric: str) -> pd.DataFrame:
 
 
 def main() -> None:
-    if not IN_CSV.exists():
-        print(f"bulunamadı: {IN_CSV}")
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--run", default="loso_main")
+    args = ap.parse_args()
+    in_csv = RESULTS_ROOT / "chbmit" / args.run / "perfold.csv"
+    out = RESULTS_ROOT / "chbmit" / ("phase0" if args.run == "loso_main"
+                                     else f"phase0_{args.run}")
+    if not in_csv.exists():
+        print(f"bulunamadı: {in_csv}")
         return
-    df = pd.read_csv(IN_CSV)
+    df = pd.read_csv(in_csv)
     n_folds = df.fold.nunique()
     ratio, ratio_con = ratios(n_folds)
     print(f"CHB-MIT LOSO: {len(df)} satır, {n_folds} katman (denek), "
           f"{df.model.nunique()} model, test/eğitim oranı = 1/{n_folds - 1} "
           f"(temkinli: 1/{round(1 / ratio_con)})\n")
 
-    OUT.mkdir(parents=True, exist_ok=True)
+    out.mkdir(parents=True, exist_ok=True)
     all_res, summary_rows = [], []
 
     for metric in ("f1_macro", "log_loss", "brier"):
@@ -140,7 +146,7 @@ def main() -> None:
         if res.empty:
             print("(çift yok, atlanıyor)\n")
             continue
-        res.to_csv(OUT / f"chbmit_{metric}.csv", index=False)
+        res.to_csv(out / f"chbmit_{metric}.csv", index=False)
         all_res.append(res)
 
         sig = res[res.sig_corrected]
@@ -173,15 +179,15 @@ def main() -> None:
         })
 
     if all_res:
-        pd.concat(all_res).to_csv(OUT / "chbmit_all.csv", index=False)
-    pd.DataFrame(summary_rows).to_csv(OUT / "summary.csv", index=False)
+        pd.concat(all_res).to_csv(out / "chbmit_all.csv", index=False)
+    pd.DataFrame(summary_rows).to_csv(out / "summary.csv", index=False)
 
     # Bonn ile yan yana konabilecek kısa karşılaştırma notu
     print("=== Bonn (T1, N2) ile karşılaştırma referansı ===")
     print("Bonn'da (25 ölçüm, 5x5 CV): T1 füzyon çiftlerinde düzeltilmiş anlamlı=1/10, "
           "delta_min [0.022, 0.130] (bkz. results_v2/phase0/probscores_f1_macro.csv)")
     print(f"CHB-MIT'te (24 ölçüm, LOSO): yukarıdaki tabloya bakın")
-    print(f"\nkaydedildi: {OUT}")
+    print(f"\nkaydedildi: {out}")
 
 
 if __name__ == "__main__":

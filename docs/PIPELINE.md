@@ -202,16 +202,21 @@ runs showed AUC 0.96 with macro F1 0.40.
 
 ### 5.2 CHB-MIT
 
-- Leave one subject out: 24 folds, each holding out one case.
-- The inner validation split is **subject wise**: about 20 percent of the training cases
-  (5 of 23) are held out entirely, chosen evenly along a list sorted by ictal count so the
+- Leave one subject out over **persons**, not case folders: chb01 and chb21 are the same
+  person (`src/chbmit_corpus.py: SAME_SUBJECT`), so there are 23 folds and the fold that
+  holds out chb01 also holds out chb21. The stored results in `results_v2/chbmit/loso_main/`
+  predate this correction and use 24 case based folds; the corrected run is
+  `loso_grouped` (Section 9).
+- The inner validation split is **subject wise**: about 20 percent of the training persons
+  (4 of 22) are held out entirely, chosen evenly along a list sorted by ictal count so the
   validation set always contains seizures (`inner_split`). A window wise inner split would
   put windows from the same patient in both training and validation and inflate the early
   stopping decision.
-- Two leakage rules are enforced: no case's windows in both train and test, and no single
+- Two leakage rules are enforced: no person's windows in both train and test, and no single
   seizure's windows split across train and test (`src/chbmit_corpus.py: check_leakage`).
-  The checker itself was validated by building a deliberately leaky random split and
-  confirming it is flagged on both rules. See Section 9 for the one known exception.
+  The checker is validated two ways: a deliberately leaky random split is flagged on both
+  rules, and the old case based split is flagged on exactly the two folds (chb01, chb21)
+  where the same person appeared on both sides (`python -m src.chbmit_corpus --check`).
 
 ### 5.3 Metrics (`src/evaluate.py`)
 
@@ -292,23 +297,44 @@ the statistics and figures can be regenerated without the raw data or a GPU.
 | Bonn statistics | `python -m src.phase0` and `python -m src.phase0_probscores` | `results_v2/phase0/` |
 | Naive test simulation | `python -m src.sim_cv_correlation` | printed |
 | CHB-MIT integrity check | `python -m src.verify_chbmit` | printed |
-| CHB-MIT corpus and leakage check | `python -m src.chbmit_corpus` | printed, cached corpus |
-| CHB-MIT deep models (Table 3) | `python -m src.chbmit_run --split loso --threads 6 --tag loso_main` | `results_v2/chbmit/loso_main/perfold.csv` |
-| CHB-MIT classical baselines | `python -m src.chbmit_baselines` | appended to the same file |
-| CHB-MIT score fusion | `python -m src.chbmit_score --threads 6` | appended to the same file |
-| CHB-MIT statistics | `python -m src.chbmit_stats` | `results_v2/chbmit/phase0/` |
+| CHB-MIT corpus and leakage check | `python -m src.chbmit_corpus --check` | printed, cached corpus |
+| CHB-MIT deep models and score fusion, corrected grouping | `python -m src.chbmit_run --split loso --threads <N> --tag loso_grouped` (add `--resume` to continue an interrupted run) | `results_v2/chbmit/loso_grouped/perfold.csv` |
+| CHB-MIT classical baselines, corrected grouping | `python -m src.chbmit_baselines --run loso_grouped` | appended to the same file |
+| CHB-MIT statistics, corrected grouping | `python -m src.chbmit_stats --run loso_grouped` | `results_v2/chbmit/phase0_loso_grouped/` |
+| CHB-MIT statistics, stored pre-correction run (current Table 3) | `python -m src.chbmit_stats` | `results_v2/chbmit/phase0/` |
+
+The CHB-MIT runs need only the cached corpus
+`data/chbmit/_cache/corpus_w10_s10_n4_g0_seed20260727_24subj.npz` and its `.json` (about
+1.2 GB), not the 43 GB of raw EDF files: the correction changes which windows count as the
+same person, not which windows are selected. `src/chbmit_score.py` is kept only to
+reproduce the score rows of the pre-correction `loso_main` run.
+
+### Running the CHB-MIT experiments on another machine
+
+1. `git clone https://github.com/Atytmr07/eeg-fusion-benchmark` and install as in the
+   README (Python 3.12, CPU build of torch, `pip install -r requirements.txt`).
+2. Copy the two cache files into `data/chbmit/_cache/`.
+3. `python -m src.chbmit_corpus --check` must report 23 persons, no leakage, and flag the
+   old case based split on chb01 and chb21.
+4. Time one fold first: `python -m src.chbmit_run --split loso --limit-folds 1 --threads <N> --tag timing_test`,
+   then delete `results_v2/chbmit/timing_test/`. The full run takes about 23 times that.
+5. Run the full grouping with the same `<N>` throughout. Thread count changes results
+   (Section 7), so an interrupted run must be resumed with `--resume` and the same `<N>`,
+   and nothing else heavy should run on the machine meanwhile.
+6. Then run the baselines and statistics commands above with `--run loso_grouped`.
 | Manuscript figures | `python -m src.make_manuscript_figures` | `paper/figures_manuscript/` |
 
 ## 9. Known issues and open items
 
 These are also listed in the manuscript's Limitations section.
 
-1. **chb01 and chb21 are the same person.** Subject grouping uses case folder names, so
-   the fold holding out chb01 trains on chb21 and vice versa. On the chb01 fold every
-   model scores far above its own mean (late fusion 0.981 against 0.675). Excluding that
-   fold lowers each model's mean macro F1 by 0.006 to 0.013 and leaves the ranking largely
-   unchanged (Spearman rho 0.88). Fix: merge chb01 and chb21 into one held out subject and
-   rerun LOSO.
+1. **chb01 and chb21 are the same person: fixed in code, rerun pending.** The stored
+   `loso_main` run grouped by case folder, so the fold holding out chb01 trained on chb21
+   and vice versa. On the chb01 fold every model scored far above its own mean (late fusion
+   0.981 against 0.675); excluding that fold lowered each model's mean macro F1 by 0.006 to
+   0.013 and left the ranking largely unchanged (Spearman rho 0.88). Splitting and leakage
+   checks now use persons (23 folds). Table 3 and the CHB-MIT statistics will be replaced by
+   the `loso_grouped` run once it completes.
 2. **Boundary windows.** 25.7 percent of CHB-MIT ictal windows only partly overlap a
    seizure. Whether to keep them is a design choice whose effect has not been measured.
 3. **Optimiser differs between corpora.** Bonn uses AdamW (decoupled weight decay),

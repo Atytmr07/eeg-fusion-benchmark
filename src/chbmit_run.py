@@ -2,18 +2,24 @@
 
 Bonn koşusundan üç farkı var:
 
-  1. **Bölme denek bazlı.** Dış katmanlar leave-one-subject-out veya denek bazlı
-     gruplu k-kat. İç doğrulama bölmesi de denek bazlıdır: eğitim deneklerinin bir
+  1. **Bölme kişi bazlı.** Dış katmanlar leave-one-subject-out veya kişi bazlı
+     gruplu k-kat. İç doğrulama bölmesi de kişi bazlıdır: eğitim kişilerinin bir
      kısmı tamamen ayrılır. Pencere düzeyinde iç bölme yapılsaydı aynı hastanın
      pencereleri hem eğitimde hem doğrulamada olur, erken durdurma kararı şişerdi.
+     Kişi = `group` (chb01 ve chb21 aynı kişi, bkz. chbmit_corpus.SAME_SUBJECT),
+     bu yüzden LOSO 24 değil 23 katmandır.
   2. **Sınıf dengesizliği** 1:4 (alt örnekleme sonrası), kayıp fonksiyonu sınıf
      ağırlıklı.
   3. **Metrikler** pencere düzeyi doğruluk ve F1'in yanında olasılık tabanlı
      (Brier, log loss) ve klinik yönlü (duyarlılık, özgüllük, saatte yanlış alarm).
 
+`score` modeli ayrı eğitilmez: raw1d ve spec2d'nin doğrulama logit'leriyle
+harmanlama ağırlığı seçilir ve aynı katmanda hesaplanır, bu yüzden istenirse
+raw1d ve spec2d de listede olmalıdır.
+
 Kullanım:
     python -m src.chbmit_run --split loso --models late raw1d spec2d --limit-folds 2
-    python -m src.chbmit_run --split loso            # tam koşu
+    python -m src.chbmit_run --split loso --tag loso_grouped   # tam koşu
 """
 from __future__ import annotations
 
@@ -44,7 +50,7 @@ from .train import best_blend_weight, set_seed, softmax_np
 
 OUT_ROOT = RESULTS_ROOT / "chbmit"
 DEFAULT_MODELS = ("raw1d", "spec2d", "raw1d_wide", "spec2d_wide",
-                  "late", "gated", "attention", "early")
+                  "late", "gated", "attention", "early", "score")
 
 
 def inner_split(subject: np.ndarray, tr: np.ndarray, y: np.ndarray,
@@ -184,8 +190,13 @@ def main() -> None:
     torch.set_num_threads(args.threads)
     t_start = time.time()
 
+    want_score = "score" in args.models
+    if want_score and not {"raw1d", "spec2d"} <= set(args.models):
+        raise SystemExit("score, raw1d ve spec2d'nin çıktılarından hesaplanır; "
+                         "ikisini de --models listesine ekleyin")
+
     d = build_corpus(verbose=False)
-    X, y, subject = d["X"], d["y"], d["subject"]
+    X, y, subject, group = d["X"], d["y"], d["subject"], d["group"]
     info = d["info"]
     ncls, in_ch = 2, X.shape[1]
 
@@ -196,8 +207,8 @@ def main() -> None:
     X1, X2, Y = torch.from_numpy(x1), torch.from_numpy(x2), torch.from_numpy(y)
     del x1, x2
 
-    splits = list(leave_one_subject_out(subject) if args.split == "loso"
-                  else grouped_kfold_by_subject(subject, args.folds))
+    splits = list(leave_one_subject_out(group) if args.split == "loso"
+                  else grouped_kfold_by_subject(group, args.folds))
     if args.limit_folds:
         splits = splits[:args.limit_folds]
 
@@ -228,19 +239,26 @@ def main() -> None:
             print(f"[{fi+1}/{len(splits)}] atlandı (resume, zaten tam)")
             continue
         seed_f = fold_seed(20260727, 0, fi, "split")
-        tr, va = inner_split(subject, tr_all, y, seed=seed_f)
-        te_subs = sorted(set(subject[te]))
+        tr, va = inner_split(group, tr_all, y, seed=seed_f)
+        te_subs = sorted(set(subject[te]))              # case'ler: chb01 katmanında chb01,chb21
         hrs = sum(hours_of.get(s, 0.0) for s in te_subs)
-        print(f"[{fi+1}/{len(splits)}] test={key if isinstance(key,str) else te_subs} "
+        print(f"[{fi+1}/{len(splits)}] test={','.join(te_subs)} "
               f"eğitim={len(tr)} doğrulama={len(va)} test={len(te)} "
               f"(test ictal={int(y[te].sum())})")
 
-        probs = {}
+        probs, val_logits = {}, {}
         for m in args.models:
+            if m == "score":
+                continue
             t0 = time.time()
             seed = fold_seed(20260727, 0, fi, m)
-            prob, tinfo = train_fold(m, X1, X2, Y, tr, va, te, ncls, in_ch, seed,
-                                     epochs=args.epochs)
+            if want_score and m in ("raw1d", "spec2d"):
+                prob, tinfo, val_logits[m] = train_fold(
+                    m, X1, X2, Y, tr, va, te, ncls, in_ch, seed,
+                    epochs=args.epochs, return_val_logits=True)
+            else:
+                prob, tinfo = train_fold(m, X1, X2, Y, tr, va, te, ncls, in_ch, seed,
+                                         epochs=args.epochs)
             mm = metrics(y[te], prob, ncls)
             mm.update(clinical_metrics(y[te], prob, hrs))
             mm.update(model=m, fold=fi, test_subjects=",".join(te_subs),
@@ -253,6 +271,22 @@ def main() -> None:
                   f"brier={mm['brier']:.3f} sens={mm['sensitivity']:.3f} "
                   f"spec={mm['specificity']:.3f} ({mm['sec']:.0f}s, "
                   f"{tinfo['epochs_run']} epoch)")
+
+        if want_score:
+            w = best_blend_weight(val_logits["raw1d"], val_logits["spec2d"],
+                                  Y[va].numpy(), ncls)
+            prob = w * probs["raw1d"] + (1 - w) * probs["spec2d"]
+            mm = metrics(y[te], prob, ncls)
+            mm.update(clinical_metrics(y[te], prob, hrs))
+            mm.update(model="score", fold=fi, test_subjects=",".join(te_subs),
+                      n_test=len(te), n_test_ictal=int(y[te].sum()), blend_w=w,
+                      params=count_params(build("raw1d", ncls, in_ch=in_ch)) +
+                             count_params(build("spec2d", ncls, in_ch=in_ch)),
+                      sec=0.0, best_epoch=-1, epochs_run=0, val_f1=float("nan"))
+            rows.append(mm)
+            probs["score"] = prob
+            print(f"    {'score':12s} f1={mm['f1_macro']:.3f} auc={mm['auc']:.3f} "
+                  f"brier={mm['brier']:.3f} blend_w={w:.2f}")
 
         np.savez(outdir / "preds" / f"fold{fi}.npz",
                  idx_te=te, y_te=y[te], **probs)

@@ -18,10 +18,14 @@ Amaç: Bonn'daki en önemli bulgulardan biri, tek öznitelikli bir modelin klasi
 görevde 0.954 F1 alması, yani ölçütün doygun olmasıydı. CHB-MIT'te aynı testi
 yapmadan "bu görev zor/kolay" diye bir şey söylenemez.
 
-Kullanım:  python -m src.chbmit_baselines
+Sonuçlar, derin modellerle aynı katmanlara denk gelsin diye `--run` ile verilen
+chbmit_run koşusunun perfold.csv dosyasına eklenir.
+
+Kullanım:  python -m src.chbmit_baselines --run loso_grouped
 """
 from __future__ import annotations
 
+import argparse
 import sys
 import time
 from pathlib import Path
@@ -41,8 +45,6 @@ from .evaluate import metrics
 
 FS_CHB = 256.0
 BANDS = [(0.5, 4), (4, 8), (8, 13), (13, 30), (30, 64)]     # delta..gama, 64 Hz tavan
-OUT_DIR = RESULTS_ROOT / "chbmit" / "loso_main"
-CSV_PATH = OUT_DIR / "perfold.csv"
 
 
 def _per_channel(fn, X: np.ndarray) -> np.ndarray:
@@ -76,8 +78,16 @@ def shallow_features(X: np.ndarray) -> np.ndarray:
 
 
 def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--run", required=True,
+                    help="sonuçların ekleneceği chbmit_run koşusu (örn. loso_grouped)")
+    args = ap.parse_args()
+    out_dir = RESULTS_ROOT / "chbmit" / args.run
+    out_dir.mkdir(parents=True, exist_ok=True)
+    csv_path = out_dir / "perfold.csv"
+
     d = build_corpus(verbose=False)
-    X, y, subject = d["X"], d["y"], d["subject"]
+    X, y, subject, group = d["X"], d["y"], d["subject"], d["group"]
     info = d["info"]
     hours_of = {s: info["per_subject"][s]["hours"] for s in info["per_subject"]}
     ncls = 2
@@ -90,7 +100,8 @@ def main() -> None:
           f"({time.time() - t0:.1f}s)")
 
     rows = []
-    for fi, (key, tr, te) in enumerate(leave_one_subject_out(subject)):
+    splits = list(leave_one_subject_out(group))
+    for fi, (key, tr, te) in enumerate(splits):
         te_subs = sorted(set(subject[te]))
         hrs = sum(hours_of.get(s, 0.0) for s in te_subs)
         for name, feat in (("logvar", feat_logvar), ("shallow", feat_shallow)):
@@ -111,25 +122,29 @@ def main() -> None:
                       params=feat.shape[1], sec=round(time.time() - t0, 2),
                       best_epoch=-1, epochs_run=0, val_f1=float("nan"))
             rows.append(mm)
-        print(f"[{fi + 1}/24] {key if isinstance(key, str) else te_subs}: "
+        print(f"[{fi + 1}/{len(splits)}] {','.join(te_subs)}: "
               f"logvar f1={rows[-2]['f1_macro']:.3f}  shallow f1={rows[-1]['f1_macro']:.3f}")
 
     new_df = pd.DataFrame(rows)
 
-    if CSV_PATH.exists():
-        backup = OUT_DIR / "perfold_before_baselines.csv"
+    if csv_path.exists():
+        old_df = pd.read_csv(csv_path)
+        if old_df.fold.nunique() != len(splits):
+            raise SystemExit(f"{csv_path} {old_df.fold.nunique()} katman içeriyor, bu "
+                             f"bölme {len(splits)} katman üretiyor; farklı gruplamayla "
+                             f"üretilmiş sonuçlara eklenmiyor")
+        backup = out_dir / "perfold_before_baselines.csv"
         if not backup.exists():
             import shutil
-            shutil.copy(CSV_PATH, backup)
+            shutil.copy(csv_path, backup)
             print(f"yedeklendi: {backup}")
-        old_df = pd.read_csv(CSV_PATH)
         old_df = old_df[~old_df.model.isin(("logvar", "shallow"))]     # tekrar koşuya karşı
         merged = pd.concat([old_df, new_df], ignore_index=True)
     else:
         merged = new_df
 
-    merged.to_csv(CSV_PATH, index=False)
-    print(f"\nkaydedildi: {CSV_PATH} ({len(merged)} satır)")
+    merged.to_csv(csv_path, index=False)
+    print(f"\nkaydedildi: {csv_path} ({len(merged)} satır)")
     print(new_df.groupby("model")[["f1_macro", "auc", "brier"]].mean().round(4).to_string())
 
 

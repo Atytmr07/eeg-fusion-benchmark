@@ -6,7 +6,8 @@ hastaya genelleyip genellemediği sorulamıyordu.
 
 Sızıntıya karşı iki kural:
 
-  1. Aynı **deneğin** hiçbir penceresi hem eğitimde hem testte olamaz.
+  1. Aynı **kişinin** hiçbir penceresi hem eğitimde hem testte olamaz. Kişi, case
+     klasörü değil `group` alanıdır: chb01 ve chb21 aynı kişidir (SAME_SUBJECT).
   2. Aynı **nöbetin** hiçbir penceresi bölünemez. Örtüşmeli pencerelemede aynı
      nöbetin pencereleri neredeyse aynıdır; bölünürlerse model ezberi genelleme
      sanır. Kural 1 uygulandığında bu kendiliğinden sağlanır, ama örtüşmeli
@@ -42,6 +43,16 @@ from .chbmit import (CHB_ROOT, FS_CHB, TARGET_CHANNELS, extract_windows,
 
 CACHE = CHB_ROOT / "_cache"
 NON_ICTAL = ""                      # ictal olmayan pencerelerin nöbet kimliği
+CASES = tuple(f"chb{i:02d}" for i in range(1, 25))
+
+# PhysioNet: "Case chb21 was obtained 1.5 years after case chb01, from the same
+# female subject." Bölme ve sızıntı denetimi klasöre (case) değil kişiye göre yapılır.
+SAME_SUBJECT = {"chb21": "chb01"}
+
+
+def subject_groups(cases: np.ndarray) -> np.ndarray:
+    """Case adlarını kişi grubuna çevirir: chb21 -> chb01, diğerleri aynen."""
+    return np.array([SAME_SUBJECT.get(c, c) for c in cases])
 
 
 def all_subjects() -> list[str]:
@@ -65,13 +76,15 @@ def build_corpus(subjects: list[str] | None = None, win_s: float = 10.0,
                  cache: bool = True, verbose: bool = True) -> dict:
     """Korpusu pencereler, alt örnekler ve grup etiketleriyle birlikte döndürür.
 
-    Dönen sözlük: X, y, subject, seizure_id, record, t0, info.
+    Dönen sözlük: X, y, subject (case klasörü), group (kişi, bkz. SAME_SUBJECT),
+    seizure_id, record, t0, info.
 
     Alt örnekleme **denek içinde** yapılır: her deneğin kendi ictal pencere sayısına
     oranla non-ictal pencere tutulur. Korpus genelinde tek bir oran kullanmak,
     nöbeti çok olan deneklerin non-ictal örneklerini diğerlerinin üstüne yığardı.
     """
-    subs = subjects or all_subjects()
+    # Ham EDF'ler yoksa (yalnızca önbellekle çalışırken) klasör taraması boş döner.
+    subs = subjects or all_subjects() or list(CASES)
     tag = (f"w{win_s:g}_s{(stride_s or win_s):g}_n{neg_per_pos:g}"
            f"_g{guard_s:g}_seed{seed}_{len(subs)}subj")
     npz = CACHE / f"corpus_{tag}.npz"
@@ -80,7 +93,8 @@ def build_corpus(subjects: list[str] | None = None, win_s: float = 10.0,
             print(f"önbellekten okunuyor: {npz.name}")
         d = np.load(npz, allow_pickle=False)
         info = json.loads((CACHE / f"corpus_{tag}.json").read_text(encoding="utf-8"))
-        return {k: d[k] for k in d.files} | {"info": info}
+        out = {k: d[k] for k in d.files}
+        return out | {"group": subject_groups(out["subject"]), "info": info}
 
     rng = np.random.default_rng(seed)
     Xs, ys, subj, sids, fnames, t0s = [], [], [], [], [], []
@@ -173,7 +187,7 @@ def build_corpus(subjects: list[str] | None = None, win_s: float = 10.0,
             json.dumps(info, indent=2, ensure_ascii=False), encoding="utf-8")
         if verbose:
             print(f"önbelleğe yazıldı: {npz} ({npz.stat().st_size/1e6:.0f} MB)")
-    return out | {"info": info}
+    return out | {"group": subject_groups(out["subject"]), "info": info}
 
 
 def validate(d: dict, info: dict) -> None:
@@ -249,19 +263,19 @@ def grouped_kfold_by_subject(subject: np.ndarray, n_folds: int = 5,
 def check_leakage(d: dict, splitter, name: str = "") -> list[str]:
     """Bölmelerin iki kuralı da sağladığını denetler. Sorun listesi döndürür."""
     problems = []
-    subject, sid, y = d["subject"], d["seizure_id"], d["y"]
+    group, sid, y = d["group"], d["seizure_id"], d["y"]
     for key, tr, te in splitter:
         if len(tr) == 0 or len(te) == 0:
             problems.append(f"{name} {key}: boş katman (eğitim {len(tr)}, test {len(te)})")
             continue
-        shared_s = set(subject[tr]) & set(subject[te])
+        shared_s = set(group[tr]) & set(group[te])
         if shared_s:
-            problems.append(f"{name} {key}: denek hem eğitimde hem testte: "
-                            f"{sorted(shared_s)}")
+            problems.append(f"{name} {key}: aynı kişi hem eğitimde hem testte: "
+                            f"{sorted(map(str, shared_s))}")
         a = {s for s in sid[tr] if s != NON_ICTAL}
         b = {s for s in sid[te] if s != NON_ICTAL}
         if a & b:
-            problems.append(f"{name} {key}: nöbet bölünmüş: {sorted(a & b)[:5]}")
+            problems.append(f"{name} {key}: nöbet bölünmüş: {sorted(map(str, a & b))[:5]}")
         if y[te].sum() == 0:
             problems.append(f"{name} {key}: test katmanında ictal pencere yok")
         if y[tr].sum() == 0:
@@ -285,20 +299,21 @@ def main() -> None:
                      neg_per_pos=args.neg_per_pos, guard_s=args.guard)
     info = d["info"]
     print(f"\nkorpus: {info['n_windows']} pencere, {info['n_ictal']} ictal, "
-          f"{info['n_seizures']} nöbet, {info['n_subjects']} denek, "
+          f"{info['n_seizures']} nöbet, {info['n_subjects']} case "
+          f"({len(set(d['group']))} kişi), "
           f"{d['X'].shape[1]} kanal x {d['X'].shape[2]} örnek")
     print(f"bellek: {d['X'].nbytes/1e9:.2f} GB")
 
     if args.check:
-        n_subj = len(set(d["subject"]))
+        n_subj = len(set(d["group"]))
         folds = min(args.folds, n_subj)
         if folds != args.folds:
-            print(f"\nnot: {args.folds} katman istendi ama {n_subj} denek var, "
+            print(f"\nnot: {args.folds} katman istendi ama {n_subj} kişi var, "
                   f"{folds} katmana düşürüldü")
 
         print("\n--- sızıntı denetimi ---")
-        p1 = check_leakage(d, leave_one_subject_out(d["subject"]), "LOSO")
-        p2 = check_leakage(d, grouped_kfold_by_subject(d["subject"], folds),
+        p1 = check_leakage(d, leave_one_subject_out(d["group"]), "LOSO")
+        p2 = check_leakage(d, grouped_kfold_by_subject(d["group"], folds),
                            f"{folds}-kat")
         for p in p1 + p2:
             print("  SORUN:", p)
@@ -307,7 +322,7 @@ def main() -> None:
                   f"sızıntı yok")
 
         print("\n--- katman dengesi (gruplu bölme) ---")
-        for te_subs, tr, te in grouped_kfold_by_subject(d["subject"], folds):
+        for te_subs, tr, te in grouped_kfold_by_subject(d["group"], folds):
             print(f"  test denekleri {len(te_subs):2d}: {len(te):5d} pencere, "
                   f"{int(d['y'][te].sum()):4d} ictal  |  eğitim {len(tr):5d}")
 
@@ -325,6 +340,16 @@ def main() -> None:
                 print("   ", c[:110])
         else:
             print("  UYARI: denetim yapay sızıntıyı YAKALAYAMADI, denetim bozuk")
+
+        print("\n--- eski, klasör bazlı LOSO (chb01/chb21 ayrı) ---")
+        old = check_leakage(d, leave_one_subject_out(d["subject"]), "klasör-LOSO")
+        if old:
+            print(f"  denetim eski bölmedeki aynı-kişi sızıntısını yakaladı "
+                  f"({len(old)} katman):")
+            for c in old:
+                print("   ", c[:110])
+        else:
+            print("  UYARI: eski bölmedeki chb01/chb21 sızıntısı YAKALANMADI")
 
 
 if __name__ == "__main__":
