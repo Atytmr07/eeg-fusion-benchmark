@@ -87,9 +87,10 @@ def train_fold(model_name: str, X1: torch.Tensor, X2: torch.Tensor, Y: torch.Ten
     """
     set_seed(seed)
     model = build(model_name, ncls, in_ch=in_ch)
-    # Note: Adam with L2 weight decay, whereas the Bonn loop uses AdamW (decoupled
-    # weight decay). Documented as an open item in docs/PIPELINE.md.
-    opt = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=wd)
+    # AdamW (decoupled weight decay), the same optimiser as the Bonn loop. Plain Adam
+    # would add the decay to the gradient, where the adaptive scaling makes its
+    # strength differ per parameter. The stored loso_main run still used Adam.
+    opt = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=wd)
 
     ytr = Y[tr].numpy()
     cnt = np.bincount(ytr, minlength=ncls).astype(np.float64)
@@ -267,7 +268,7 @@ def main() -> None:
                  idx_te=te, y_te=y[te], **probs)
         pd.DataFrame(rows).to_csv(outdir / "perfold.csv", index=False)
 
-    meta = {"args": vars(args), "prep": prep_meta, "corpus": info,
+    meta = {"args": vars(args), "optimizer": "AdamW", "prep": prep_meta, "corpus": info,
             "env": runtime_env(), "elapsed_s": round(time.time() - t_start, 1)}
     (outdir / "meta.json").write_text(json.dumps(meta, indent=2, ensure_ascii=False),
                                       encoding="utf-8")

@@ -232,8 +232,11 @@ scores both branches from the same normalised signal.
 
 ### 3.4 Training and evaluation protocol
 
-Adam optimiser, learning rate 1e-3, weight decay 1e-4, batch size 32, class weighted
-cross entropy loss. A minimum epoch budget of 20 is enforced before early stopping on
+AdamW optimiser (decoupled weight decay; Loshchilov and Hutter 2019), learning rate
+1e-3, weight decay 1e-4, batch size 32, class weighted cross entropy loss. The stored
+pre-correction CHB-MIT run reported in Table 3 used Adam with coupled (L2) weight decay
+instead; the corrected CHB-MIT run (Section 5.2) uses AdamW, so that both corpora share
+the same optimiser. A minimum epoch budget of 20 is enforced before early stopping on
 validation macro F1 (patience 12, ceiling 60 epochs); this guard was added after an
 audit found 6 of 55 early runs had frozen in a trivial single class solution while
 still reporting AUC near 0.96, because early stopping triggered while validation
@@ -734,6 +737,7 @@ PhysioNet), and the repository documents how to obtain and verify them
 - Huang, J. et al. (2024) Multi-modal feature fusion with multi-head self-attention for epileptic EEG signals. *Mathematical Biosciences and Engineering* 21(2). doi:10.3934/mbe.2024304
 - Kontras, K. et al. (2026) NeuroAtlas: Benchmarking Foundation Models for Clinical EEG and Brain-Computer Interfaces. arXiv:2605.14698.
 - Lee, H.-T., Shim, M., Liu, X., Cheon, H.-R., Kim, S.-G., Han, C.-H., Hwang, H.-J. (2025) A review of hybrid EEG-based multimodal human-computer interfaces using deep learning: applications, advances, and challenges. *Biomedical Engineering Letters* 15:587-618. doi:10.1007/s13534-025-00469-5
+- Loshchilov, I., Hutter, F. (2019) Decoupled Weight Decay Regularization. *International Conference on Learning Representations (ICLR)*. arXiv:1711.05101.
 - Mattei, P.-A., Garreau, D. (2025) Are Ensembles Getting Better all the Time? *Journal of Machine Learning Research* 26(201):1-46. arXiv:2311.17885.
 - Mohamady, A., Burchard, R., Van Laerhoven, K. (2026) A Comparison of Fusion Techniques for Multi-Modal Human Activity Recognition on the HARMES Dataset. arXiv:2606.27886.
 - Nadeau, C., Bengio, Y. (2003) Inference for the Generalization Error. *Machine Learning* 52:239-281. doi:10.1023/a:1024068626366

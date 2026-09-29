@@ -177,7 +177,7 @@ the common budget would mean shrinking its two constituent classifiers.
 
 | | Bonn (`src/train.py`) | CHB-MIT (`src/chbmit_run.py: train_fold`) |
 |---|---|---|
-| Optimiser | AdamW, lr 1e-3, weight decay 1e-4 | Adam, lr 1e-3, weight decay 1e-4 (see Section 9) |
+| Optimiser | AdamW, lr 1e-3, weight decay 1e-4 | AdamW, lr 1e-3, weight decay 1e-4 (the stored `loso_main` run used Adam; see Section 9) |
 | Loss | cross entropy, class weighted | cross entropy, class weighted |
 | Batch size | 32 | 32 |
 | Epochs | max 60, min 20 | max 60, min 20 |
@@ -340,8 +340,11 @@ These are also listed in the manuscript's Limitations section.
    the `loso_grouped` run once it completes.
 2. **Boundary windows.** 25.7 percent of CHB-MIT ictal windows only partly overlap a
    seizure. Whether to keep them is a design choice whose effect has not been measured.
-3. **Optimiser differs between corpora.** Bonn uses AdamW (decoupled weight decay),
-   CHB-MIT uses Adam with L2 weight decay. This should be unified before final runs.
+3. **Optimiser: unified in code, rerun pending.** Bonn always used AdamW (decoupled
+   weight decay). The stored CHB-MIT `loso_main` run used Adam, whose weight decay is
+   added to the gradient and then rescaled per parameter, so the same settings meant
+   different regularisation on the two corpora. CHB-MIT now uses AdamW as well; the
+   `loso_grouped` run is the first to use it.
 4. **No CHB-MIT sensitivity analysis yet** (window length, frequency ceiling, notch,
    subsampling ratio, boundary windows), unlike Bonn.
 5. **False alarms per hour are not reported**, because the rate on the subsampled time
