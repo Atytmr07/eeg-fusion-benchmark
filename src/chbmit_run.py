@@ -15,14 +15,21 @@ Three differences from the Bonn runs:
 `score` is not trained separately: its blend weight is chosen from raw1d's and
 spec2d's validation logits in the same fold, so raw1d and spec2d must be in the list.
 
+Preprocessing pipelines (src/preprocess.py): --pipeline P0 is the original benchmark
+and reproduces loso_grouped exactly; P1-P6 change one preprocessing step each. --repeat
+selects a different set of training seeds, to separate pipeline effects from
+run-to-run variation; --repeat 0 is the seed set of all earlier runs.
+
 Usage:
     python -m src.chbmit_run --split loso --models late raw1d spec2d --limit-folds 2
-    python -m src.chbmit_run --split loso --threads 8 --tag loso_grouped   # full run
+    python -m src.chbmit_run --split loso --threads 16 --tag loso_grouped   # full run
+    python -m src.chbmit_run --split loso --threads 16 --pipeline P1 --repeat 1
 """
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -43,6 +50,7 @@ from .chbmit_prep import prepare
 from .config import RESULTS_ROOT, fold_seed, runtime_env
 from .evaluate import clinical_metrics, metrics
 from .models import build, count_params
+from .preprocess import PIPELINES, artifact_mask
 from .train import best_blend_weight, set_seed, softmax_np
 
 OUT_ROOT = RESULTS_ROOT / "chbmit"
@@ -77,7 +85,7 @@ def train_fold(model_name: str, X1: torch.Tensor, X2: torch.Tensor, Y: torch.Ten
                tr: np.ndarray, va: np.ndarray, te: np.ndarray, ncls: int, in_ch: int,
                seed: int, epochs: int = 60, min_epochs: int = 20, patience: int = 12,
                batch: int = 32, lr: float = 1e-3, wd: float = 1e-4,
-               return_val_logits: bool = False,
+               return_val_logits: bool = False, device: str = "cpu",
                verbose: bool = False) -> tuple[np.ndarray, dict] | tuple[np.ndarray, dict, np.ndarray]:
     """Train one model on one fold and return its test-set probabilities.
 
@@ -86,7 +94,7 @@ def train_fold(model_name: str, X1: torch.Tensor, X2: torch.Tensor, Y: torch.Ten
     the validation set only.
     """
     set_seed(seed)
-    model = build(model_name, ncls, in_ch=in_ch)
+    model = build(model_name, ncls, in_ch=in_ch).to(device)
     # AdamW (decoupled weight decay), the same optimiser as the Bonn loop. Plain Adam
     # would add the decay to the gradient, where the adaptive scaling makes its
     # strength differ per parameter. The earlier loso_main run used Adam.
@@ -95,7 +103,7 @@ def train_fold(model_name: str, X1: torch.Tensor, X2: torch.Tensor, Y: torch.Ten
     ytr = Y[tr].numpy()
     cnt = np.bincount(ytr, minlength=ncls).astype(np.float64)
     w = torch.tensor((cnt.sum() / (ncls * np.maximum(cnt, 1))), dtype=torch.float32)
-    lossf = nn.CrossEntropyLoss(weight=w)
+    lossf = nn.CrossEntropyLoss(weight=w.to(device))
 
     def raw_logits(idx: np.ndarray) -> np.ndarray:
         model.eval()
@@ -103,7 +111,7 @@ def train_fold(model_name: str, X1: torch.Tensor, X2: torch.Tensor, Y: torch.Ten
         with torch.no_grad():
             for i in range(0, len(idx), 256):
                 b = idx[i:i + 256]
-                outs.append(model(X1[b], X2[b]).numpy())
+                outs.append(model(X1[b].to(device), X2[b].to(device)).cpu().numpy())
         return np.concatenate(outs)
 
     def predict(idx: np.ndarray) -> np.ndarray:
@@ -117,7 +125,7 @@ def train_fold(model_name: str, X1: torch.Tensor, X2: torch.Tensor, Y: torch.Ten
         for i in range(0, len(perm), batch):
             b = perm[i:i + batch]
             opt.zero_grad()
-            loss = lossf(model(X1[b], X2[b]), Y[b])
+            loss = lossf(model(X1[b].to(device), X2[b].to(device)), Y[b].to(device))
             loss.backward()
             opt.step()
 
@@ -158,6 +166,13 @@ def main() -> None:
     ap.add_argument("--threads", type=int, default=12)
     ap.add_argument("--outdir", default=None)
     ap.add_argument("--tag", default="")
+    ap.add_argument("--pipeline", default="P0", choices=list(PIPELINES),
+                    help="preprocessing pipeline (src/preprocess.py); P0 is the original")
+    ap.add_argument("--repeat", type=int, default=0,
+                    help="seed set; 0 reproduces the earlier runs")
+    ap.add_argument("--device", default="cpu", choices=["cpu", "cuda"],
+                    help="cuda runs in PyTorch's deterministic mode; results are not "
+                         "comparable with CPU runs, so default tags get a _cuda suffix")
     ap.add_argument("--resume", action="store_true",
                     help="skip folds already complete in the outdir's perfold.csv and "
                          "continue from there. A fold counts as complete only if every "
@@ -165,21 +180,59 @@ def main() -> None:
     args = ap.parse_args()
 
     torch.set_num_threads(args.threads)
+    if args.device == "cuda":
+        # Deterministic GPU kernels; the cuBLAS setting must precede CUDA initialisation.
+        os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
+        if not torch.cuda.is_available():
+            raise SystemExit("--device cuda: no CUDA device visible to this torch build")
+        torch.backends.cudnn.benchmark = False
+        torch.backends.cudnn.deterministic = True
+        # warn_only: the backward pass of adaptive average pooling (used by every
+        # backbone) has no deterministic CUDA kernel, and strict mode would refuse to
+        # run. Whether GPU runs still repeat exactly is therefore an empirical question,
+        # answered by running the same fold twice (docs/PIPELINE.md).
+        torch.use_deterministic_algorithms(True, warn_only=True)
     t_start = time.time()
 
     want_score = "score" in args.models
     if want_score and not {"raw1d", "spec2d"} <= set(args.models):
         raise SystemExit("score is computed from raw1d and spec2d; add both to --models")
 
-    d = build_corpus(verbose=False)
+    pipe = PIPELINES[args.pipeline]
+    if pipe.reject_uv is not None and not np.isfinite(pipe.reject_uv):
+        raise SystemExit("P4: the rejection threshold (src/preprocess.py: REJECT_UV) has "
+                         "not been decided yet")
+    if pipe.name != "P0" and (args.norm != "window" or args.notch):
+        raise SystemExit("--pipeline sets normalisation and filtering itself; do not "
+                         "combine it with --norm or --notch")
+    norm = pipe.norm if pipe.name != "P0" else args.norm
+    d = build_corpus(verbose=pipe.has_signal_steps,
+                     signal_fn=pipe.apply_signal if pipe.has_signal_steps else None,
+                     signal_tag=pipe.signal_tag)
     X, y, subject, group = d["X"], d["y"], d["subject"], d["group"]
     info = d["info"]
     ncls, in_ch = 2, X.shape[1]
 
-    if args.norm == "channel":
+    # Artefact rejection (P4) is decided on the filtered microvolt signal, before
+    # normalisation, and applied to training and validation windows only.
+    rejected = np.zeros(len(y), bool)
+    reject_meta = None
+    if pipe.reject_uv is not None:
+        rejected = artifact_mask(X, pipe.reject_uv)
+        reject_meta = {"threshold_uv": pipe.reject_uv,
+                       "ictal_rejected": int(rejected[y == 1].sum()),
+                       "ictal_total": int((y == 1).sum()),
+                       "nonictal_rejected": int(rejected[y == 0].sum()),
+                       "nonictal_total": int((y == 0).sum())}
+        print(f"artefact rejection > {pipe.reject_uv:g} uV: "
+              f"{reject_meta['ictal_rejected']}/{reject_meta['ictal_total']} ictal and "
+              f"{reject_meta['nonictal_rejected']}/{reject_meta['nonictal_total']} "
+              f"non-ictal windows flagged (excluded from training and validation)")
+
+    if norm == "channel":
         raise SystemExit("norm='channel' needs per-fold training statistics, which this "
                          "driver does not wire up yet; use 'window'")
-    x1, x2, prep_meta = prepare(X, norm=args.norm, notch_hz=args.notch)
+    x1, x2, prep_meta = prepare(X, norm=norm, notch_hz=args.notch)
     X1, X2, Y = torch.from_numpy(x1), torch.from_numpy(x2), torch.from_numpy(y)
     del x1, x2
 
@@ -188,7 +241,14 @@ def main() -> None:
     if args.limit_folds:
         splits = splits[:args.limit_folds]
 
-    tag = args.tag or f"{args.split}_{args.norm}" + (f"_notch{args.notch:g}" if args.notch else "")
+    if args.tag:
+        tag = args.tag
+    elif pipe.name != "P0" or args.repeat:
+        tag = f"{args.split}_{pipe.name}" + (f"_r{args.repeat}" if args.repeat else "")
+    else:
+        tag = f"{args.split}_{args.norm}" + (f"_notch{args.notch:g}" if args.notch else "")
+    if not args.tag and args.device == "cuda":
+        tag += "_cuda"
     outdir = Path(args.outdir) if args.outdir else OUT_ROOT / tag
     outdir.mkdir(parents=True, exist_ok=True)
     (outdir / "preds").mkdir(exist_ok=True)
@@ -215,6 +275,9 @@ def main() -> None:
             print(f"[{fi+1}/{len(splits)}] skipped (resume, already complete)")
             continue
         tr, va = inner_split(group, tr_all, y)
+        # Validation persons are chosen before rejection, so they are the same in
+        # every pipeline.
+        tr, va = tr[~rejected[tr]], va[~rejected[va]]
         te_subs = sorted(set(subject[te]))              # cases; the chb01 fold has chb01,chb21
         hrs = sum(hours_of.get(s, 0.0) for s in te_subs)
         print(f"[{fi+1}/{len(splits)}] test={','.join(te_subs)} "
@@ -226,14 +289,14 @@ def main() -> None:
             if m == "score":
                 continue
             t0 = time.time()
-            seed = fold_seed(20260727, 0, fi, m)
+            seed = fold_seed(20260727, args.repeat, fi, m)
             if want_score and m in ("raw1d", "spec2d"):
                 prob, tinfo, val_logits[m] = train_fold(
                     m, X1, X2, Y, tr, va, te, ncls, in_ch, seed,
-                    epochs=args.epochs, return_val_logits=True)
+                    epochs=args.epochs, return_val_logits=True, device=args.device)
             else:
                 prob, tinfo = train_fold(m, X1, X2, Y, tr, va, te, ncls, in_ch, seed,
-                                         epochs=args.epochs)
+                                         epochs=args.epochs, device=args.device)
             mm = metrics(y[te], prob, ncls)
             mm.update(clinical_metrics(y[te], prob, hrs))
             mm.update(model=m, fold=fi, test_subjects=",".join(te_subs),
@@ -268,8 +331,12 @@ def main() -> None:
                  idx_te=te, y_te=y[te], **probs)
         pd.DataFrame(rows).to_csv(outdir / "perfold.csv", index=False)
 
-    meta = {"args": vars(args), "optimizer": "AdamW", "prep": prep_meta, "corpus": info,
-            "env": runtime_env(), "elapsed_s": round(time.time() - t_start, 1)}
+    meta = {"args": vars(args), "optimizer": "AdamW", "pipeline": pipe.describe(),
+            "rejection": reject_meta, "prep": prep_meta, "corpus": info,
+            "env": runtime_env() | {"device": args.device, "cuda_device":
+                                    torch.cuda.get_device_name(0) if args.device == "cuda"
+                                    else None},
+            "elapsed_s": round(time.time() - t_start, 1)}
     (outdir / "meta.json").write_text(json.dumps(meta, indent=2, ensure_ascii=False),
                                       encoding="utf-8")
     df = pd.DataFrame(rows)

@@ -307,9 +307,16 @@ def plan_windows(path: Path, seizures: list[Seizure], win_s: float = 10.0,
 
 
 def extract_windows(path: Path, channels: list[str], starts_s: np.ndarray,
-                    win_s: float = 10.0) -> np.ndarray:
-    """Read the windows starting at the given times. Returns (window, channel, sample)."""
+                    win_s: float = 10.0, signal_fn=None) -> np.ndarray:
+    """Read the windows starting at the given times. Returns (window, channel, sample).
+
+    signal_fn(x, fs, key), if given, is applied to the whole continuous recording
+    (channel, time) before the windows are cut; this is where the preprocessing
+    pipelines filter (src/preprocess.py).
+    """
     x, _, fs = read_edf(path, channels)
+    if signal_fn is not None:
+        x = signal_fn(x, fs, path.name)
     fs = int(round(fs))
     n = int(win_s * fs)
     out = np.empty((len(starts_s), len(channels), n), np.float32)

@@ -15,9 +15,10 @@ strong line in the spectrogram. With notch_hz set, that frequency and its harmon
 suppressed. Off by default; meant to be run as a sensitivity axis.
 
 Normalisation. Amplitude scale varies between subjects, which matters directly for
-subject-wise evaluation. Three options, and the choice is recorded:
+subject-wise evaluation. Four options, and the choice is recorded:
   none     leave as is
   window   z-score each channel of each window on its own (default)
+  robust   like window, with median and interquartile range (pipeline P5)
   channel  z-score each channel with statistics from the training windows only
 """
 from __future__ import annotations
@@ -59,6 +60,13 @@ def zscore_window(x: np.ndarray, eps: float = 1e-8) -> np.ndarray:
     return ((x - m) / (s + eps)).astype(np.float32)
 
 
+def robust_window(x: np.ndarray, eps: float = 1e-8) -> np.ndarray:
+    """Per window and channel: subtract the median, divide by the interquartile range."""
+    med = np.median(x, axis=-1, keepdims=True)
+    q75, q25 = np.percentile(x, [75, 25], axis=-1, keepdims=True)
+    return ((x - med) / (q75 - q25 + eps)).astype(np.float32)
+
+
 def zscore_channel_from_train(x: np.ndarray, train_mask: np.ndarray,
                               eps: float = 1e-8) -> np.ndarray:
     """Per-channel z-score with statistics from the TRAINING windows only.
@@ -82,13 +90,15 @@ def prepare(X: np.ndarray, norm: str = "window", train_mask: np.ndarray | None =
     Returns X1d (N, C, T), X2d (N, C, F, T'), and a record of the choices made, which
     should be stored with the results.
     """
-    if norm not in ("none", "window", "channel"):
+    if norm not in ("none", "window", "robust", "channel"):
         raise ValueError(f"unknown normalisation: {norm}")
     x = X
     if notch_hz:
         x = notch_filter(x, fs=fs, f0=notch_hz)
     if norm == "window":
         x = zscore_window(x)
+    elif norm == "robust":
+        x = robust_window(x)
     elif norm == "channel":
         if train_mask is None:
             raise ValueError("norm='channel' needs train_mask; using test statistics "

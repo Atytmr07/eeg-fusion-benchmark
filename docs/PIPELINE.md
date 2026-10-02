@@ -115,6 +115,51 @@ normalisation, N1 z-scored signal but spectrogram from the raw signal (the confi
 the original notebook implementation ran by accident), N2 both from the z-scored signal
 (main), N3 additionally z-scoring the spectrogram.
 
+### 2.1 Preprocessing pipelines P0 to P6 (`src/preprocess.py`, CHB-MIT)
+
+The preprocessing multiverse asks whether the comparison between fusion operators
+depends on preprocessing. Each pipeline changes one step; the windows, spectrogram
+settings, models, training and evaluation stay the same.
+
+| Pipeline | Band-pass | Notch | Artefacts | Normalisation | Question |
+|---|---|---|---|---|---|
+| P0 | none | none | none | z-score | original benchmark (= `loso_grouped`) |
+| P1 | 0.5 to 40 Hz | none | none | z-score | standard EEG band |
+| P2 | 0.5 to 70 Hz | 60 Hz | none | z-score | information above 40 Hz |
+| P3 | 1 to 40 Hz | none | none | z-score | low frequency and drift |
+| P4 | 0.5 to 40 Hz | none | amplitude based window rejection | z-score | artefact rejection |
+| P5 | 0.5 to 40 Hz | none | none | median and IQR | normalisation |
+| P6 | 0.5 to 40 Hz | none | ICA, ocular components removed | z-score | aggressive cleaning |
+
+- **Filters run on the continuous recording**, before windowing (zero-phase Butterworth,
+  order 4, `sosfiltfilt`); filtering each 10 s window separately would put filter
+  transients at every window edge. Each set of signal-level steps has its own corpus
+  cache (`corpus_..._24subj_<tag>.npz`); P1, P4 and P5 share one.
+- **Every pipeline has exactly the same windows as P0**, checked when the caches are
+  built (`python -m src.preprocess --build`). Runs are therefore paired fold by fold
+  across pipelines.
+- **The spectrogram ceiling stays at 64 Hz** in every pipeline, so input shapes and
+  parameter counts do not change. In the 40 Hz pipelines the 40 to 64 Hz rows are
+  near zero.
+- **P4** rejects a window if any channel's peak-to-peak amplitude after the band-pass
+  exceeds `REJECT_UV`. Rejected windows are removed from training and validation only;
+  the test set is unchanged, so P4 stays paired with the other pipelines. The rejection
+  rate is reported separately for ictal and non-ictal windows, because ictal EEG is high
+  in amplitude (`python -m src.preprocess --scan-rejection`). On CHB-MIT every fixed
+  threshold removes ictal windows far more often than non-ictal ones (500 uV: 72 percent
+  against 48; 1000 uV: 44 against 12), and a per-subject relative rule does as well
+  (robust z above 10: 21 against 4.5). The threshold is therefore left to the advisor,
+  and P4 refuses to run until it is set.
+- **P6** fits FastICA (18 components) per recording and removes up to two components
+  whose topography lies mainly on the four FP channels and whose power lies mainly below
+  4 Hz (ocular activity; CHB-MIT has no EOG channel). Muscle components are not removed,
+  because the gamma band carries the strongest ictal signal in this corpus.
+- **Repeats.** The model ranking changed between two CHB-MIT runs that differed only in
+  settings unrelated to the operators (manuscript Section 5.4), so a ranking difference
+  between pipelines is only interpretable against run-to-run variation. `--repeat r`
+  trains every model with a different seed set; `--repeat 0` is the seed set of all
+  earlier runs.
+
 ## 3. Models (`src/models.py`)
 
 ### 3.1 Backbones
@@ -329,6 +374,35 @@ remains available in the repository history (commit `804709c`).
    (Section 7), so an interrupted run must be resumed with `--resume` and the same `<N>`,
    and nothing else heavy should run on the machine meanwhile.
 6. Then run the baselines and statistics commands above with `--run loso_grouped`.
+
+### Preprocessing pipelines
+
+1. Build the pipeline caches once (needs the raw EDF files; P6 takes the longest because
+   of ICA): `python -m src.preprocess --build`. It stops with an error if any pipeline's
+   windows differ from P0's.
+2. Per pipeline and repeat: `python -m src.chbmit_run --split loso --threads 16 --pipeline P1 --repeat 0`
+   (output `results_v2/chbmit/loso_P1/`; with `--repeat 1`, `loso_P1_r1/`), then
+   `python -m src.chbmit_baselines --run loso_P1` and `python -m src.chbmit_stats --run loso_P1`.
+   P0 with repeat 0 is the existing `loso_grouped` run.
+3. All runs use the same thread count (16, as `loso_grouped`). Runs at the same thread
+   count are deterministic, so several can run side by side on a machine with enough
+   cores without changing the results.
+
+### GPU check
+
+`--device cuda` trains on the GPU in PyTorch's deterministic mode. Some kernels used by the
+models have no deterministic CUDA implementation, so whether GPU runs repeat exactly is
+tested rather than assumed: run the same fold twice and compare.
+
+```
+python -m src.chbmit_run --split loso --limit-folds 1 --device cuda --threads 16 --tag gpu_a
+python -m src.chbmit_run --split loso --limit-folds 1 --device cuda --threads 16 --tag gpu_b
+python -m src.compare_runs results_v2/chbmit/gpu_a results_v2/chbmit/gpu_b
+```
+
+GPU results are not comparable with CPU results, so all pipelines of one analysis must
+run on the same device. This needs the CUDA build of torch, installed into a separate
+environment so the CPU environment stays as it is.
 
 ## 9. Known issues and open items
 

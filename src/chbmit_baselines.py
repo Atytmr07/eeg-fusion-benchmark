@@ -17,13 +17,17 @@ the benchmark was saturated. Whether CHB-MIT is hard or easy cannot be claimed w
 the same check.
 
 Results are appended to the perfold.csv of the chbmit_run run given by --run, so the
-baselines line up with the deep models fold by fold.
+baselines line up with the deep models fold by fold. The preprocessing pipeline is read
+from that run's meta.json, so the baselines see the same signal-level preprocessing and,
+for P4, the same artefact rejection of training windows. Normalisation does not apply:
+the features are computed from microvolt signals.
 
 Usage:  python -m src.chbmit_baselines --run loso_grouped
 """
 from __future__ import annotations
 
 import argparse
+import json
 import shutil
 import sys
 import time
@@ -41,6 +45,7 @@ from .chbmit import FS_CHB
 from .chbmit_corpus import build_corpus, leave_one_subject_out
 from .config import RESULTS_ROOT
 from .evaluate import clinical_metrics, metrics
+from .preprocess import PIPELINES, artifact_mask
 
 BANDS = [(0.5, 4), (4, 8), (8, 13), (13, 30), (30, 64)]     # delta .. gamma, 64 Hz ceiling
 
@@ -70,8 +75,22 @@ def main() -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     csv_path = out_dir / "perfold.csv"
 
-    d = build_corpus(verbose=False)
+    meta_path = out_dir / "meta.json"
+    pipe_name = "P0"
+    if meta_path.exists():
+        pipe_name = json.loads(meta_path.read_text(encoding="utf-8")).get(
+            "pipeline", {}).get("name", "P0")
+    pipe = PIPELINES[pipe_name]
+    if pipe.reject_uv is not None and not np.isfinite(pipe.reject_uv):
+        raise SystemExit("P4: the rejection threshold has not been decided yet")
+    d = build_corpus(verbose=False,
+                     signal_fn=pipe.apply_signal if pipe.has_signal_steps else None,
+                     signal_tag=pipe.signal_tag)
     X, y, subject, group = d["X"], d["y"], d["subject"], d["group"]
+    rejected = (artifact_mask(X, pipe.reject_uv) if pipe.reject_uv is not None
+                else np.zeros(len(y), bool))
+    print(f"pipeline {pipe.name}" + (f", {int(rejected.sum())} training-eligible windows "
+                                     f"flagged as artefacts" if rejected.any() else ""))
     info = d["info"]
     hours_of = {s: info["per_subject"][s]["hours"] for s in info["per_subject"]}
     ncls = 2
@@ -86,6 +105,7 @@ def main() -> None:
     rows = []
     splits = list(leave_one_subject_out(group))
     for fi, (key, tr, te) in enumerate(splits):
+        tr = tr[~rejected[tr]]
         te_subs = sorted(set(subject[te]))
         hrs = sum(hours_of.get(s, 0.0) for s in te_subs)
         for name, feat in (("logvar", feat_logvar), ("shallow", feat_shallow)):

@@ -73,7 +73,8 @@ def _window_seizure_id(t0: float, win_s: float,
 def build_corpus(subjects: list[str] | None = None, win_s: float = 10.0,
                  stride_s: float | None = None, neg_per_pos: float = 4.0,
                  guard_s: float = 0.0, seed: int = 20260727,
-                 cache: bool = True, verbose: bool = True) -> dict:
+                 cache: bool = True, verbose: bool = True, signal_fn=None,
+                 signal_tag: str = "") -> dict:
     """The windowed, subsampled corpus with group labels.
 
     Returns a dict with X (window, channel, sample), y, subject (case folder), group
@@ -85,11 +86,17 @@ def build_corpus(subjects: list[str] | None = None, win_s: float = 10.0,
 
     The result is cached under data/chbmit/_cache/. With the cache present the raw EDF
     files are not needed at all.
+
+    signal_fn(x, fs, key) is applied to each continuous recording before windowing (the
+    signal-level steps of a preprocessing pipeline, src/preprocess.py); signal_tag names
+    it in the cache file. Window selection does not depend on it, so every pipeline
+    gets exactly the same windows.
     """
     # Without raw EDFs (cache-only use) the folder scan is empty; fall back to all cases.
     subs = subjects or all_subjects() or list(CASES)
     tag = (f"w{win_s:g}_s{(stride_s or win_s):g}_n{neg_per_pos:g}"
-           f"_g{guard_s:g}_seed{seed}_{len(subs)}subj")
+           f"_g{guard_s:g}_seed{seed}_{len(subs)}subj"
+           + (f"_{signal_tag}" if signal_tag else ""))
     npz = CACHE / f"corpus_{tag}.npz"
     if cache and npz.exists():
         if verbose:
@@ -144,7 +151,8 @@ def build_corpus(subjects: list[str] | None = None, win_s: float = 10.0,
         for name, items in by_file.items():
             js = np.array([a for a, _ in items])
             ts = np.array([b for _, b in items], np.float32)
-            X[js] = extract_windows(path_of[name], list(TARGET_CHANNELS), ts, win_s)
+            X[js] = extract_windows(path_of[name], list(TARGET_CHANNELS), ts, win_s,
+                                    signal_fn=signal_fn)
 
         Xs.append(X)
         ys.append(y_all[idx])
@@ -177,7 +185,7 @@ def build_corpus(subjects: list[str] | None = None, win_s: float = 10.0,
         "subjects": subs, "n_subjects": len(per_subject),
         "channels": list(TARGET_CHANNELS), "fs": FS_CHB,
         "win_s": win_s, "stride_s": stride_s or win_s, "guard_s": guard_s,
-        "neg_per_pos": neg_per_pos, "seed": seed,
+        "neg_per_pos": neg_per_pos, "seed": seed, "signal_tag": signal_tag,
         "n_windows": int(len(out["y"])), "n_ictal": int(out["y"].sum()),
         "n_seizures": int(len({s for s in sids if s})),
         "per_subject": per_subject,
