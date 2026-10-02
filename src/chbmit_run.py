@@ -89,7 +89,7 @@ def train_fold(model_name: str, X1: torch.Tensor, X2: torch.Tensor, Y: torch.Ten
     model = build(model_name, ncls, in_ch=in_ch)
     # AdamW (decoupled weight decay), the same optimiser as the Bonn loop. Plain Adam
     # would add the decay to the gradient, where the adaptive scaling makes its
-    # strength differ per parameter. The stored loso_main run still used Adam.
+    # strength differ per parameter. The earlier loso_main run used Adam.
     opt = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=wd)
 
     ytr = Y[tr].numpy()

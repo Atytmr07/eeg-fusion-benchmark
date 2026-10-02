@@ -19,9 +19,11 @@ fusion operator make a difference that survives a statistically valid test?
   corrected test in any of three task formulations, and are positively shown to be
   equivalent within about 0.02 to 0.03 macro F1. Early fusion is the one operator that
   departs, downward.
-- **CHB-MIT (leave one subject out):** no operator pair differs either, but between subject
-  variance is too large to establish equivalence. This is reported as a different kind of
-  negative result from Bonn's.
+- **CHB-MIT (leave one subject out, 23 persons):** no operator pair differs either, but
+  between subject variance is too large to establish equivalence. This is reported as a
+  different kind of negative result from Bonn's. A full re-run after correcting the
+  subject grouping and the optimiser kept these conclusions but reordered the models,
+  so the CHB-MIT results do not rank the operators.
 - **Evaluation practice:** the naive paired test common in this literature has a 38
   percent false positive rate under repeated cross validation (simulation), and CPU thread
   count alone moves per fold results by amounts comparable to the operator differences.

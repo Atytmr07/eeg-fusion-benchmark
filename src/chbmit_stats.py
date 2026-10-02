@@ -12,9 +12,9 @@ removes the inner validation persons from training is reported alongside.
 
 The ROPE constants match the Bonn analysis so the two corpora stay comparable.
 
-Usage:   python -m src.chbmit_stats                     # stored loso_main run (24 folds)
-         python -m src.chbmit_stats --run loso_grouped  # chb01+chb21 merged, 23 folds
-Output:  results_v2/chbmit/phase0/*.csv (loso_main) or phase0_<run>/*.csv
+Usage:   python -m src.chbmit_stats                     # loso_grouped: chb01+chb21 merged, 23 folds
+         python -m src.chbmit_stats --run loso_main     # earlier case based run, 24 folds
+Output:  results_v2/chbmit/phase0_<run>/*.csv, except loso_main: results_v2/chbmit/phase0/
 """
 from __future__ import annotations
 
@@ -112,7 +112,7 @@ def per_model_summary(df: pd.DataFrame, metric: str) -> pd.DataFrame:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--run", default="loso_main")
+    ap.add_argument("--run", default="loso_grouped")
     args = ap.parse_args()
     in_csv = RESULTS_ROOT / "chbmit" / args.run / "perfold.csv"
     out = RESULTS_ROOT / "chbmit" / ("phase0" if args.run == "loso_main"

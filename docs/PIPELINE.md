@@ -177,7 +177,7 @@ the common budget would mean shrinking its two constituent classifiers.
 
 | | Bonn (`src/train.py`) | CHB-MIT (`src/chbmit_run.py: train_fold`) |
 |---|---|---|
-| Optimiser | AdamW, lr 1e-3, weight decay 1e-4 | AdamW, lr 1e-3, weight decay 1e-4 (the stored `loso_main` run used Adam; see Section 9) |
+| Optimiser | AdamW, lr 1e-3, weight decay 1e-4 | AdamW, lr 1e-3, weight decay 1e-4 (the earlier `loso_main` run used Adam; see Section 9) |
 | Loss | cross entropy, class weighted | cross entropy, class weighted |
 | Batch size | 32 | 32 |
 | Epochs | max 60, min 20 | max 60, min 20 |
@@ -204,9 +204,10 @@ runs showed AUC 0.96 with macro F1 0.40.
 
 - Leave one subject out over **persons**, not case folders: chb01 and chb21 are the same
   person (`src/chbmit_corpus.py: SAME_SUBJECT`), so there are 23 folds and the fold that
-  holds out chb01 also holds out chb21. The stored results in `results_v2/chbmit/loso_main/`
-  predate this correction and use 24 case based folds; the corrected run is
-  `loso_grouped` (Section 9).
+  holds out chb01 also holds out chb21. The manuscript's CHB-MIT results come from this
+  corrected run, `results_v2/chbmit/loso_grouped/`. The earlier run in
+  `results_v2/chbmit/loso_main/` uses 24 case based folds and is kept for the comparison
+  in the manuscript's Section 5.4 (Section 9).
 - The inner validation split is **subject wise**: about 20 percent of the training persons
   (4 of 22) are held out entirely, chosen evenly along a list sorted by ictal count so the
   validation set always contains seizures (`inner_split`). A window wise inner split would
@@ -277,7 +278,9 @@ of negative result.
   of the run identity (`docs/10_OLASILIK_VE_TEKRARLANABILIRLIK.md`).
 - **Numerical realisations in the manuscript.** Bonn Table 2 comes from the original runs
   at 2 threads. The Bonn log loss and Brier analysis comes from a 12 thread rerun that also
-  stored predicted probabilities (`results_v2/rerun_probs/`). CHB-MIT folds 0 to 4 were
+  stored predicted probabilities (`results_v2/rerun_probs/`). The CHB-MIT run
+  (`loso_grouped`) was trained on one machine at 16 threads throughout (Python 3.12.10,
+  torch 2.8.0+cpu, about 6.3 hours). In the earlier `loso_main` run, folds 0 to 4 were
   trained at 12 threads and folds 5 to 23 at 6 threads, after a thermal slowdown forced a
   restart. These are stated in the manuscript where they apply.
 
@@ -298,17 +301,17 @@ the statistics and figures can be regenerated without the raw data or a GPU.
 | Naive test simulation | `python -m src.sim_cv_correlation` | printed |
 | CHB-MIT integrity check | `python -m src.verify_chbmit` | printed |
 | CHB-MIT corpus and leakage check | `python -m src.chbmit_corpus --check` | printed, cached corpus |
-| CHB-MIT deep models and score fusion, corrected grouping | `python -m src.chbmit_run --split loso --threads <N> --tag loso_grouped` (add `--resume` to continue an interrupted run) | `results_v2/chbmit/loso_grouped/perfold.csv` |
-| CHB-MIT classical baselines, corrected grouping | `python -m src.chbmit_baselines --run loso_grouped` | appended to the same file |
-| CHB-MIT statistics, corrected grouping | `python -m src.chbmit_stats --run loso_grouped` | `results_v2/chbmit/phase0_loso_grouped/` |
-| CHB-MIT statistics, stored pre-correction run (current Table 3) | `python -m src.chbmit_stats` | `results_v2/chbmit/phase0/` |
+| CHB-MIT deep models and score fusion (Table 3) | `python -m src.chbmit_run --split loso --threads 16 --tag loso_grouped` (add `--resume` to continue an interrupted run) | `results_v2/chbmit/loso_grouped/perfold.csv` |
+| CHB-MIT classical baselines | `python -m src.chbmit_baselines --run loso_grouped` | appended to the same file |
+| CHB-MIT statistics | `python -m src.chbmit_stats` (default `--run loso_grouped`) | `results_v2/chbmit/phase0_loso_grouped/` |
+| CHB-MIT statistics, earlier 24 fold run (Section 5.4 comparison) | `python -m src.chbmit_stats --run loso_main` | `results_v2/chbmit/phase0/` |
 | Manuscript figures | `python -m src.make_manuscript_figures` | `paper/figures_manuscript/` |
 | Parameter counts (Section 3.3) | `python -m src.models` | printed |
 
 The CHB-MIT runs need only the cached corpus
 `data/chbmit/_cache/corpus_w10_s10_n4_g0_seed20260727_24subj.npz` and its `.json` (about
 1.2 GB), not the 43 GB of raw EDF files: the correction changes which windows count as the
-same person, not which windows are selected. The score rows of the stored pre-correction
+same person, not which windows are selected. The score rows of the earlier
 `loso_main` run were produced by a separate script, `src/chbmit_score.py`, which was
 removed in the code cleanup because score fusion is now computed inside `chbmit_run`; it
 remains available in the repository history (commit `804709c`).
@@ -331,25 +334,27 @@ remains available in the repository history (commit `804709c`).
 
 These are also listed in the manuscript's Limitations section.
 
-1. **chb01 and chb21 are the same person: fixed in code, rerun pending.** The stored
-   `loso_main` run grouped by case folder, so the fold holding out chb01 trained on chb21
-   and vice versa. On the chb01 fold every model scored far above its own mean (late fusion
-   0.981 against 0.675); excluding that fold lowered each model's mean macro F1 by 0.006 to
-   0.013 and left the ranking largely unchanged (Spearman rho 0.88). Splitting and leakage
-   checks now use persons (23 folds). Table 3 and the CHB-MIT statistics will be replaced by
-   the `loso_grouped` run once it completes.
+1. **chb01 and chb21 are the same person: fixed and rerun.** The earlier `loso_main` run
+   grouped by case folder, so the fold holding out chb01 trained on chb21 and vice versa
+   (late fusion 0.981 on chb01, 0.444 on chb21; held out together they now give 0.841).
+   Splitting and leakage checks use persons (23 folds), and every CHB-MIT number in the
+   manuscript comes from the corrected `loso_grouped` run. Its conclusions match the
+   earlier run, but the model ranking does not (Spearman rho 0.45; manuscript Section 5.4),
+   so CHB-MIT results support the null result, not an ordering of the operators. Whether
+   chb24 is a distinct person is assumed, not documented.
 2. **Boundary windows.** 25.7 percent of CHB-MIT ictal windows only partly overlap a
    seizure. Whether to keep them is a design choice whose effect has not been measured.
-3. **Optimiser: unified in code, rerun pending.** Bonn always used AdamW (decoupled
-   weight decay). The stored CHB-MIT `loso_main` run used Adam, whose weight decay is
-   added to the gradient and then rescaled per parameter, so the same settings meant
-   different regularisation on the two corpora. CHB-MIT now uses AdamW as well; the
-   `loso_grouped` run is the first to use it.
+3. **Optimiser: unified.** Bonn always used AdamW (decoupled weight decay). The earlier
+   CHB-MIT `loso_main` run used Adam, whose weight decay is added to the gradient and then
+   rescaled per parameter, so the same settings meant different regularisation on the two
+   corpora. The `loso_grouped` run uses AdamW.
 4. **No CHB-MIT sensitivity analysis yet** (window length, frequency ceiling, notch,
    subsampling ratio, boundary windows), unlike Bonn.
 5. **False alarms per hour are not reported**, because the rate on the subsampled time
    base would not be clinically meaningful; computing it on the true recording duration is
    still to do.
-6. **Mixed thread counts** within the CHB-MIT run (Section 7).
+6. **Single run per model on CHB-MIT.** The re-run changed the ranking while leaving the
+   conclusions intact; ranking claims would need repeated runs with different seeds. (The
+   earlier run's mixed thread counts no longer affect any reported number.)
 7. **The detailed working notes in `docs/` (other than this file) are in Turkish.** The
    code, its comments, the manuscript, this document, and the README are in English.

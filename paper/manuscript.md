@@ -23,8 +23,8 @@ measurements that repeated cross validation violates. We hold backbone architect
 training protocol, and parameter budget fixed to within 1.3 percent and vary only the
 fusion operator, then evaluate the resulting differences with a resampling corrected
 paired test, Holm correction, and two one sided equivalence testing, on two corpora:
-the Bonn EEG dataset (5x5 repeated stratified cross validation) and CHB-MIT (24
-subject leave one subject out). On Bonn, no pair among late, gated, attention, and
+the Bonn EEG dataset (5x5 repeated stratified cross validation) and CHB-MIT (leave
+one subject out over 23 individuals). On Bonn, no pair among late, gated, attention, and
 score level fusion separates under the corrected test in any of three task
 formulations, and the pairs are equivalent within an F1 margin of 0.02 to 0.03; early
 fusion is the one operator that departs, and only downward. On CHB-MIT, none of the
@@ -37,10 +37,15 @@ under repeated cross validation; correcting for it collapses most of the differe
 we originally observed. Second, CPU thread count alone, a setting with no bearing on
 the scientific question, shifts per fold macro F1 by up to 0.09 on Bonn and 0.21 on
 CHB-MIT, a magnitude comparable to or larger than the differences between the
-operators under comparison. We also report and correct two errors we found along the
-way: a training bug that let some models collapse to a trivial single class solution
-while reporting high AUC, and a labelling error in CHB-MIT's own seizure annotations
-that a sequence naive parser would turn into a nonexistent 6316 second seizure. We
+operators under comparison; re-running CHB-MIT after correcting the subject grouping
+and unifying the optimiser left every conclusion intact but reordered the eleven
+models almost arbitrarily (Spearman rho = 0.45 between the two runs). We also report
+and correct three errors we found along the way: a training bug that let some models
+collapse to a trivial single class solution while reporting high AUC, a labelling
+error in CHB-MIT's own seizure annotations that a sequence naive parser would turn
+into a nonexistent 6316 second seizure, and a subject grouping error in our own
+CHB-MIT evaluation, where two recording cases from the same person were treated as
+different subjects. We
 argue that the absence of a detectable difference between fusion operators in this
 literature is not yet established as a real finding so much as it is obscured by
 evaluation practices too imprecise to resolve differences at this scale, and that
@@ -90,8 +95,9 @@ search was actually conducted (Section 2 and `docs/09`, `docs/14`).
    (Section 3.5).
 3. External validation on CHB-MIT with subject wise leave one subject out evaluation,
    which the Bonn corpus does not support because it publishes no subject identifiers
-   (Section 5), together with a disclosed exception to that subject wise design found
-   during this work (Section 5.2).
+   (Section 5), with subjects grouped by person rather than by recording case, after
+   finding that two of CHB-MIT's 24 cases are documented as the same individual
+   (Section 5.2).
 4. Two methodological findings that generalise beyond this specific comparison: naive
    paired testing under repeated cross validation and CPU thread count as an
    unreported source of variance comparable in magnitude to the effect under study
@@ -233,10 +239,9 @@ scores both branches from the same normalised signal.
 ### 3.4 Training and evaluation protocol
 
 AdamW optimiser (decoupled weight decay; Loshchilov and Hutter 2019), learning rate
-1e-3, weight decay 1e-4, batch size 32, class weighted cross entropy loss. The stored
-pre-correction CHB-MIT run reported in Table 3 used Adam with coupled (L2) weight decay
-instead; the corrected CHB-MIT run (Section 5.2) uses AdamW, so that both corpora share
-the same optimiser. A minimum epoch budget of 20 is enforced before early stopping on
+1e-3, weight decay 1e-4, batch size 32, class weighted cross entropy loss, on both
+corpora. An earlier CHB-MIT run, which we compare against in Section 5.4, used Adam
+with coupled (L2) weight decay instead. A minimum epoch budget of 20 is enforced before early stopping on
 validation macro F1 (patience 12, ceiling 60 epochs); this guard was added after an
 audit found 6 of 55 early runs had frozen in a trivial single class solution while
 still reporting AUC near 0.96, because early stopping triggered while validation
@@ -247,10 +252,11 @@ original implementation had.
 
 On Bonn, evaluation is 5x5 repeated stratified cross validation (25 paired
 measurements per model) with an inner 20 percent validation split carved from the
-training fold, never touching the test fold. On CHB-MIT, evaluation is 24 fold leave
-one subject out, with the same inner validation split constructed subject wise
-(Section 5.3), since Bonn's lack of subject identifiers makes this comparison
-impossible there.
+training fold, never touching the test fold. On CHB-MIT, evaluation is 23 fold leave
+one subject out over 24 recording cases, with the same inner validation split
+constructed subject wise (Section 5.2), since Bonn's lack of subject identifiers makes
+this comparison impossible there. All CHB-MIT models were trained on one machine at a
+fixed thread count of 16 (Section 6.2).
 
 ### 3.5 Statistical framework
 
@@ -391,8 +397,8 @@ whether a model generalises across patients rather than across segments drawn fr
 small, possibly overlapping pool. CHB-MIT (Shoeb 2009; Goldberger et al. 2000),
 publicly available via PhysioNet, provides 24 pediatric recording cases with subject
 identifiers, making leave one subject out (LOSO) evaluation possible for the first
-time in this comparison, with one documented exception to "24 cases means 24
-distinct subjects" that we did not control for (Section 5.2).
+time in this comparison. Two of the 24 cases are documented as the same person, so
+the evaluation has 23 folds rather than 24 (Section 5.2).
 
 ### 5.1 Data preparation and two errors found in the source data
 
@@ -456,34 +462,23 @@ We validated the leakage checker itself by constructing a deliberately leaky spl
 (windows shuffled at random, ignoring subject and seizure identity) and confirming it
 is flagged on both rules; the real LOSO and grouped k-fold splits used throughout are
 confirmed leakage free by the same checker (`src/chbmit_corpus.py`), under the
-subject grouping described next.
+person level grouping described next.
 
-**A documented exception we did not control for.** Our subject grouping is derived
-from CHB-MIT's case folder names (chb01 through chb24), which is what both rules
-above check against. PhysioNet's own dataset documentation states that "case chb21
-was obtained 1.5 years after case chb01, from the same female subject," and that
-case chb24 was added later and is not listed in the corpus's `SUBJECT-INFO` file. The
-24 case folders therefore correspond to at most 23, and in this one documented
-instance at least 22, distinct individuals rather than 24. Because our grouping
-treats chb01 and chb21 as different subjects, the LOSO fold that holds out chb01
-trains on chb21's windows from the same person, and vice versa. The effect is
-visible and asymmetric: on the chb01 fold, every model's macro F1 is far above its
-own 24 fold mean (late fusion reaches 0.981 against a mean of 0.675; gated reaches
-0.962 against 0.689), while the chb21 fold is among the worst for most models (late
-fusion 0.444). Excluding the chb01 fold alone lowers every model's mean macro F1 by
-0.006 to 0.013 (spec2d_wide is the one exception, which rises by 0.002) and leaves
-the Table 3 ranking largely intact (Spearman rho = 0.88, p < 0.001, between the full
-and chb01 excluded rankings). We did not re run LOSO with chb01 and chb21 merged
-into a single held out subject before writing this manuscript, so Table 3, Section
-5.3, and the CHB-MIT statistics in Section 6 all still reflect the uncorrected
-grouping; we disclose this as a limitation (Section 7) rather than silently correct
-it, because a partial re run would leave figures and prose inconsistent with each
-other. Given the small aggregate effect and unchanged ranking, we do not believe this
-changes the paper's central finding, but it should be fixed before any of these
-CHB-MIT numbers are treated as final.
+**Two cases, one person.** PhysioNet's own dataset documentation states that "case
+chb21 was obtained 1.5 years after case chb01, from the same female subject." We
+therefore group subjects by person rather than by case folder: chb01 and chb21 form
+one subject, held out together, which gives 23 LOSO folds over 24 cases
+(`src/chbmit_corpus.py: SAME_SUBJECT`). The leakage checker validates the grouping
+directly: applied to the earlier, case based split, it flags exactly the two folds
+in which one of the pair was tested while the other was in training. One residual
+uncertainty remains: case chb24 was added to the corpus later and is not listed in
+its `SUBJECT-INFO` file, so we cannot confirm from the documentation that it is a
+distinct person; we treat it as one. Within each training fold, four of the 22
+training subjects are held out, as whole subjects, for the inner validation split
+used for early stopping and for the score fusion weight.
 
-The resulting corpus is 6,380 windows (1,276 ictal) across 24 subjects and 18
-channels. Model architectures are unchanged from Section 3.1 except that the first
+The resulting corpus is 6,380 windows (1,276 ictal) from 24 cases, 23 subjects, and
+18 channels. Model architectures are unchanged from Section 3.1 except that the first
 convolutional layer of each backbone accepts 18 input channels rather than one; this
 adds channels only to the input layer and leaves every reported Bonn parameter count
 identical when re run at 1 input channel, which we verified directly rather than
@@ -491,51 +486,55 @@ assuming.
 
 ### 5.3 Results
 
-**Table 3. CHB-MIT, macro F1, log loss, and Brier, mean over 24 leave one subject
-out folds.** Source: `results_v2/chbmit/loso_main/perfold.csv`.
+**Table 3. CHB-MIT, macro F1, log loss, and Brier, mean over 23 leave one subject
+out folds.** Source: `results_v2/chbmit/loso_grouped/perfold.csv`.
 
 | Model | F1 | F1 SD | Log loss | Brier |
 |---|---|---|---|---|
-| spec2d | 0.695 | 0.134 | 0.820 | 0.283 |
-| gated | 0.689 | 0.162 | 0.655 | **0.260** |
-| shallow | 0.677 | 0.178 | 0.620 | 0.365 |
-| score | 0.677 | 0.156 | **0.501** | 0.260 |
-| late | 0.675 | 0.168 | 0.936 | 0.314 |
-| spec2d_wide | 0.675 | 0.134 | 0.861 | 0.291 |
-| attention | 0.672 | 0.144 | 0.849 | 0.289 |
-| early | 0.669 | 0.159 | 1.031 | 0.336 |
-| raw1d | 0.651 | 0.142 | 0.805 | 0.312 |
-| raw1d_wide | 0.630 | 0.174 | 0.869 | 0.335 |
-| logvar | 0.627 | 0.162 | 0.609 | 0.411 |
+| spec2d_wide | 0.673 | 0.132 | 0.752 | 0.291 |
+| shallow | 0.671 | 0.180 | 0.634 | 0.373 |
+| spec2d | 0.671 | 0.121 | 1.012 | 0.330 |
+| attention | 0.668 | 0.164 | 0.982 | 0.318 |
+| raw1d | 0.668 | 0.152 | 0.700 | 0.311 |
+| score | 0.666 | 0.154 | **0.499** | **0.274** |
+| early | 0.666 | 0.164 | 1.047 | 0.354 |
+| gated | 0.659 | 0.165 | 0.965 | 0.344 |
+| raw1d_wide | 0.657 | 0.130 | 0.806 | 0.329 |
+| late | 0.649 | 0.150 | 0.804 | 0.318 |
+| logvar | 0.622 | 0.162 | 0.615 | 0.416 |
 
 ![CHB-MIT LOSO, mean macro F1 with 95% CI per model.](figures_manuscript/chbmit_forest.png)
 
 **Figure 3.** CHB-MIT LOSO, mean macro F1 with 95% CI per model, same axis
 conventions as Figure 1. Compare the width of these intervals to Figure 1's: every
-model's 95% CI here spans roughly 0.15 to 0.2 macro F1, wide enough that all eleven
+model's 95% CI here spans roughly 0.10 to 0.16 macro F1, wide enough that all eleven
 overlap substantially, which is the between subject variability problem stated in
 prose below made visible.
 
 **No pair among the five fusion operators separates under the corrected test on any
 metric** (0 of 10 pairs on macro F1, log loss, or Brier;
-`results_v2/chbmit/phase0/chbmit_*.csv`), and in fact **no pair among all 55
-comparisons across all 11 models separates, even under the uncorrected naive test**
-on macro F1 (0 of 55). This is a stronger non separation than Bonn's, where the naive
-test found 22 of 55 pairs "significant" before correction. The reason is visible in
-the standard deviation column of Table 3: between subject variability (SD 0.13 to
-0.18 in macro F1) is large relative to the mean differences between models
-(spread across all 11 models of 0.068), so no resampling based test, corrected or
-not, has the power to resolve differences at this scale from 24 subjects.
+`results_v2/chbmit/phase0_loso_grouped/chbmit_*.csv`), and in fact **no pair among
+all 55 comparisons across all 11 models separates on macro F1, even under the
+uncorrected naive test** (0 of 55). This is a stronger non separation than Bonn's,
+where the naive test found 22 of 55 pairs "significant" before correction. The reason
+is visible in the standard deviation column of Table 3: between subject variability
+(SD 0.12 to 0.18 in macro F1) is large relative to the mean differences between
+models (spread across all 11 models of 0.051, and across the five fusion operators of
+0.020), so no resampling based test, corrected or not, has the power to resolve
+differences at this scale from 23 subjects. Across all 55 pairs and all three
+metrics, the corrected test finds a single difference: score fusion's lower log loss
+than raw1d_wide (p_Holm = 0.048), which does not survive the conservative test to
+train ratio (p_Holm = 0.079; Section 7) and which we therefore treat as fragile.
 
 This is not the same finding as Bonn's, and we report it separately rather than
 folding both into one sentence about operators being "indistinguishable". On Bonn,
 equivalence is positively established: the Bayesian posterior probability that late,
 gated, attention, and score are practically equivalent (within a ±0.01 macro F1
 ROPE) reaches as high as 0.61 for some pairs. On CHB-MIT, the same posterior
-probability for the same five operators' ten pairs ranges only 0.18 to 0.26, and the
-corrected equivalence margin δmin ranges 0.055 to 0.082, wider than any
+probability for the same five operators' ten pairs ranges only 0.19 to 0.31, and the
+corrected equivalence margin δmin ranges 0.049 to 0.079, wider than any
 Bonn pair. **CHB-MIT does not show that the operators are equivalent; it shows only
-that this design, at 24 subjects, cannot resolve whether they are equivalent or
+that this design, at 23 subjects, cannot resolve whether they are equivalent or
 different.** This is a materially weaker and more honest claim, and the distinction
 matters for anyone citing this result: "we could not tell the difference" is not
 "there is no difference."
@@ -543,7 +542,11 @@ matters for anyone citing this result: "we could not tell the difference" is not
 ![CHB-MIT LOSO, pairwise corrected significance and equivalence matrix, all 11 models.](figures_manuscript/chbmit_significance_corrected.png)
 
 **Figure 4.** CHB-MIT LOSO, all 11 models, the same corrected test and the same
-delta_min <= 0.03 margin as Figure 2. Every cell is inconclusive. Contrasted directly
+delta_min <= 0.03 margin as Figure 2. Every cell but one is inconclusive. The
+exception, raw1d and score fusion established as equivalent (δmin = 0.026), is
+expected rather than informative: score fusion is a weighted average of raw1d's and
+spec2d's predicted probabilities in which raw1d receives a mean validation selected
+weight of 0.65, so the two make largely the same decisions. Contrasted directly
 with Figure 2, which is mostly green (equivalent) with a clear orange block
 (`logvar` significantly worse), this is the clearest single illustration in this
 paper of the difference between "no difference found" and "equivalence established":
@@ -552,18 +555,20 @@ to erase every distinction Bonn's design could draw, including the one, `logvar`
 being worse, that Bonn establishes most strongly of all.
 
 A further consequence is that **early fusion's Bonn specific weakness does not
-replicate on CHB-MIT**: it ranks eighth of eleven models by macro F1, not last, and
-the worst performing model is instead `raw1d_wide`, a unimodal capacity matched
-control. We cannot distinguish, with the present data, whether early fusion's Bonn
+replicate on CHB-MIT**: it ranks seventh of eleven models by macro F1, not last, and
+the lowest ranked deep model is instead late fusion, the operator with the highest
+mean on Bonn T1, although no CHB-MIT difference is significant and Section 5.4 shows
+that this ordering is not stable across runs. We cannot distinguish, with the present data, whether early fusion's Bonn
 result reflects something genuine about that architecture or reflects a Bonn specific
 artefact (Section 4.4's amplitude shortcut finding is itself Bonn specific, since it
 concerns the interaction between early fusion and a spectrogram caching bug in the
 Bonn pipeline the current implementation does not share).
 
 **Classical features remain competitive.** The `shallow` classical baseline (a
-logistic regression on seven hand engineered features per channel) ranks third of
-eleven models by macro F1, 0.018 behind the best model, and outperforms two of the
-five fusion operators and both capacity matched unimodal controls. This is a less
+logistic regression on seven hand engineered features per channel) ranks second of
+eleven models by macro F1, 0.002 behind the best model, with a higher mean than all
+five fusion operators and the raw1d_wide control, though none of these differences is
+significant. It ranked third in the earlier run as well (Section 5.4). This is a less
 extreme version of Bonn's saturation finding (Section 4.1) but the same direction:
 the representation learning component of these models is not obviously earning its
 keep over a linear classifier on hand engineered features, on either corpus.
@@ -571,9 +576,11 @@ keep over a linear classifier on hand engineered features, on either corpus.
 **Score level fusion is best calibrated, not necessarily most accurate.** Score
 fusion, the simplest of the five operators, an ensemble of two independently trained
 unimodal models with no additional training, achieves the lowest log loss of all
-eleven models (0.501, next best 0.609) and is statistically tied for lowest Brier
-score with gated fusion (0.260 vs 0.260). Its macro F1 (0.677) is unremarkable and not
-separable from the other operators. We flag this as an interesting but narrow
+eleven models (0.499, next best 0.615) and the lowest Brier score (0.274, next best
+0.291), the latter not significantly different from any other model. Its macro F1
+(0.666) is unremarkable and not separable from the other operators. This is also one
+of the few CHB-MIT patterns that held across both runs (Section 5.4: log loss 0.501
+and joint lowest Brier in the earlier run). We flag it as an interesting but narrow
 finding: classification accuracy and probabilistic calibration are different
 properties, and an operator that wins on one need not win on the other. This has a
 plausible theoretical explanation rather than being an accident of this dataset:
@@ -583,6 +590,49 @@ such guarantee for a non convex one. Log loss and Brier score are convex, macro 
 is not, which is consistent with score fusion (the one operator here that is a
 literal post hoc average of two independent models) improving on the two convex
 metrics without improving on the non convex one.
+
+### 5.4 Re-running CHB-MIT: what changed and what did not
+
+The results above come from a full re-run. An earlier CHB-MIT run
+(`results_v2/chbmit/loso_main/`), on which a previous draft of this manuscript was
+based, differed in four ways: it grouped subjects by case folder, giving 24 folds and
+letting chb01 and chb21 appear on opposite sides of a split; it used Adam rather than
+AdamW; it ran on a different machine with mixed thread counts (12 threads for the
+first five folds, 6 for the rest); and it computed score fusion in a separate script.
+The corrected run changes all four at once, so the differences below cannot be
+attributed to any single one of them.
+
+**The conclusions did not change.** In both runs, 0 of 55 pairs separate on macro F1
+under either the naive or the corrected test, no pair of fusion operators separates
+on any metric, equivalence is not established for any fusion pair, and score fusion
+has the lowest log loss.
+
+**The ranking did.** Mean macro F1 per model moved by between −0.030 and +0.027, and
+the rank correlation of the eleven models between the two runs is weak and not
+significant (Spearman rho = 0.45, p = 0.17). The best fusion operator was gated in
+the earlier run (second of eleven) and is attention in this one; gated fell to eighth
+and late fusion from fifth to tenth.
+
+**The cause lies in training, not in the data.** On the 22 subjects whose test folds
+are identical in the two runs (every subject except chb01 and chb21), the per fold
+macro F1 of the nine deep models changed by a median of 0.056 and by up to 0.364 (gated
+fusion on chb05), while the two classical baselines, which involve no neural network
+training, changed by at most 0.004. The windows, labels, and features are therefore
+the same; what changed is how the networks trained.
+
+**The grouping error distorted two folds, in opposite directions.** In the earlier
+run, the fold testing chb01 (with chb21 in training) was among the best of all folds
+(late fusion 0.981, its best fold), while the fold testing chb21 (with chb01 in
+training) was the second worst averaged over the deep models: six of the nine
+detected no ictal window at all (late fusion 0.444). Held out together, the same person now scores 0.841 with late
+fusion. The leak therefore did not simply inflate results, and its net effect on the
+mean was small, but it made two of 24 folds unrepresentative.
+
+We read this as the thread count finding of Section 6.2 at a larger scale: a set of
+changes with no bearing on which fusion operator is better moves individual models by
+as much as the entire spread between them. A single CHB-MIT run supports the null
+result, which is about the absence of separable differences, but it does not support
+any ranking of the operators, and neither run's ordering should be cited as one.
 
 ## 6. Discussion: What Does "Cannot Distinguish" Mean Here
 
@@ -606,7 +656,8 @@ While verifying determinism of the CHB-MIT pipeline we found that CPU thread cou
 alone, set via `torch.set_num_threads` and otherwise invisible in any results table,
 shifts per fold macro F1 by up to 0.093 on Bonn and 0.208 on CHB-MIT (a single
 outlier fold; median effect near zero, mean effect 0.05 across the 24 fold by 2 model
-comparisons we made), holding code, data, and random seed fixed
+comparisons we made, on the earlier case grouped configuration), holding code, data,
+and random seed fixed
 (`docs/10_OLASILIK_VE_TEKRARLANABILIRLIK.md`, `docs/13_CHBMIT_ISTATISTIK.md`). We
 confirmed this is deterministic at fixed thread count (three repeated runs at
 identical settings reproduce identical results to the last recorded decimal) and
@@ -616,9 +667,13 @@ rather than to any nondeterministic scheduling. The consequence for interpretati
 direct: on Bonn, the spread across our five fusion operators (0.078 macro F1, Table
 2) is comparable to the spread this single, scientifically meaningless setting can
 introduce on its own (0.093, measured on a separate numerical realisation of the same
-comparison); on CHB-MIT the thread effect can exceed the entire operator spread
-(0.068). Thread count, batch order and library version are not
-routinely reported in this literature; our finding suggests they should be, and that
+comparison); on CHB-MIT the thread effect can exceed the entire spread across all
+eleven models (0.051, Table 3). The re-run of Section 5.4 shows the same phenomenon
+from a different direction: changing the optimiser, thread count, and machine
+together reordered the CHB-MIT models while leaving every conclusion intact. The final
+CHB-MIT run was therefore made on a single machine at one fixed thread count, and the
+thread count is recorded with every run. Thread count, batch order and library version
+are not routinely reported in this literature; our finding suggests they should be, and that
 result tables from single, unreported hardware configurations warrant more caution
 than they are usually given.
 
@@ -629,8 +684,8 @@ task, particularly its conventional binary split, is saturated (Section 4.1;
 independently confirmed by Kontras et al. 2026), and within that regime the five
 fusion operators are shown, positively, to be statistically equivalent to each other
 at a fairly tight margin. CHB-MIT is not saturated in the same way (macro F1 in the
-0.63 to 0.70 range, well below ceiling) but its between subject variability is large
-enough that with 24 subjects, this design has too little power to establish either
+0.62 to 0.67 range, well below ceiling) but its between subject variability is large
+enough that with 23 subjects, this design has too little power to establish either
 equivalence or difference between the operators. Both are negative results for the
 practical question "does the fusion operator matter", but they are negative for
 different statistical reasons, and a reader who only takes away "no difference was
@@ -648,29 +703,32 @@ defects found during this project's own development rather than omitting them.
 | Naive paired testing under repeated cross validation | Simulation (Section 3.5) | Most originally reported "significant" differences did not survive correction |
 | CHB-MIT annotation number based parsing | A 27 minute average seizure duration in one subject was not physiologically plausible | Total ictal duration corrected downward by 35 percent (Section 5.1) |
 | CPU thread count changes results | Direct controlled test after an unusual wall clock slowdown was investigated | Documented as a confound (Section 6.2), not fully eliminated |
+| CHB-MIT subjects grouped by case folder | PhysioNet's documentation states chb21 is chb01 recorded 1.5 years later | Two folds distorted in opposite directions; corrected by grouping by person and re-running all models (Sections 5.2, 5.4) |
+| CHB-MIT trained with Adam, Bonn with AdamW | Documentation of the training protocol | Optimiser unified to AdamW in the re-run (Section 3.4) |
 
 ## 7. Limitations
 
-- **CHB-MIT's LOSO folds were not corrected for one documented same subject pair**
-  (chb01 and chb21, per PhysioNet's own dataset documentation; Section 5.2). The
-  measured effect on aggregate results is small (0.006 to 0.013 macro F1 per model)
-  and the model ranking is largely preserved (Spearman rho = 0.88), but the
-  corrected LOSO grouping (merging chb01 and chb21 into one held out subject) has
-  not yet been run, and Table 3 and Section 6's CHB-MIT statistics should be
-  re-derived from it before this work is treated as final.
+- **CHB-MIT results are a single training run per model.** Section 5.4 shows that the
+  ranking of models is not stable across runs that differ only in settings unrelated
+  to the fusion operator. The null result does not depend on the ranking, but any
+  statement about which operator is better on CHB-MIT would need repeated runs with
+  different seeds, which we have not made. Case chb24's identity as a distinct person
+  is assumed rather than documented (Section 5.2).
 - **The corrected resampled t test assumes a fixed test to train ratio, which an
   inner validation split complicates.** Del Pup et al. (2025) argue this assumption
   is frequently violated in deep learning pipelines that hold out an internal
   validation set, as ours does for early stopping (Section 3.4). Our primary analysis
-  uses the standard ratio 1/(k-1) (0.25 for Bonn, 1/23 for CHB-MIT LOSO). As a
+  uses the standard ratio 1/(k-1) (0.25 for Bonn, 1/22 for CHB-MIT LOSO). As a
   sensitivity check we recomputed every test with a conservative ratio based on the
   data actually used for fitting once the validation split is removed (0.3125 for
-  Bonn; 1/18 for CHB-MIT, where five of the 23 training subjects are held out for
-  validation). No conclusion changes: the number of Holm significant pairs is
-  identical in all four analyses (10 of 55 on Bonn T1; 0 of 55 on Bonn T2, Bonn T3,
-  and CHB-MIT), and the corrected equivalence bounds for the fusion operator pairs
-  widen by at most 0.005 macro F1 (`src/phase0.py`, `src/chbmit_stats.py`, column
-  `p_corrected_conservative`). This addresses the objection empirically for our
+  Bonn; 1/18 for CHB-MIT, where four of the 22 training subjects are held out for
+  validation). No conclusion on macro F1 changes: the number of Holm significant
+  pairs is identical in all four analyses (10 of 55 on Bonn T1; 0 of 55 on Bonn T2,
+  Bonn T3, and CHB-MIT), and the corrected equivalence bounds for the fusion operator
+  pairs widen by at most 0.005 macro F1 (`src/phase0.py`, `src/chbmit_stats.py`,
+  column `p_corrected_conservative`). The one CHB-MIT pair significant under the
+  primary ratio, on log loss (Section 5.3), is not significant under the
+  conservative one. This addresses the objection empirically for our
   design; it does not replace a correction derived for nested splits.
 - **The literature gap claimed in Section 2 rests on a scoping search, not yet the
   registered systematic search** described in `paper/proposal.md` and protocolled in
