@@ -81,13 +81,11 @@ def main() -> None:
         pipe_name = json.loads(meta_path.read_text(encoding="utf-8")).get(
             "pipeline", {}).get("name", "P0")
     pipe = PIPELINES[pipe_name]
-    if pipe.reject_uv is not None and not np.isfinite(pipe.reject_uv):
-        raise SystemExit("P4: the rejection threshold has not been decided yet")
     d = build_corpus(verbose=False,
                      signal_fn=pipe.apply_signal if pipe.has_signal_steps else None,
                      signal_tag=pipe.signal_tag)
     X, y, subject, group = d["X"], d["y"], d["subject"], d["group"]
-    rejected = (artifact_mask(X, pipe.reject_uv) if pipe.reject_uv is not None
+    rejected = (artifact_mask(build_corpus(verbose=False)["X"]) if pipe.reject
                 else np.zeros(len(y), bool))
     print(f"pipeline {pipe.name}" + (f", {int(rejected.sum())} training-eligible windows "
                                      f"flagged as artefacts" if rejected.any() else ""))

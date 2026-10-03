@@ -17,7 +17,7 @@ overlap. Results do not depend on how many runs share the machine, only on the
 thread count, which must stay the same for all runs of one analysis.
 
 Usage:
-    python -m src.run_queue --pipelines P0 P1 P2 P3 P5 --repeats 0 1 2 --threads 16
+    python -m src.run_queue --pipelines P0 P1 P2 P3 P4 P5 --repeats 0 1 2 --threads 16
     python -m src.run_queue ... --worker 1/2        # and --worker 2/2 in a second window
     python -m src.run_queue ... --dry-run           # only list what would run
 """
@@ -70,7 +70,7 @@ def run(cmd: list[str]) -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--pipelines", nargs="+", default=["P0", "P1", "P2", "P3", "P5"],
+    ap.add_argument("--pipelines", nargs="+", default=["P0", "P1", "P2", "P3", "P4", "P5"],
                     choices=list(PIPELINES))
     ap.add_argument("--repeats", nargs="+", type=int, default=[0, 1, 2])
     ap.add_argument("--threads", type=int, default=16)

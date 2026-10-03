@@ -127,7 +127,7 @@ settings, models, training and evaluation stay the same.
 | P1 | 0.5 to 40 Hz | none | none | z-score | standard EEG band |
 | P2 | 0.5 to 70 Hz | 60 Hz | none | z-score | information above 40 Hz |
 | P3 | 1 to 40 Hz | none | none | z-score | low frequency and drift |
-| P4 | 0.5 to 40 Hz | none | amplitude based window rejection | z-score | artefact rejection |
+| P4 | 0.5 to 40 Hz | none | technical artefact rejection (flat channels, dropouts) | z-score | artefact rejection |
 | P5 | 0.5 to 40 Hz | none | none | median and IQR | normalisation |
 | P6 | 0.5 to 40 Hz | none | ICA, ocular components removed | z-score | aggressive cleaning |
 
@@ -141,15 +141,19 @@ settings, models, training and evaluation stay the same.
 - **The spectrogram ceiling stays at 64 Hz** in every pipeline, so input shapes and
   parameter counts do not change. In the 40 Hz pipelines the 40 to 64 Hz rows are
   near zero.
-- **P4** rejects a window if any channel's peak-to-peak amplitude after the band-pass
-  exceeds `REJECT_UV`. Rejected windows are removed from training and validation only;
-  the test set is unchanged, so P4 stays paired with the other pipelines. The rejection
-  rate is reported separately for ictal and non-ictal windows, because ictal EEG is high
-  in amplitude (`python -m src.preprocess --scan-rejection`). On CHB-MIT every fixed
-  threshold removes ictal windows far more often than non-ictal ones (500 uV: 72 percent
-  against 48; 1000 uV: 44 against 12), and a per-subject relative rule does as well
-  (robust z above 10: 21 against 4.5). The threshold is therefore left to the advisor,
-  and P4 refuses to run until it is set.
+- **P4** rejects technical artefacts only: a window is rejected if a channel is flat
+  (standard deviation below 1 uV) or holds one constant value for at least 0.5 s (a
+  signal dropout, at 0 uV in CHB-MIT). Detection runs on the unfiltered signal of the same
+  windows, since filtering smears a flat segment. Rejected windows leave training and
+  validation only; the test set is unchanged, so P4 stays paired with the other
+  pipelines. The rule rejects 3.3 percent of ictal and 0.8 percent of non-ictal windows;
+  the 0.5 s before a dropout have the same amplitude in both classes, so the difference
+  reflects which recordings have dropouts, not seizure physiology. Amplitude criteria were
+  measured and not used, because they remove seizures selectively (500 uV: 72 percent of
+  ictal against 48 percent of non-ictal windows; 1000 uV: 44 against 12; per subject
+  robust z above 10: 21 against 4.5), and clipping is not detectable: the stored int16
+  data exceed the declared 12-bit range and no recording piles up at a limit
+  (`python -m src.preprocess --scan-rejection`).
 - **P6** fits FastICA (18 components) per recording and removes up to two components
   whose topography lies mainly on the four FP channels and whose power lies mainly below
   4 Hz (ocular activity; CHB-MIT has no EOG channel). Muscle components are not removed,
@@ -380,7 +384,7 @@ remains available in the repository history (commit `804709c`).
 1. Build the pipeline caches once (needs the raw EDF files; P6 takes the longest because
    of ICA): `python -m src.preprocess --build`. It stops with an error if any pipeline's
    windows differ from P0's.
-2. Run the pipeline x seed queue: `python -m src.run_queue --pipelines P0 P1 P2 P3 P5 --repeats 0 1 2 --threads 16`
+2. Run the pipeline x seed queue: `python -m src.run_queue --pipelines P0 P1 P2 P3 P4 P5 --repeats 0 1 2 --threads 16`
    (add `--device cuda` for the GPU). For each run it trains the models, then adds the
    baselines and the statistics, and skips whatever is already complete, so the same
    command resumes after an interruption. Output names: `loso_P1` (seed set 0),

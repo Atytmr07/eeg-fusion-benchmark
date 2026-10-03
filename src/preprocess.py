@@ -11,7 +11,7 @@ counts are identical), the same models, training and evaluation.
     P1    0.5-40 Hz    none    none                          z-score         standard EEG band
     P2    0.5-70 Hz    60 Hz   none                          z-score         information above 40 Hz
     P3    1-40 Hz      none    none                          z-score         low frequency / drift
-    P4    0.5-40 Hz    none    amplitude epoch rejection     z-score         artefact rejection
+    P4    0.5-40 Hz    none    technical artefact rejection  z-score         artefact rejection
     P5    0.5-40 Hz    none    none                          median / IQR    normalisation
     P6    0.5-40 Hz    none    ICA component removal         z-score         aggressive cleaning
 
@@ -25,15 +25,14 @@ Where each step runs:
   window level   normalisation (src/chbmit_prep.py: prepare) and artefact rejection
                  (artifact_mask) run per window at training time.
 
-Artefact rejection (P4) removes windows from TRAINING and VALIDATION only; the test set
-is the same as in every other pipeline, so the pipelines stay paired fold by fold.
-Rejecting test windows would also discard seizures selectively, because ictal EEG is
-high in amplitude: the rejection rate is recorded separately for ictal and non-ictal
-windows.
+Artefact rejection (P4) targets technical artefacts only (flat channels and signal
+dropouts, see FLAT_STD_UV) and not amplitude: on CHB-MIT every amplitude criterion
+removes seizures selectively, because high amplitude is part of ictal EEG. Rejected
+windows leave TRAINING and VALIDATION only; the test set is the same as in every other
+pipeline, so the pipelines stay paired fold by fold. The rejection rate is recorded
+separately for ictal and non-ictal windows.
 
 Open choices, pending the advisor (recorded in every run's meta.json):
-  - P4 threshold (REJECT_UV, see the measurement next to it) and whether rejection
-    should also apply to test windows.
   - P6 component selection. There is no EOG channel in CHB-MIT, so ocular components
     are identified from the frontal (FP) channels: topography concentrated on them and
     power concentrated below 4 Hz. Muscle components are not removed by default,
@@ -53,15 +52,23 @@ from .chbmit_prep import notch_filter
 
 BUTTER_ORDER = 4            # zero-phase (forward-backward), so effective order 8
 
-# P4: a window is rejected if any channel's peak-to-peak amplitude exceeds this (uV,
-# measured after the 0.5-40 Hz band-pass). None until the advisor decides; P4 refuses
-# to run without it. `python -m src.preprocess --scan-rejection` measured on CHB-MIT:
-# median worst-channel peak-to-peak is 482 uV in non-ictal and 890 uV in ictal windows,
-# so every fixed threshold removes ictal windows 1.5 to 4 times as often as non-ictal
-# ones (500 uV: 72 % vs 48 %; 1000 uV: 44 % vs 12 %). A per-subject relative rule does
-# not escape this (robust z > 10: 21 % vs 4.5 %). Amplitude-based rejection is
-# confounded with the class itself on this corpus.
-REJECT_UV: float | None = None
+# P4: technical artefacts. A window is rejected if a channel is flat (standard deviation
+# below FLAT_STD_UV over the window: a disconnected electrode) or holds one constant
+# value for at least FLAT_RUN_S seconds (a signal dropout; in CHB-MIT these sit at 0 uV).
+# Detected on the UNFILTERED signal, since filtering smears a flat segment into ringing.
+#
+# Why not amplitude (python -m src.preprocess --scan-rejection, CHB-MIT): the median
+# worst-channel peak-to-peak amplitude is 482 uV in non-ictal and 890 uV in ictal
+# windows, so every amplitude threshold removes seizures selectively (500 uV: 72 % of
+# ictal vs 48 % of non-ictal windows; 1000 uV: 44 % vs 12 %; per subject robust z > 10:
+# 21 % vs 4.5 %). Clipping is not a usable criterion either: the declared 12-bit range
+# (e.g. +-800 uV) is exceeded by the stored int16 data, and no recording piles up at a
+# limit. The rule below rejects 3.3 % of ictal and 0.8 % of non-ictal windows. The
+# higher ictal share is not physiological: the 0.5 s before a dropout have the same
+# amplitude in both classes (median about 40 uV); dropouts occur in a few recordings
+# that also contain seizures.
+FLAT_STD_UV = 1.0
+FLAT_RUN_S = 0.5
 
 # P6: ICA settings and the ocular component rule.
 ICA_FIT_STRIDE = 2          # fit on every 2nd sample; the 0.5-40 Hz signal has no
@@ -79,7 +86,7 @@ class Pipeline:
     band: tuple[float, float] | None = None
     notch_hz: float | None = None
     ica: bool = False
-    reject_uv: float | None = None
+    reject: bool = False            # P4: technical artefact rejection (artifact_mask)
     norm: str = "window"            # "window" (z-score) or "robust" (median / IQR)
 
     @property
@@ -114,8 +121,10 @@ class Pipeline:
 
     def describe(self) -> dict:
         d = asdict(self) | {"signal_tag": self.signal_tag}
-        if self.reject_uv is not None:
-            d["reject_scope"] = "train and validation"
+        if self.reject:
+            d["reject_rule"] = {"flat_std_uv": FLAT_STD_UV, "flat_run_s": FLAT_RUN_S,
+                                "detected_on": "unfiltered signal",
+                                "scope": "train and validation"}
         if self.ica:
             d["ica_rule"] = {"frontal": list(ICA_FRONTAL), "frontal_frac": ICA_FRONTAL_FRAC,
                              "low_frac": ICA_LOW_FRAC, "max_remove": ICA_MAX_REMOVE,
@@ -128,7 +137,7 @@ PIPELINES = {p.name: p for p in (
     Pipeline("P1", band=(0.5, 40.0)),
     Pipeline("P2", band=(0.5, 70.0), notch_hz=60.0),
     Pipeline("P3", band=(1.0, 40.0)),
-    Pipeline("P4", band=(0.5, 40.0), reject_uv=REJECT_UV if REJECT_UV else float("nan")),
+    Pipeline("P4", band=(0.5, 40.0), reject=True),
     Pipeline("P5", band=(0.5, 40.0), norm="robust"),
     Pipeline("P6", band=(0.5, 40.0), ica=True),
 )}
@@ -178,11 +187,25 @@ def ica_clean(x: np.ndarray, fs: float, seed: int = 0) -> tuple[np.ndarray, dict
 
 # --- Window level --------------------------------------------------------------------
 
-def artifact_mask(x: np.ndarray, threshold_uv: float) -> np.ndarray:
-    """True for windows in which any channel's peak-to-peak amplitude exceeds the
-    threshold. x: (window, channel, time) in microvolts, before normalisation."""
-    ptp = x.max(axis=-1) - x.min(axis=-1)
-    return (ptp > threshold_uv).any(axis=-1)
+def longest_constant_run(x: np.ndarray) -> np.ndarray:
+    """Longest run of identical consecutive samples, per window and channel, counted in
+    sample steps. x: (window, channel, time)."""
+    same = np.diff(x, axis=-1) == 0
+    best = np.zeros(x.shape[:2], np.int32)
+    cur = np.zeros(x.shape[:2], np.int32)
+    for k in range(same.shape[-1]):
+        cur = np.where(same[..., k], cur + 1, 0)
+        np.maximum(best, cur, out=best)
+    return best
+
+
+def artifact_mask(x_raw: np.ndarray, fs: float = 256.0) -> np.ndarray:
+    """True for windows with a technical artefact: a flat channel or a constant segment
+    of at least FLAT_RUN_S seconds on any channel. x_raw: (window, channel, time) in
+    microvolts, UNFILTERED (the P0 corpus, which holds the same windows)."""
+    flat = (x_raw.std(axis=-1) < FLAT_STD_UV).any(axis=-1)
+    dropout = (longest_constant_run(x_raw) >= int(FLAT_RUN_S * fs)).any(axis=-1)
+    return flat | dropout
 
 
 # --- Building and checking the pipeline corpora -----------------------------------------
@@ -211,9 +234,18 @@ def build_all(names: list[str]) -> None:
 
 
 def scan_rejection(thresholds=(200, 300, 400, 500, 750, 1000)) -> None:
-    """Share of ictal and non-ictal windows that P4 would reject, per threshold."""
+    """Share of ictal and non-ictal windows rejected by the P4 rule, and, for comparison,
+    by amplitude thresholds on the band-passed signal."""
     from .chbmit_corpus import build_corpus
 
+    raw = build_corpus(verbose=False)
+    r = artifact_mask(raw["X"])
+    yr = raw["y"]
+    print(f"P4 rule (flat channel or constant segment >= {FLAT_RUN_S:g} s, unfiltered): "
+          f"ictal {r[yr == 1].mean():.1%} ({int(r[yr == 1].sum())}), "
+          f"non-ictal {r[yr == 0].mean():.1%} ({int(r[yr == 0].sum())})")
+    del raw
+    print("\nfor comparison, amplitude criteria (not used):")
     p = PIPELINES["P4"]
     d = build_corpus(verbose=False, signal_fn=p.apply_signal, signal_tag=p.signal_tag)
     # per subject and channel robust z of the peak-to-peak amplitude, for comparison
@@ -249,7 +281,7 @@ def main() -> None:
     ap.add_argument("--build", nargs="*", metavar="P",
                     help="build the corpus caches of these pipelines (default: all)")
     ap.add_argument("--scan-rejection", action="store_true",
-                    help="rejection rates of P4 at several thresholds")
+                    help="rejection rates of the P4 rule and of amplitude criteria")
     args = ap.parse_args()
     if args.build is not None:
         build_all(args.build or list(PIPELINES))

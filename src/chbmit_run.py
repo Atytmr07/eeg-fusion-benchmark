@@ -205,9 +205,6 @@ def main() -> None:
         raise SystemExit("score is computed from raw1d and spec2d; add both to --models")
 
     pipe = PIPELINES[args.pipeline]
-    if pipe.reject_uv is not None and not np.isfinite(pipe.reject_uv):
-        raise SystemExit("P4: the rejection threshold (src/preprocess.py: REJECT_UV) has "
-                         "not been decided yet")
     if pipe.name != "P0" and (args.norm != "window" or args.notch):
         raise SystemExit("--pipeline sets normalisation and filtering itself; do not "
                          "combine it with --norm or --notch")
@@ -219,18 +216,18 @@ def main() -> None:
     info = d["info"]
     ncls, in_ch = 2, X.shape[1]
 
-    # Artefact rejection (P4) is decided on the filtered microvolt signal, before
-    # normalisation, and applied to training and validation windows only.
+    # Artefact rejection (P4) is decided on the UNFILTERED signal of the same windows
+    # (the P0 corpus) and applied to training and validation windows only.
     rejected = np.zeros(len(y), bool)
     reject_meta = None
-    if pipe.reject_uv is not None:
-        rejected = artifact_mask(X, pipe.reject_uv)
-        reject_meta = {"threshold_uv": pipe.reject_uv,
+    if pipe.reject:
+        rejected = artifact_mask(build_corpus(verbose=False)["X"])
+        reject_meta = {"rule": pipe.describe()["reject_rule"],
                        "ictal_rejected": int(rejected[y == 1].sum()),
                        "ictal_total": int((y == 1).sum()),
                        "nonictal_rejected": int(rejected[y == 0].sum()),
                        "nonictal_total": int((y == 0).sum())}
-        print(f"artefact rejection > {pipe.reject_uv:g} uV: "
+        print(f"technical artefact rejection: "
               f"{reject_meta['ictal_rejected']}/{reject_meta['ictal_total']} ictal and "
               f"{reject_meta['nonictal_rejected']}/{reject_meta['nonictal_total']} "
               f"non-ictal windows flagged (excluded from training and validation)")
