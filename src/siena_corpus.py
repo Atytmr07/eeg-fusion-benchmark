@@ -32,8 +32,8 @@ from .chbmit import FS_CHB, TARGET_CHANNELS, plan_windows
 from .chbmit_corpus import (NON_ICTAL, _window_seizure_id, check_leakage,
                             leave_one_subject_out, validate)
 from .siena import (DECISIONS, FS_SIENA, SIENA_ROOT, SUBJECTS, bipolar_pairs,
-                    check_decisions, parse_seizure_list, read_bipolar, record_path,
-                    seizures_in_record, subject_records)
+                    check_decisions, excluded, parse_seizure_list, read_bipolar,
+                    record_path, seizures_in_record, subject_records)
 
 CACHE = SIENA_ROOT / "_cache"
 
@@ -97,6 +97,7 @@ def build_corpus(subjects: list[str] | None = None, win_s: float = 10.0,
     rng = np.random.default_rng(seed)
     Xs, ys, subj, sids, fnames, t0s = [], [], [], [], [], []
     per_subject = {}
+    notes: dict[str, list[str]] = {}         # seizure id -> notes from the list parser
     n = int(win_s * FS_CHB)
 
     for si, sub in enumerate(subs):
@@ -113,6 +114,10 @@ def build_corpus(subjects: list[str] | None = None, win_s: float = 10.0,
         for name in names:
             path = record_path(sub, name)
             zs, excl, ids = seizures_in_record(path, listed, decisions)
+            kept = [z for z in listed if z.file == name and not excluded(z, decisions)]
+            notes.update({i: z.notes for i, z in zip(ids, kept) if z.notes})
+            notes.update({f"{name}#excluded{j}": z.notes for j, z in enumerate(
+                [z for z in listed if z.file == name and excluded(z, decisions)], 1)})
             ictal_s += sum(z.duration for z in zs)
             y_f, t_f = plan_windows(path, zs, win_s, stride_s, guard_s)
             zid = [(z.start_s, z.end_s, i) for z, i in zip(zs, ids)]
@@ -189,6 +194,7 @@ def build_corpus(subjects: list[str] | None = None, win_s: float = 10.0,
         "win_s": win_s, "stride_s": stride_s or win_s, "guard_s": guard_s,
         "neg_per_pos": neg_per_pos, "seed": seed, "signal_tag": signal_tag,
         "decisions": decisions,
+        "seizure_notes": notes,
         "n_windows": int(len(out["y"])), "n_ictal": int(out["y"].sum()),
         "n_seizures": int(len({s for s in sids if s})),
         "per_subject": per_subject,

@@ -121,8 +121,10 @@ CORRECTIONS = {
     "channel_labels": {"Channel 5: 1": "O1"},
 }
 
-# Ambiguities in the lists that the advisor decides. Both options are implemented;
-# the active choice is recorded in every corpus' info.
+# Ambiguities in the lists. Both options of each are implemented; the active choice is
+# recorded in every corpus' info. The values below are the advisor's decisions (Sevgi
+# Hoca), applied after the signal check of `python -m src.siena_qc` (docs/SIENA.md,
+# Section 5).
 DECISIONS = {
     # PN00 seizure 3 (PN00-3.edf): end "19.29.29", but the recording ends at 18.57.13,
     # which would make a 61-minute seizure running past the end of the file.
@@ -130,14 +132,21 @@ DECISIONS = {
     #              other four seizures, 54 to 74 s)
     #   "exclude"  drop the seizure and every window from its onset to the end of the
     #              recording, since the true end is unknown
+    # Rule: keep 18.29.29 only if the signal shows the seizure ending about 60 s after
+    # onset, otherwise exclude. Result: the right frontotemporal ictal rhythm falls
+    # below a quarter of its peak 14 s after 18.29.29, as the patient's other four
+    # seizures do 0 to 13 s after their listed ends; 18.29.29 is kept as a documented
+    # metadata correction.
     "PN00_seizure3": "typo",
     # PN10 seizure 3 (PN10-3.edf): "15.43.53 (CLINICAL ONSET); 15.43.59 (ELECTRIC
     # ONSET)".
     #   "electric"  15.43.59; CHB-MIT annotates electrographic onsets, so this keeps
     #               the two corpora consistent
     #   "clinical"  15.43.53
-    # PN10 seizure 6 gives only a clinical onset ("15.18.26 (CLINICAL ONSET)"); it is
-    # used as listed under either choice.
+    # Advisor: electrical onset in the main analysis (6 s later; changes one 10 s
+    # window label). PN10 seizure 6 gives only a clinical onset ("15.18.26 (CLINICAL
+    # ONSET)"); it is used as listed under either choice and flagged in the seizure
+    # notes and the corpus info.
     "PN10_seizure3_onset": "electric",
     # PN10 seizure 2 (PN10-2.edf): end "11.41.04 opure 11.40.43" (Italian "oppure",
     # "or").
@@ -256,8 +265,15 @@ def parse_seizure_list(subject: str, root: Path = SIENA_ROOT,
         if inherited and (subject, n) not in CORRECTIONS["inherited_registration"]:
             raise ValueError(f"{where}: no registration times of its own; add it to "
                              f"CORRECTIONS['inherited_registration'] if intended")
-        out.append(ListedSeizure(subject, n, ctx["file"], ctx["reg_start"],
-                                 ctx["reg_end"], cur["start"], cur["end"], inherited))
+        z = ListedSeizure(subject, n, ctx["file"], ctx["reg_start"], ctx["reg_end"],
+                          cur["start"], cur["end"], inherited)
+        marks = " ".join(re.findall(r"\(([^)]*)\)", cur["raw_start"])).upper()
+        if len(_TIME.findall(cur["raw_start"])) > 1:
+            z.notes.append(f"onset chosen from {cur['raw_start'].strip()!r}: "
+                           f"{clock(z.start)}")
+        elif "CLINICAL" in marks:
+            z.notes.append("clinical onset only; no electrical onset listed")
+        out.append(z)
         cur, reg_seen = None, False
 
     for raw in text.splitlines():
@@ -265,7 +281,8 @@ def parse_seizure_list(subject: str, root: Path = SIENA_ROOT,
         m = re.match(r"Seizure n\s*(\d+)", line, re.I)
         if m:
             close()
-            cur = {"number": int(m.group(1)), "start": None, "end": None}
+            cur = {"number": int(m.group(1)), "start": None, "end": None,
+                   "raw_start": ""}
             continue
         m = re.match(r"File name:\s*(\S+)", line, re.I)
         if m:
@@ -285,6 +302,8 @@ def parse_seizure_list(subject: str, root: Path = SIENA_ROOT,
             if cur is None:
                 raise ValueError(f"{subject}: seizure {what} time outside a seizure "
                                  f"block: {line!r}")
+            if what == "start":
+                cur["raw_start"] = m.group(2)
             cur[what] = _parse_time(m.group(2), f"{subject} seizure {cur['number']} "
                                     f"{what}", _decide(subject, cur["number"], what,
                                                        decisions))

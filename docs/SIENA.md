@@ -56,7 +56,7 @@ start time, modulo 24 hours, for every recording. The header start time is by
 definition the time of the first sample, and it agrees with the list for 39
 recordings. For PN14-3 the header is right: its start plus the recording duration
 gives the listed end time exactly, while the listed start would make the recording
-three hours longer than the file. PN05-3 is not settled (Section 5).
+three hours longer than the file. PN05-3 is not settled (Section 5.3).
 
 **The 20 s end offset.** In 18 recordings the file runs exactly 20 s past the listed
 registration end. The start times agree, so seizure times are unaffected; the most
@@ -78,29 +78,102 @@ being guessed.
 | No registration times for seizure 2 | PN12 | taken from seizure 1 of the same file; only the blocks listed in `CORRECTIONS["inherited_registration"]` may do this |
 | Recordings past midnight | PN01, PN03, PN06-2, PN07, PN14-3, PN16-2 | times taken modulo 24 hours |
 | Channel 5 named `1` | all lists | channels are taken from the EDF headers (`EEG O1`), never from the lists |
-| Wrong registration start time | PN14-3, PN05-3 | the EDF header start time is used (Section 3) |
+| Wrong registration start time | PN14-3, PN05-3 | the EDF header start time is used (Sections 3 and 5.3) |
 | Two times in one field | PN10 seizures 2 and 3 | resolved by `DECISIONS` (Section 5); any other multi-time field raises |
+| Clinical onset only | PN10 seizure 6 | used as listed and flagged in the seizure notes (Section 5.2) |
 
-## 5. Decisions for the advisor
+## 5. Decisions
 
-Both options of each are implemented; the active choice is the `DECISIONS` constant
-at the top of `src/siena.py`, part of the corpus cache name, and recorded in the
-corpus info.
+Both options of each ambiguity are implemented; the active choice is the `DECISIONS`
+constant at the top of `src/siena.py`, part of the corpus cache name, and recorded in
+the corpus info. The values are the advisor's decisions, applied after the checks in
+`src/siena_qc.py` (`python -m src.siena_qc`).
 
-| Key | Problem | Default | Alternative |
+| Key | Problem | Main analysis | Alternative (implemented) |
 |---|---|---|---|
-| `PN00_seizure3` | PN00-3: end `19.29.29`, but the recording ends at 18.57.13, a 61-minute seizure past the end of the file | `typo`: 18.29.29, a 60 s seizure (the patient's other four last 54 to 74 s) | `exclude`: the seizure and every window from its onset to the end of the recording are dropped |
-| `PN10_seizure3_onset` | PN10-3: `15.43.53 (CLINICAL ONSET); 15.43.59 (ELECTRIC ONSET)` | `electric`: 15.43.59, consistent with CHB-MIT's electrographic annotations | `clinical`: 15.43.53 |
+| `PN00_seizure3` | PN00-3: end `19.29.29`, after the recording ends (18.57.33) | `typo`: 18.29.29, a 60 s seizure, **confirmed by the signal** (5.1) | `exclude`: the seizure and every window from its onset to the end of the recording are dropped |
+| `PN10_seizure3_onset` | PN10-3: `15.43.53 (CLINICAL ONSET); 15.43.59 (ELECTRIC ONSET)` | `electric`: 15.43.59 (5.2) | `clinical`: 15.43.53 |
 | `PN10_seizure2_end` | PN10-2: end `11.41.04 opure 11.40.43` (Italian "oppure", "or") | `first`: 11.41.04 | `second`: 11.40.43 |
 
-Further open points found during the work:
+### 5.1 PN00 seizure 3
 
-- **PN05-3 start time.** The list says 06.01.23 and the header 06.01.13. The list's
-  value fits the 20 s end-offset pattern of the other recordings; the header's does
-  not. The header is used, as for every recording. The seizure lasts 30 s, so the
-  10 s can move its label by one window.
-- **PN10 seizure 6** gives only a clinical onset (`15.18.26 (CLINICAL ONSET)`), so the
-  `electric` choice for seizure 3 cannot be applied consistently to all of PN10.
+**Rule (advisor):** use the 18.29.29 end as a documented metadata correction only if
+the signal shows the seizure ending about 60 s after onset; otherwise drop the seizure
+and every window touching it from the main analysis.
+
+**Check.** PN00's seizures are right temporal (`subject_info.csv`), and in all five the
+ictal discharge is clearest on the right frontotemporal chain (FP2-F8, F8-T8) as an
+evolving 3-20 Hz rhythm. Its power is computed in 1 s steps (smoothed over 5 s), and the
+signal offset is the first second after the peak from which the power stays below a
+quarter of the peak for 10 s. The same rule is applied to all five seizures:
+
+| Seizure | Listed onset | Listed end | Listed duration | Rhythm peak | Signal offset | Offset - listed end |
+|---|---|---|---|---|---|---|
+| 1 | 19.58.36 | 19.59.46 | 70 s | +60 s | +70 s | +0 s |
+| 2 | 02.38.37 | 02.39.31 | 54 s | +59 s | +67 s | +13 s |
+| **3** | **18.28.29** | **18.29.29** (corrected) | **60 s** | **+42 s** | **+74 s** | **+14 s** |
+| 4 | 21.08.29 | 21.09.43 | 74 s | +54 s | +76 s | +2 s |
+| 5 | 22.37.08 | 22.38.15 | 67 s | +44 s | +72 s | +5 s |
+
+**Result: the correction is supported.** Seizure 3's rhythm ends 14 s after the
+corrected end, in line with the other four seizures (0 to 13 s after their listed ends,
+all measured the same way); the listed 19.29.29 lies 1916 s after the end of the
+recording. `PN00_seizure3` stays `typo`. The traces show the rhythmic discharge on
+FP2-F8 and F8-T8 building from about 18:28:58 and stopping just before 18:29:29.
+Broadband line length rises again on the right frontal channels after 18:29:35; that
+activity is not rhythmic (it has no 3-20 Hz peak) and looks like post-ictal muscle or
+movement, which is why the offset is measured on the band-limited rhythm and not on
+line length or amplitude (both of which stay raised for minutes after seizures 1 and 2).
+
+![PN00 seizure 3](figures/siena_PN00_sz3.png)
+
+*Top: 18 bipolar channels, 18:27:30 to 18:31:00, 0.5-40 Hz, listed onset and corrected
+end marked. Middle: line length per channel in 1 s steps relative to the pre-ictal
+median. Bottom: right frontotemporal 3-20 Hz power of all five PN00 seizures aligned to
+their listed onsets, normalised to each seizure's peak; triangles mark the listed ends,
+the dashed line the offset threshold.*
+
+### 5.2 PN10 onsets
+
+**Decision (advisor):** electrical onset in the main analysis. Only seizure 3 lists both
+onsets; seizure 6 lists only a clinical onset, the other eight are unmarked.
+
+| Seizure | File | Listed onset | Onsets given | Electrical - clinical | 10 s windows whose label changes |
+|---|---|---|---|---|---|
+| 1 | PN10-1.edf | 07.45.50 | unmarked | - | - |
+| 2 | PN10-2.edf | 11.40.13 | unmarked | - | - |
+| **3** | PN10-3.edf | 15.43.53 (clinical); 15.43.59 (electric) | both | **+6 s** | **1** (the window starting 15.43.48 is ictal with the clinical onset, non-ictal with the electrical one) |
+| 4 | PN10-4.5.6.edf | 12.49.50 | unmarked | - | - |
+| 5 | PN10-4.5.6.edf | 14.00.25 | unmarked | - | - |
+| **6** | PN10-4.5.6.edf | 15.18.26 (clinical) | **clinical only** | unknown | unknown |
+| 7 | PN10-7.8.9.edf | 17.35.13 | unmarked | - | - |
+| 8 | PN10-7.8.9.edf | 18.20.24 | unmarked | - | - |
+| 9 | PN10-7.8.9.edf | 20.24.48 | unmarked | - | - |
+| 10 | PN10-10.edf | 10.58.19 | unmarked | - | - |
+
+Seizure 6 uses its clinical onset, as recommended, and is flagged: the parser adds the
+note "clinical onset only" to it, and every corpus records the notes of its seizures
+under `info["seizure_notes"]`. In seizure 3 the clinical onset precedes the electrical
+one by 6 s; if seizure 6 behaves alike, its electrical onset would be a few seconds
+later and change at most one window. Both facts are for a later sensitivity check
+(`PN10_seizure3_onset = "clinical"` gives the alternative corpus directly).
+
+### 5.3 Start times of PN14-3 and PN05-3
+
+- **PN14-3: header used, list corrected.** The list's start (16.17.45) is three hours
+  early. The header's 19.17.45 plus the recording duration (41995 s) gives the listed
+  end time 06.57.40 exactly, so the list's start is a typo; the seizure (21.10.05) lies
+  1 h 52 min into the recording, not 4 h 52 min.
+- **PN05-3: header used (06.01.13), not resolved.** The list says 06.01.23. The header is
+  used for every recording because its start time belongs to the first sample by
+  definition, and 39 of 41 recordings agree with their list to the second. Against it:
+  the list's value fits the 20 s end offset seen in 18 other recordings, the header's
+  does not. For this 30 s seizure (07.55.19 to 07.55.49) the choice moves the ictal
+  span by one window: with the header 4 windows are ictal (6840 to 6880 s), with the
+  list start also 4, shifted by one (6830 to 6870 s), so 2 window labels differ.
+
+### 5.4 Other notes
+
 - **PN10's electrodes.** Its seizure list names 19 EEG channels and `subject_info.csv`
   20, but its EDF headers carry the same 29 EEG labels as the other patients. Only the
   19 standard electrodes are used, so this does not affect the corpus.
@@ -113,6 +186,7 @@ python -m src.siena_download --subjects PN00         # one subject, about 400 MB
 python -m src.siena_download                         # all 14 subjects, 20.3 GB
 python -m src.verify_siena                           # integrity of what is on disk
 python -m src.siena_corpus --check                   # build the cache, counts, leakage checks
+python -m src.siena_qc                               # PN00 seizure 3 check and figure, PN10 onsets
 ```
 
 Downloads resume where they stopped, skip complete files, and check every EDF against
