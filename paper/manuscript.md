@@ -1,11 +1,14 @@
-> **DRAFT, NOT FOR SUBMISSION.** This manuscript is a working draft. It has not been
-> reviewed by an advisor, the systematic literature search committed to in
-> `paper/proposal.md` has not been run, and the implementation is still the version
-> described there as preliminary. Numbers are traceable to stored result files
-> (paths given throughout) but the surrounding text, framing, and completeness are
-> not final. See `docs/` for the full audit trail this draft is built from.
+> **DRAFT, NOT FOR SUBMISSION.** This manuscript is a working draft. The systematic
+> literature search committed to in `paper/proposal.md` has not been run yet. The
+> study is being extended, at the advisor's request, from a single comparison into a
+> preprocessing and training multiverse: its design is described in Section 3.6 and
+> the third corpus in Section 5.5, while their results (Section 5.6) are pending and
+> marked as such. The abstract, introduction and discussion still describe the
+> original two-corpus comparison and will be rewritten when those results exist.
+> Numbers are traceable to stored result files (paths given throughout). See `docs/`
+> for the full audit trail this draft is built from.
 
-# Do Fusion Operators Matter? A Parameter-Matched, Statistically Controlled Comparison of Multimodal CNN Fusion for EEG Seizure Detection
+# Do Fusion Operators Matter, and Does the Answer Survive Preprocessing? A Parameter-Matched Multiverse Comparison of Multimodal CNN Fusion for EEG Seizure Detection
 
 Emre Atay Tümer
 Computer Engineering and Industrial Engineering, Antalya Bilim University
@@ -105,6 +108,11 @@ search was actually conducted (Section 2 and `docs/09`, `docs/14`).
 5. A corrected, order based parser for CHB-MIT's seizure annotation files, after
    finding that the standard number based parsing is vulnerable to a labelling error
    present in the released files (Section 5.1).
+6. A preprocessing and training multiverse (Section 3.6): nine preprocessing pipelines,
+   including three artefact removal algorithms, each crossed with three seed sets, to
+   ask whether conclusions about fusion operators, not only their absolute
+   performance, are robust to preprocessing decisions and to stochastic training
+   (results pending, Section 5.6).
 
 ## 2. Related Work
 
@@ -290,6 +298,102 @@ report primary results on macro F1 and Brier score; log loss is reported but tre
 as secondary, because it proved heavy tailed and unstable across both corpora
 (Section 4.3, Section 5.2), inflating variance for any model with even a few
 confidently wrong predictions and correspondingly losing statistical power.
+
+### 3.6 Preprocessing and training multiverse
+
+The re-run of Section 5.4 showed that settings unrelated to the fusion operator can
+reorder the operators while leaving the null result intact. We therefore ask a
+broader question than "which operator is best": how robust are conclusions about
+fusion operators to preprocessing decisions and to stochastic training? The design
+follows the multiverse approach (Steegen et al. 2016): a fixed set of defensible
+analysis choices is crossed and every combination is run, instead of reporting one.
+
+**Pipelines.** Each pipeline changes one hypothesis driven aspect of preprocessing;
+windows, labels, subsampling, spectrogram settings (64 Hz ceiling, so input shapes
+and parameter counts do not change), models, training and evaluation stay fixed
+(`src/preprocess.py`).
+
+| Pipeline | Band-pass | Notch | Artefact handling | Normalisation | Question |
+|---|---|---|---|---|---|
+| P0 | none | none | none | z-score | original benchmark (Section 5.3) |
+| P1 | 0.5 to 40 Hz | none | none | z-score | standard EEG band |
+| P2 | 0.5 to 70 Hz | 60 Hz | none | z-score | information above 40 Hz |
+| P3 | 1 to 40 Hz | none | none | z-score | low frequency content and drift |
+| P4 | 0.5 to 40 Hz | none | technical artefact rejection | z-score | artefact rejection |
+| P5 | 0.5 to 40 Hz | none | none | median and IQR | normalisation |
+| P6a | 0.5 to 40 Hz | none | Extended Infomax ICA | z-score | aggressive cleaning |
+| P6b | 0.5 to 40 Hz | none | GEDAI | z-score | aggressive cleaning |
+| P6c | 0.5 to 40 Hz | none | AMICA | z-score | aggressive cleaning |
+
+Filters are zero phase Butterworth filters (order 4, applied forward and backward)
+run on each continuous recording before it is cut into windows, since filtering 10 s
+windows separately would place filter transients at every window edge. Every
+pipeline's corpus holds exactly the windows of P0, which is checked when it is built,
+so all pipelines are paired fold by fold.
+
+**P4: rejecting technical artefacts, not amplitude.** We measured amplitude
+distributions before choosing a criterion. The median worst channel peak to peak
+amplitude is 482 uV in non-ictal and 890 uV in ictal windows, so every amplitude
+threshold removes seizures selectively: 500 uV rejects 72 percent of ictal against 48
+percent of non-ictal windows, 1000 uV 44 against 12, and a per subject robust z score
+above 10 still 21 against 4.5. Amplifier clipping could not serve as a criterion
+either, because the stored integer data exceed the declared physical range and no
+recording piles up at a limit. P4 therefore rejects only technical artefacts: a flat
+channel (standard deviation below 1 uV over the window) or a constant segment of at
+least 0.5 s on any channel (a signal dropout, at 0 uV in CHB-MIT), detected on the
+unfiltered signal. This rejects 3.3 percent of ictal and 0.8 percent of non-ictal
+windows. The difference is not physiological: the 0.5 s before a dropout have the
+same amplitude in both classes (median about 40 uV); dropouts occur in a few
+recordings that also contain seizures. Rejected windows are removed from training and
+validation only, so the test set is identical across pipelines.
+
+**P6: three artefact removal algorithms.** To separate the effect of the algorithm
+from the rest of the pipeline, P6 is run with Extended Infomax ICA (Lee et al. 1999,
+as implemented in MNE-Python, Gramfort et al. 2013), GEDAI (Ros et al. 2025), and
+AMICA (Palmer et al., reference to be verified in the literature search; Python
+implementation `jamica`), all on the same 0.5 to 40 Hz signal and per recording.
+Infomax and AMICA share every setting and the same automatic component rule: 16
+components, fitted on every 8th sample, and MNE's correlation based ocular component
+detection (`find_bads_eog`, |z| > 3) with the four frontal FP channels as EOG proxies,
+since CHB-MIT has no EOG channel. Sixteen, not eighteen, components are used because
+the 18 channel bipolar montage contains two closed electrode loops on each side (FP1
+to O1 along the temporal and along the parasagittal chain), so the data have rank 16;
+the remaining two singular values are quantisation noise. Muscle components are not
+removed, because the gamma band carries the strongest ictal signal in this corpus
+(Section 3.3). GEDAI is not an ICA: it removes what departs from a leadfield based
+reference covariance, chosen by its own criterion, so the shared component rule
+cannot apply to it. Its bundled reference covariance C, defined for a referential
+10-05 layout, is mapped onto the bipolar montage as D C D^T, with D the electrode
+difference matrix (a bipolar difference cancels the common reference), and the
+channel mean is removed before and restored after cleaning, because GEDAI would
+otherwise average reference the bipolar channels. All three were bit for bit
+reproducible with a fixed seed in a trial on one subject. Their behaviour differs
+markedly: across the corpus GEDAI keeps a median 66 percent of a recording's power
+(range 4 to 100 percent), whereas Infomax and AMICA remove about 1.6 components per
+recording and keep about 82 to 84 percent of the power in that trial. What every
+method removed, the power kept and the time taken are logged per recording.
+
+**Seeds and device.** Every pipeline is trained with three seed sets (`--repeat`),
+seed set 0 being the one used throughout Section 5. If the ranking of the fusion
+operators proves unstable across seeds, the affected pipelines are extended to five.
+All runs of one analysis use one machine, one thread count and one device. Before GPU
+training is used, its agreement with the CPU is tested on one fold: two GPU runs must
+repeat, and the CPU to GPU difference at identical seeds must not exceed the
+difference between two CPU seed sets (`docs/PIPELINE.md`).
+
+**Analyses** (`src/multiverse.py`, validated on synthetic runs with known effects):
+(1) performance per pipeline, seed and model, with AUPRC added to the metrics of
+Section 3.5; (2) rank stability of the five fusion operators, comparing Kendall's tau
+between pipelines with Kendall's tau between seeds of the same pipeline, with a
+permutation test that permutes pipeline labels within each seed set, and the same
+comparison among P6a, P6b and P6c to ask whether the artefact algorithm alone changes
+the ranking; (3) the Fusion x Preprocessing interaction in a repeated measures ANOVA
+over folds (Greenhouse-Geisser corrected); (4) variance components for subject,
+pipeline, fusion, their interaction and seed; (5) robust equivalence, a fusion pair
+being equivalent in every pipeline under the corrected test of Section 3.5;
+(6) robustness against performance, the mean macro F1 of each operator against the
+spread of its pipeline means; and (7) prediction stability, the agreement of window
+level predictions between pipelines compared with the agreement between seeds.
 
 ## 4. Bonn Results
 
@@ -634,6 +738,37 @@ as much as the entire spread between them. A single CHB-MIT run supports the nul
 result, which is about the absence of separable differences, but it does not support
 any ranking of the operators, and neither run's ordering should be cited as one.
 
+### 5.5 Third corpus: Siena Scalp EEG (in progress)
+
+The Siena Scalp EEG Database (Detti et al. 2020; PhysioNet) holds 41 recordings of 14
+adult patients (128 hours, 47 seizures, 512 Hz, referential 10-20 montage). It is
+converted to exactly the CHB-MIT form, so every driver is shared: the 18 channels of
+the CHB-MIT bipolar montage are derived from the referential electrodes, the signal
+is resampled to 256 Hz on the continuous recording, and windowing, labelling and
+subsampling are CHB-MIT's own (`src/siena.py`, `src/siena_corpus.py`). Siena serves
+two purposes: an external replication of the multiverse on adult patients, and,
+separately from the multiverse, a cross dataset experiment in which models trained on
+CHB-MIT are tested on Siena. Differences between the corpora will not be interpreted
+as an age effect, because seizure types, recording structure and acquisition also
+differ.
+
+The published seizure lists required checks before use (`docs/SIENA.md`). All 41
+headers are internally consistent; the listed recording start agrees with the header
+in 39 recordings (in PN14-3 the list is three hours off and the header is right; in
+PN05-3 they differ by 10 s, and the header is used). One seizure end in PN00 lies 32
+minutes after its recording ends; we accepted the evident correction (one hour
+earlier, a 60 s seizure) only after the signal confirmed it: measured with the same
+rule as the patient's other four seizures, the ictal rhythm ends 14 s after the
+corrected end, within the range of those four (0 to 13 s). For PN10 the electrical
+onset is used where both onsets are listed; it changes the label of one window.
+
+### 5.6 Multiverse results (pending)
+
+[Pending: the nine pipelines x three seed sets on CHB-MIT are being run; tables and
+figures will be produced by `python -m src.multiverse --dataset chbmit`: performance
+per pipeline, rank stability heatmap, interaction plot, variance components, robust
+equivalence, robustness against performance, and prediction stability.]
+
 ## 6. Discussion: What Does "Cannot Distinguish" Mean Here
 
 ### 6.1 The naive test is not a minor technicality
@@ -708,12 +843,17 @@ defects found during this project's own development rather than omitting them.
 
 ## 7. Limitations
 
-- **CHB-MIT results are a single training run per model.** Section 5.4 shows that the
-  ranking of models is not stable across runs that differ only in settings unrelated
-  to the fusion operator. The null result does not depend on the ranking, but any
-  statement about which operator is better on CHB-MIT would need repeated runs with
-  different seeds, which we have not made. Case chb24's identity as a distinct person
+- **The CHB-MIT results of Section 5.3 are a single training run per model.** Section
+  5.4 shows that the ranking of models is not stable across runs that differ only in
+  settings unrelated to the fusion operator. The multiverse of Section 3.6 trains every
+  pipeline with three seed sets for this reason; until its results are in, no ranking
+  of operators on CHB-MIT should be cited. Case chb24's identity as a distinct person
   is assumed rather than documented (Section 5.2).
+- **The artefact removal algorithms are not compared on equal terms in one respect.**
+  Infomax and AMICA share one automatic component rule, but GEDAI selects what to
+  remove by its own criterion (Section 3.6), so differences involving GEDAI combine
+  the algorithm with its selection rule. Ocular components are identified without an
+  EOG channel, from frontal proxies, which may also capture frontal ictal activity.
 - **The corrected resampled t test assumes a fixed test to train ratio, which an
   inner validation split complicates.** Del Pup et al. (2025) argue this assumption
   is frequently violated in deep learning pipelines that hold out an internal
@@ -771,10 +911,12 @@ analysis and figure generation scripts are publicly available at
 github.com/Atytmr07/eeg-fusion-benchmark. `docs/PIPELINE.md` in that repository
 documents the full pipeline and the command that reproduces each table and figure;
 the statistics and figures regenerate identically from the stored results with the
-pinned package versions. Raw EEG data (Bonn, CHB-MIT) is not redistributed; both
-corpora are publicly available from their original sources (Andrzejak et al. 2001;
-PhysioNet), and the repository documents how to obtain and verify them
-(`src/chbmit.py`, `src/verify_chbmit.py`, `docs/11_CHBMIT_PLANI.md`).
+pinned package versions. Raw EEG data (Bonn, CHB-MIT, Siena) is not redistributed;
+all three corpora are publicly available from their original sources (Andrzejak et al.
+2001; PhysioNet), and the repository documents how to obtain and verify them
+(`src/chbmit.py`, `src/verify_chbmit.py`, `docs/11_CHBMIT_PLANI.md`,
+`src/siena_download.py`, `src/verify_siena.py`, `docs/SIENA.md`). The packages used
+only to build the P6 caches are listed in `requirements-ica.txt`.
 
 ## References
 
@@ -788,22 +930,27 @@ PhysioNet), and the repository documents how to obtain and verify them
 - Corani, G., Benavoli, A., Demšar, J., Mangili, F. (2017) Statistical comparison of classifiers through Bayesian hierarchical modelling. *Machine Learning* 106:1817-1837. doi:10.1007/s10994-017-5641-9
 - Daşdemir, A. (2025) Epileptic seizure prediction with deep learning-based fusion methods. *Engineering Science and Technology, an International Journal* 72:102212. doi:10.1016/j.jestch.2025.102212
 - Das, S. et al. (2024) Epileptic Seizure Detection from Decomposed EEG Signal through 1D and 2D Feature Representation and Convolutional Neural Network. *Information* 15(5):256. doi:10.3390/info15050256
+- Detti, P., Vatti, G., Zabalo Manrique de Lara, G. (2020) EEG Synchronization Analysis for Seizure Prediction: A Study on Data of Noninvasive Recordings. *Processes* 8(7):846. doi:10.3390/pr8070846
 - Del Pup, F., Zanola, A., Tshimanga, L. F., Bertoldo, A., Atzori, M. (2025) The More, the Better? Evaluating the Role of EEG Preprocessing for Deep Learning Applications. *IEEE Transactions on Neural Systems and Rehabilitation Engineering* 33:1061-1070. doi:10.1109/TNSRE.2025.3547616
 - Goldberger, A. L. et al. (2000) PhysioBank, PhysioToolkit, and PhysioNet: Components of a New Research Resource for Complex Physiologic Signals. *Circulation* 101(23):e215-e220. doi:10.1161/01.cir.101.23.e215
 - Golrizkhatami, Z., Acan, A. (2018) ECG classification using three-level fusion of different feature descriptors. *Expert Systems with Applications* 114:54-64.
 - Jafrasteh, B., Adeli, E., Pohl, K. M., Kuceyeski, A., Sabuncu, M. R., Zhao, Q. (2025) Statistical variability in comparing accuracy of neuroimaging based classification models via cross validation. *Scientific Reports* 15:28745. doi:10.1038/s41598-025-12026-2
+- Gramfort, A. et al. (2013) MEG and EEG data analysis with MNE-Python. *Frontiers in Neuroscience* 7:267. doi:10.3389/fnins.2013.00267
 - Huang, J. et al. (2024) Multi-modal feature fusion with multi-head self-attention for epileptic EEG signals. *Mathematical Biosciences and Engineering* 21(2). doi:10.3934/mbe.2024304
 - Kontras, K. et al. (2026) NeuroAtlas: Benchmarking Foundation Models for Clinical EEG and Brain-Computer Interfaces. arXiv:2605.14698.
 - Lee, H.-T., Shim, M., Liu, X., Cheon, H.-R., Kim, S.-G., Han, C.-H., Hwang, H.-J. (2025) A review of hybrid EEG-based multimodal human-computer interfaces using deep learning: applications, advances, and challenges. *Biomedical Engineering Letters* 15:587-618. doi:10.1007/s13534-025-00469-5
+- Lee, T.-W., Girolami, M., Sejnowski, T. J. (1999) Independent component analysis using an extended infomax algorithm for mixed subgaussian and supergaussian sources. *Neural Computation* 11(2):417-441. doi:10.1162/089976699300016719
 - Loshchilov, I., Hutter, F. (2019) Decoupled Weight Decay Regularization. *International Conference on Learning Representations (ICLR)*. arXiv:1711.05101.
 - Mattei, P.-A., Garreau, D. (2025) Are Ensembles Getting Better all the Time? *Journal of Machine Learning Research* 26(201):1-46. arXiv:2311.17885.
 - Mohamady, A., Burchard, R., Van Laerhoven, K. (2026) A Comparison of Fusion Techniques for Multi-Modal Human Activity Recognition on the HARMES Dataset. arXiv:2606.27886.
 - Nadeau, C., Bengio, Y. (2003) Inference for the Generalization Error. *Machine Learning* 52:239-281. doi:10.1023/a:1024068626366
 - Narotamo, H., Dias, M., Santos, R., Carreiro, A. V., Gamboa, H., Silveira, M. (2024) Deep learning for ECG classification: A comparative study of 1D and 2D representations and multimodal fusion approaches. *Biomedical Signal Processing and Control* 93:106141. doi:10.1016/j.bspc.2024.106141
 - Rheude, T., Eils, R., Wild, B. (2025) Fusion or Confusion? Multimodal Complexity Is Not All You Need. arXiv:2512.22991.
+- Ros, T., Férat, V., Huang, Y., Colangelo, C., Kia, S. M., Wolfers, T., Vulliemoz, S., Michela, A. (2025) Return of the GEDAI: Unsupervised EEG Denoising based on Leadfield Filtering. *bioRxiv*. doi:10.1101/2025.10.04.680449
 - Roy, Y. et al. (2019) Deep learning-based electroencephalography analysis: a systematic review. *Journal of Neural Engineering* 16:051001. doi:10.1088/1741-2552/ab260c
 - Shoeb, A. H. (2009) Application of machine learning to epileptic seizure onset detection and treatment. PhD thesis, Massachusetts Institute of Technology.
 - Shoeibi, A. et al. (2021) Epileptic Seizures Detection Using Deep Learning Techniques: A Review. *International Journal of Environmental Research and Public Health* 18(11):5780. doi:10.3390/ijerph18115780
+- Steegen, S., Tuerlinckx, F., Gelman, A., Vanpaemel, W. (2016) Increasing Transparency Through a Multiverse Analysis. *Perspectives on Psychological Science* 11(5):702-712. doi:10.1177/1745691616658637
 - Truong, N. D. et al. (2018) Convolutional neural networks for seizure prediction using intracranial and scalp electroencephalogram. *Neural Networks* 105:104-111. doi:10.1016/j.neunet.2018.04.018
 - Wang, X. et al. (2020) One and Two Dimensional Convolutional Neural Networks for Seizure Detection Using EEG Signals. *EUSIPCO 2020*. doi:10.23919/eusipco47968.2020.9287640
 - Xu, J. et al. (2024) EEG-based epileptic seizure detection using deep learning techniques: A survey. *Neurocomputing* 610:128644. doi:10.1016/j.neucom.2024.128644
