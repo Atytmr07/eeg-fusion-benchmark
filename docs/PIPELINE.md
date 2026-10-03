@@ -115,7 +115,7 @@ normalisation, N1 z-scored signal but spectrogram from the raw signal (the confi
 the original notebook implementation ran by accident), N2 both from the z-scored signal
 (main), N3 additionally z-scoring the spectrogram.
 
-### 2.1 Preprocessing pipelines P0 to P6 (`src/preprocess.py`, CHB-MIT)
+### 2.1 Preprocessing pipelines P0 to P6c (`src/preprocess.py`, CHB-MIT)
 
 The preprocessing multiverse asks whether the comparison between fusion operators
 depends on preprocessing. Each pipeline changes one step; the windows, spectrogram
@@ -129,7 +129,9 @@ settings, models, training and evaluation stay the same.
 | P3 | 1 to 40 Hz | none | none | z-score | low frequency and drift |
 | P4 | 0.5 to 40 Hz | none | technical artefact rejection (flat channels, dropouts) | z-score | artefact rejection |
 | P5 | 0.5 to 40 Hz | none | none | median and IQR | normalisation |
-| P6 | 0.5 to 40 Hz | none | ICA, ocular components removed | z-score | aggressive cleaning |
+| P6a | 0.5 to 40 Hz | none | Extended Infomax ICA, ocular components removed | z-score | aggressive cleaning |
+| P6b | 0.5 to 40 Hz | none | GEDAI (leadfield based denoising) | z-score | aggressive cleaning |
+| P6c | 0.5 to 40 Hz | none | AMICA, ocular components removed | z-score | aggressive cleaning |
 
 - **Filters run on the continuous recording**, before windowing (zero-phase Butterworth,
   order 4, `sosfiltfilt`); filtering each 10 s window separately would put filter
@@ -154,10 +156,31 @@ settings, models, training and evaluation stay the same.
   robust z above 10: 21 against 4.5), and clipping is not detectable: the stored int16
   data exceed the declared 12-bit range and no recording piles up at a limit
   (`python -m src.preprocess --scan-rejection`).
-- **P6** fits FastICA (18 components) per recording and removes up to two components
-  whose topography lies mainly on the four FP channels and whose power lies mainly below
-  4 Hz (ocular activity; CHB-MIT has no EOG channel). Muscle components are not removed,
-  because the gamma band carries the strongest ictal signal in this corpus.
+- **P6a, P6b, P6c** compare three artefact removal methods on the same 0.5 to 40 Hz
+  signal, per recording, so that the algorithm's effect on the fusion comparison can be
+  separated from the rest of the pipeline.
+  - Extended Infomax (MNE) and AMICA (`jamica`) use identical settings: 16 components,
+    fitted on every 8th sample, and the same automatic component rule, MNE's
+    `find_bads_eog` (|z| > 3) with the four FP channels as EOG proxies, since CHB-MIT has
+    no EOG channel. Muscle components are not removed, because the gamma band carries
+    the strongest ictal signal in this corpus.
+  - **16 components, not 18:** the 18 bipolar channels contain two closed electrode loops
+    (FP1 to O1 along the temporal and along the parasagittal chain, on each side), so the
+    data have rank 16; the last two singular values are quantisation noise.
+  - GEDAI is not an ICA; it decides what to remove against a leadfield reference. Its
+    bundled reference covariance C (referential 10-05 layout) is mapped onto the bipolar
+    montage as D C D^T (D: electrode difference matrix), and the channel mean is removed
+    before and added back after, because GEDAI would otherwise average-reference the
+    bipolar channels. The shared component rule cannot apply to GEDAI; its default
+    threshold is used.
+  - In trials on single recordings all three were bit-for-bit reproducible with a fixed
+    seed. Cost per one-hour recording on a laptop: GEDAI about 11 s, Infomax about 45 s,
+    AMICA about 130 s (300 iterations; 1000 iterations removed the same components and
+    took 3 times longer). What each method removed, the power kept, and the time are
+    logged per recording under `data/ica_logs/` and summarised when the cache is built.
+  - The packages need a newer numpy than the pinned environment, so the P6 caches are
+    built in a separate environment (`requirements-ica.txt`); training reads the caches
+    and does not need them.
 - **Repeats.** The model ranking changed between two CHB-MIT runs that differed only in
   settings unrelated to the operators (manuscript Section 5.4), so a ranking difference
   between pipelines is only interpretable against run-to-run variation. `--repeat r`

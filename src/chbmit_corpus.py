@@ -74,7 +74,7 @@ def build_corpus(subjects: list[str] | None = None, win_s: float = 10.0,
                  stride_s: float | None = None, neg_per_pos: float = 4.0,
                  guard_s: float = 0.0, seed: int = 20260727,
                  cache: bool = True, verbose: bool = True, signal_fn=None,
-                 signal_tag: str = "") -> dict:
+                 signal_tag: str = "", n_jobs: int = 1) -> dict:
     """The windowed, subsampled corpus with group labels.
 
     Returns a dict with X (window, channel, sample), y, subject (case folder), group
@@ -90,7 +90,9 @@ def build_corpus(subjects: list[str] | None = None, win_s: float = 10.0,
     signal_fn(x, fs, key) is applied to each continuous recording before windowing (the
     signal-level steps of a preprocessing pipeline, src/preprocess.py); signal_tag names
     it in the cache file. Window selection does not depend on it, so every pipeline
-    gets exactly the same windows.
+    gets exactly the same windows. n_jobs > 1 reads and processes a subject's recordings
+    in parallel processes (useful when signal_fn is slow, e.g. ICA); which windows are
+    selected is decided before that and is unaffected.
     """
     # Without raw EDFs (cache-only use) the folder scan is empty; fall back to all cases.
     subs = subjects or all_subjects() or list(CASES)
@@ -107,6 +109,14 @@ def build_corpus(subjects: list[str] | None = None, win_s: float = 10.0,
         return out | {"group": subject_groups(out["subject"]), "info": info}
 
     rng = np.random.default_rng(seed)
+    pool = None
+    if n_jobs > 1:
+        import os
+        from concurrent.futures import ProcessPoolExecutor
+        per = str(max(1, (os.cpu_count() or n_jobs) // n_jobs))
+        for v in ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS"):
+            os.environ[v] = per                     # inherited by the worker processes
+        pool = ProcessPoolExecutor(n_jobs)
     Xs, ys, subj, sids, fnames, t0s = [], [], [], [], [], []
     per_subject = {}
 
@@ -148,11 +158,15 @@ def build_corpus(subjects: list[str] | None = None, win_s: float = 10.0,
             by_file.setdefault(plan[i][0], []).append((j, plan[i][1]))
         X = np.empty((len(idx), len(TARGET_CHANNELS), int(win_s * FS_CHB)), np.float32)
         path_of = {f.name: f for f in files}
+        jobs = []
         for name, items in by_file.items():
             js = np.array([a for a, _ in items])
             ts = np.array([b for _, b in items], np.float32)
-            X[js] = extract_windows(path_of[name], list(TARGET_CHANNELS), ts, win_s,
-                                    signal_fn=signal_fn)
+            args = (path_of[name], list(TARGET_CHANNELS), ts, win_s, signal_fn)
+            jobs.append((js, pool.submit(extract_windows, *args) if pool
+                         else extract_windows(*args)))
+        for js, res in jobs:
+            X[js] = res.result() if pool else res
 
         Xs.append(X)
         ys.append(y_all[idx])
@@ -173,6 +187,8 @@ def build_corpus(subjects: list[str] | None = None, win_s: float = 10.0,
                   f"({len(pos):4d} ictal, {per_subject[sub]['n_seizures']:2d} seizures, "
                   f"{per_subject[sub]['hours']:6.1f} hours)")
 
+    if pool:
+        pool.shutdown()
     out = {
         "X": np.concatenate(Xs),
         "y": np.concatenate(ys).astype(np.int64),
