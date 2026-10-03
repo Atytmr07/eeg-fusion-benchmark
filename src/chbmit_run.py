@@ -242,6 +242,11 @@ def main() -> None:
                          "driver does not wire up yet; use 'window'")
     x1, x2, prep_meta = prepare(X, norm=norm, notch_hz=args.notch)
     X1, X2, Y = torch.from_numpy(x1), torch.from_numpy(x2), torch.from_numpy(y)
+    if args.device == "cuda":
+        # The inputs (about 1.8 GB) fit in GPU memory; moving them once instead of per
+        # mini-batch removes the transfer that dominates with models this small. The
+        # values are unchanged; labels stay on the CPU for the metrics.
+        X1, X2 = X1.to("cuda"), X2.to("cuda")
     del x1, x2
 
     splits = list(leave_one_subject_out(group) if args.split == "loso"
