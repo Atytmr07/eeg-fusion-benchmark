@@ -1,7 +1,7 @@
 # Sistematik Literatür Tarama Protokolü
 
 **Tarih:** 21 Eylül 2026
-**Durum:** Taslak, aramalar henüz çalıştırılmadı.
+**Durum:** Aramalar 3 Ekim 2026'da çalıştırıldı; sonuçlar ve sapmalar `docs/15_LITERATUR_SONUCLARI.md` içinde.
 **Neden gerekli:** `docs/09_LITERATUR_TARAMASI.md` bir kapsam belirleme (scoping)
 taramasıydı, kayıtlı değildi. `paper/proposal.md` §3 açıkça "novelty iddiasından önce
 kayıtlı bir tarama yapacağım" diyor. Bu belge o taramanın protokolü.
