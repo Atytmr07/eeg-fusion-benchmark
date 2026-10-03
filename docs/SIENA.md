@@ -288,24 +288,22 @@ differences comes from:
   - Their headers are plain continuous EDF ("reserved" field empty, so not
     EDF+D), with one-second records and no annotation channel. Each file's size
     matches its header, and the list gives the same span as the header.
-  - The difference may therefore be the time between the original recordings
-    inside the merged files. Those stretches would be counted by the header but
-    not by `subject_info.csv`. This is a hypothesis.
-  - Checking it needs the signals: flat or filler stretches in the three merged
-    files (about 1.9 GB together), which are not on this machine.
-  - The two differences do not fit a simple rule: PN12 has one junction and
-    PN10 has four, yet both are about 120 min. This is a reason for caution, not
-    a refutation.
+  - One hypothesis was that the merged files hold filler between the original
+    recordings, counted by the header but not by `subject_info.csv`. **The signals
+    do not support it** (checked on the full download, 4 October 2026): scanning
+    the first four EEG channels in one-second records for constant stretches of at
+    least 10 s finds none in PN10-4.5.6 and PN12-1.2 and a single 1.8-minute one in
+    PN10-7.8.9, far from the 120 minutes. PN03's two files have none either.
+  - The two differences also do not fit a simple rule: PN12 has one junction and
+    PN10 has four, yet both are about 120 min. They remain unexplained, like PN03's.
 
 **Consequences for this project.**
 
 - The corpus is built from the EDF files, so every window comes from the
   recordings as they are. The 141.0 hours is what the pipeline reads, and no
   window count depends on `subject_info.csv`.
-- If the merged files do contain filler, it would sit in non-ictal time. Some of
-  it could end up among the subsampled non-ictal windows. The amplitude check of
-  P4 (flat channel, constant segment) would reject such windows in P4 only.
-  Checking this is part of the full download on the lab machine.
+- The merged files contain no filler (above), so no constant stretches enter the
+  corpus from the junctions.
 
 **Suggested wording for the manuscript (Section 5.5).** Keep 141.0 hours as the
 figure, because it is measured from the files. Say where 128 comes from:

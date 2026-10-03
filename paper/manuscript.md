@@ -761,7 +761,12 @@ any ranking of the operators, and neither run's ordering should be cited as one.
 
 The Siena Scalp EEG Database (Detti et al. 2020; PhysioNet) holds 41 recordings of 14
 adult patients (47 seizures, 512 Hz, referential 10-20 montage; 141.0 hours by the EDF
-headers, where the database description gives about 128). After windowing and the same
+headers). The database description gives about 128 hours, the total of its
+`subject_info.csv`, which differs from the recordings for four patients: for PN14 it
+inherits a three-hour error in the seizure list, and for PN03, PN10 and PN12 it is
+11.7, 2.0 and 2.0 hours shorter than the files, without an explanation in the data
+(the files are complete and contain no filler; `docs/SIENA.md`, Section 8). After
+windowing and the same
 1:4 subsampling as CHB-MIT, the corpus has 1,640 windows (328 ictal) and 14 leave one
 subject out folds, confirmed free of leakage by the same checker. It is
 converted to exactly the CHB-MIT form, so every driver is shared: the 18 channels of
