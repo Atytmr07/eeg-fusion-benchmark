@@ -1,0 +1,3 @@
+# Local only: abstracts from licensed databases (see screen.py, "Licensing").
+abstracts_*.csv
+second_pass_*.csv

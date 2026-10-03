@@ -1,0 +1,10 @@
+{
+  "exports": {
+    "arxiv_B4_2026-10-03.xml": 37
+  },
+  "per_database_unique": {
+    "arxiv": 37
+  },
+  "records_raw": 37,
+  "records_unique": 37
+}

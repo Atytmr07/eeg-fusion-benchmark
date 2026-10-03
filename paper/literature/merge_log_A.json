@@ -1,0 +1,15 @@
+{
+  "exports": {
+    "arxiv_A-broad_2026-10-03.xml": 17,
+    "arxiv_A_2026-10-03.xml": 10,
+    "scopus_A_2026-10-03.csv": 475,
+    "wos_A_2026-10-03.txt": 251
+  },
+  "per_database_unique": {
+    "arxiv": 17,
+    "scopus": 462,
+    "wos": 251
+  },
+  "records_raw": 753,
+  "records_unique": 499
+}
