@@ -32,6 +32,7 @@ except (AttributeError, ValueError):
     pass
 
 from .config import RESULTS_ROOT
+from .datasets import DATASETS
 from .stats import (corrected_equivalence_bound, corrected_ttest, correlated_bayes,
                     holm, sign_test)
 
@@ -112,10 +113,11 @@ def per_model_summary(df: pd.DataFrame, metric: str) -> pd.DataFrame:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
+    ap.add_argument("--dataset", default="chbmit", choices=list(DATASETS))
     ap.add_argument("--run", default="loso_grouped")
     args = ap.parse_args()
-    in_csv = RESULTS_ROOT / "chbmit" / args.run / "perfold.csv"
-    out = RESULTS_ROOT / "chbmit" / ("phase0" if args.run == "loso_main"
+    in_csv = RESULTS_ROOT / args.dataset / args.run / "perfold.csv"
+    out = RESULTS_ROOT / args.dataset / ("phase0" if args.run == "loso_main"
                                      else f"phase0_{args.run}")
     if not in_csv.exists():
         print(f"not found: {in_csv}")
@@ -123,7 +125,7 @@ def main() -> None:
     df = pd.read_csv(in_csv)
     n_folds = df.fold.nunique()
     ratio, ratio_con = ratios(n_folds)
-    print(f"CHB-MIT LOSO: {len(df)} rows, {n_folds} folds, "
+    print(f"{args.dataset} LOSO: {len(df)} rows, {n_folds} folds, "
           f"{df.model.nunique()} models, test/train ratio = 1/{n_folds - 1} "
           f"(conservative: 1/{round(1 / ratio_con)})\n")
 

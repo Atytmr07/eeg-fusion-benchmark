@@ -25,6 +25,7 @@ for P4, the same artefact rejection of training windows. Normalisation does not 
 the features are computed from microvolt signals.
 
 Usage:  python -m src.chbmit_baselines --run loso_grouped
+        python -m src.chbmit_baselines --dataset siena --run loso_P0
 """
 from __future__ import annotations
 
@@ -44,8 +45,9 @@ except (AttributeError, ValueError):
 
 from . import baselines
 from .chbmit import FS_CHB
-from .chbmit_corpus import build_corpus, leave_one_subject_out
+from .chbmit_corpus import leave_one_subject_out
 from .config import RESULTS_ROOT
+from .datasets import DATASETS, corpus_builder
 from .evaluate import clinical_metrics, metrics
 from .preprocess import PIPELINES, artifact_mask
 
@@ -70,10 +72,12 @@ def shallow_features(X: np.ndarray) -> np.ndarray:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
+    ap.add_argument("--dataset", default="chbmit", choices=list(DATASETS))
     ap.add_argument("--run", required=True,
                     help="chbmit_run run to append to (e.g. loso_grouped)")
     args = ap.parse_args()
-    out_dir = RESULTS_ROOT / "chbmit" / args.run
+    out_dir = RESULTS_ROOT / args.dataset / args.run
+    build_corpus = corpus_builder(args.dataset)
     out_dir.mkdir(parents=True, exist_ok=True)
     csv_path = out_dir / "perfold.csv"
 

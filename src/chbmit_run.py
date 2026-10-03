@@ -24,6 +24,10 @@ Usage:
     python -m src.chbmit_run --split loso --models late raw1d spec2d --limit-folds 2
     python -m src.chbmit_run --split loso --threads 16 --tag loso_grouped   # full run
     python -m src.chbmit_run --split loso --threads 16 --pipeline P1 --repeat 1
+    python -m src.chbmit_run --dataset siena --split loso --threads 16 --pipeline P0
+
+--dataset siena runs the same drivers on the Siena corpus (src/siena_corpus.py), which
+has the same form; results go to results_v2/siena/.
 """
 from __future__ import annotations
 
@@ -44,16 +48,15 @@ try:
 except (AttributeError, ValueError):
     pass
 
-from .chbmit_corpus import (build_corpus, grouped_kfold_by_subject,
-                            leave_one_subject_out)
+from .chbmit_corpus import grouped_kfold_by_subject, leave_one_subject_out
 from .chbmit_prep import prepare
 from .config import RESULTS_ROOT, fold_seed, runtime_env
+from .datasets import DATASETS, corpus_builder
 from .evaluate import clinical_metrics, metrics
 from .models import build, count_params
 from .preprocess import PIPELINES, artifact_mask
 from .train import best_blend_weight, set_seed, softmax_np
 
-OUT_ROOT = RESULTS_ROOT / "chbmit"
 DEFAULT_MODELS = ("raw1d", "spec2d", "raw1d_wide", "spec2d_wide",
                   "late", "gated", "attention", "early", "score")
 
@@ -161,6 +164,7 @@ def train_fold(model_name: str, X1: torch.Tensor, X2: torch.Tensor, Y: torch.Ten
 
 def main() -> None:
     ap = argparse.ArgumentParser()
+    ap.add_argument("--dataset", default="chbmit", choices=list(DATASETS))
     ap.add_argument("--split", choices=["loso", "kfold"], default="loso")
     ap.add_argument("--folds", type=int, default=5)
     ap.add_argument("--limit-folds", type=int, default=None,
@@ -209,6 +213,7 @@ def main() -> None:
         raise SystemExit("--pipeline sets normalisation and filtering itself; do not "
                          "combine it with --norm or --notch")
     norm = pipe.norm if pipe.name != "P0" else args.norm
+    build_corpus = corpus_builder(args.dataset)
     d = build_corpus(verbose=pipe.has_signal_steps,
                      signal_fn=pipe.apply_signal if pipe.has_signal_steps else None,
                      signal_tag=pipe.signal_tag)
@@ -250,7 +255,7 @@ def main() -> None:
         tag = run_tag(args.split, pipe.name, args.repeat, args.device)
     else:
         tag = f"{args.split}_{args.norm}" + (f"_notch{args.notch:g}" if args.notch else "")
-    outdir = Path(args.outdir) if args.outdir else OUT_ROOT / tag
+    outdir = Path(args.outdir) if args.outdir else RESULTS_ROOT / args.dataset / tag
     outdir.mkdir(parents=True, exist_ok=True)
     (outdir / "preds").mkdir(exist_ok=True)
 
@@ -332,7 +337,8 @@ def main() -> None:
                  idx_te=te, y_te=y[te], **probs)
         pd.DataFrame(rows).to_csv(outdir / "perfold.csv", index=False)
 
-    meta = {"args": vars(args), "optimizer": "AdamW", "pipeline": pipe.describe(),
+    meta = {"args": vars(args), "dataset": args.dataset, "optimizer": "AdamW",
+            "pipeline": pipe.describe(),
             "rejection": reject_meta, "prep": prep_meta, "corpus": info,
             "env": runtime_env() | {"device": args.device, "cuda_device":
                                     torch.cuda.get_device_name(0) if args.device == "cuda"

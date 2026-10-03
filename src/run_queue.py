@@ -9,7 +9,8 @@ pipelines before the next seed starts:
   3. src.chbmit_stats    unless its output folder exists
 
 so the same command can be started again after an interruption and only does what is
-missing. P0 with repeat 0 on the CPU is the existing loso_grouped run.
+missing. P0 with repeat 0 on the CPU is the existing loso_grouped run (CHB-MIT only).
+--dataset siena runs the same queue on Siena (results_v2/siena/).
 
 Parallel use: with --worker k/n, this process takes every n-th item starting at k, so
 two windows started with --worker 1/2 and --worker 2/2 share the queue without
@@ -36,28 +37,30 @@ except (AttributeError, ValueError):
 
 from .chbmit_run import DEFAULT_MODELS, run_tag
 from .config import RESULTS_ROOT
+from .datasets import DATASETS, N_FOLDS
 from .preprocess import PIPELINES
 
-N_FOLDS = 23
 DEEP = [m for m in DEFAULT_MODELS]
 
 
-def tag_for(pipeline: str, repeat: int, device: str) -> str:
-    if pipeline == "P0" and repeat == 0 and device == "cpu":
+def tag_for(pipeline: str, repeat: int, device: str, dataset: str = "chbmit") -> str:
+    if dataset == "chbmit" and pipeline == "P0" and repeat == 0 and device == "cpu":
         return "loso_grouped"
     return run_tag("loso", pipeline, repeat, device)
 
 
-def status(tag: str) -> tuple[bool, bool, bool]:
+def status(tag: str, dataset: str = "chbmit") -> tuple[bool, bool, bool]:
     """(deep models complete, baselines present, statistics present)."""
-    csv = RESULTS_ROOT / "chbmit" / tag / "perfold.csv"
+    root = RESULTS_ROOT / dataset
+    n_folds = N_FOLDS[dataset]
+    csv = root / tag / "perfold.csv"
     if not csv.exists():
         return False, False, False
     df = pd.read_csv(csv)
     have = df.groupby("model")["fold"].nunique()
-    deep = all(have.get(m, 0) == N_FOLDS for m in DEEP)
-    base = all(have.get(m, 0) == N_FOLDS for m in ("logvar", "shallow"))
-    stats_dir = RESULTS_ROOT / "chbmit" / ("phase0" if tag == "loso_main" else f"phase0_{tag}")
+    deep = all(have.get(m, 0) == n_folds for m in DEEP)
+    base = all(have.get(m, 0) == n_folds for m in ("logvar", "shallow"))
+    stats_dir = root / ("phase0" if tag == "loso_main" else f"phase0_{tag}")
     return deep, base, (stats_dir / "summary.csv").exists()
 
 
@@ -70,6 +73,7 @@ def run(cmd: list[str]) -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
+    ap.add_argument("--dataset", default="chbmit", choices=list(DATASETS))
     ap.add_argument("--pipelines", nargs="+", default=["P0", "P1", "P2", "P3", "P4", "P5"],
                     choices=list(PIPELINES))
     ap.add_argument("--repeats", nargs="+", type=int, default=[0, 1, 2])
@@ -82,31 +86,32 @@ def main() -> None:
 
     items = [(r, p) for r in args.repeats for p in args.pipelines]
     mine = items[k - 1::n]
-    print(f"worker {k}/{n}: {len(mine)} of {len(items)} runs, device {args.device}, "
+    print(f"{args.dataset}, worker {k}/{n}: {len(mine)} of {len(items)} runs, device {args.device}, "
           f"{args.threads} threads")
     for r, p in mine:
-        tag = tag_for(p, r, args.device)
-        deep, base, stats = status(tag)
+        tag = tag_for(p, r, args.device, args.dataset)
+        deep, base, stats = status(tag, args.dataset)
         state = "done" if deep and base and stats else (
-            "partial" if (RESULTS_ROOT / "chbmit" / tag / "perfold.csv").exists() else "to do")
+            "partial" if (RESULTS_ROOT / args.dataset / tag / "perfold.csv").exists() else "to do")
         print(f"  {tag:22s} pipeline {p} seed set {r}: {state}")
     if args.dry_run:
         return
 
     for r, p in mine:
-        tag = tag_for(p, r, args.device)
-        deep, base, stats = status(tag)
+        tag = tag_for(p, r, args.device, args.dataset)
+        deep, base, stats = status(tag, args.dataset)
         if not deep:
-            cmd = ["src.chbmit_run", "--split", "loso", "--threads", str(args.threads),
+            cmd = ["src.chbmit_run", "--dataset", args.dataset, "--split", "loso",
+                   "--threads", str(args.threads),
                    "--pipeline", p, "--repeat", str(r), "--device", args.device,
                    "--tag", tag]
-            if (RESULTS_ROOT / "chbmit" / tag / "perfold.csv").exists():
+            if (RESULTS_ROOT / args.dataset / tag / "perfold.csv").exists():
                 cmd.append("--resume")
             run(cmd)
         if not base:
-            run(["src.chbmit_baselines", "--run", tag])
+            run(["src.chbmit_baselines", "--dataset", args.dataset, "--run", tag])
         if not stats:
-            run(["src.chbmit_stats", "--run", tag])
+            run(["src.chbmit_stats", "--dataset", args.dataset, "--run", tag])
     print("\nqueue finished")
 
 

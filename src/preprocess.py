@@ -301,12 +301,14 @@ def artifact_mask(x_raw: np.ndarray, fs: float = 256.0) -> np.ndarray:
 
 # --- Building and checking the pipeline corpora -----------------------------------------
 
-def build_all(names: list[str], jobs: int = 1) -> None:
+def build_all(names: list[str], jobs: int = 1, dataset: str = "chbmit") -> None:
     """Build the corpus cache of every distinct signal-level step set among `names`,
     and check that each holds exactly the same windows as P0. jobs > 1 processes the
     recordings of each subject in parallel worker processes."""
-    from .chbmit_corpus import build_corpus
+    from .datasets import corpus_builder
 
+    build_corpus = corpus_builder(dataset)
+    extra = {"n_jobs": jobs} if dataset == "chbmit" else {}    # Siena builds serially
     ref = build_corpus(verbose=False)
     done: set[str] = set()
     for name in names:
@@ -316,7 +318,7 @@ def build_all(names: list[str], jobs: int = 1) -> None:
         done.add(p.signal_tag)
         print(f"\n{name}: building corpus '{p.signal_tag}' (shared by "
               f"{', '.join(q.name for q in PIPELINES.values() if q.signal_tag == p.signal_tag)})")
-        d = build_corpus(signal_fn=p.apply_signal, signal_tag=p.signal_tag, n_jobs=jobs)
+        d = build_corpus(signal_fn=p.apply_signal, signal_tag=p.signal_tag, **extra)
         same = all(np.array_equal(d[k], ref[k]) for k in
                    ("y", "subject", "seizure_id", "record", "t0"))
         if not same or d["X"].shape != ref["X"].shape:
@@ -392,13 +394,14 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--build", nargs="*", metavar="P",
                     help="build the corpus caches of these pipelines (default: all)")
+    ap.add_argument("--dataset", default="chbmit", choices=["chbmit", "siena"])
     ap.add_argument("--jobs", type=int, default=1,
                     help="parallel worker processes when building (useful for P6)")
     ap.add_argument("--scan-rejection", action="store_true",
                     help="rejection rates of the P4 rule and of amplitude criteria")
     args = ap.parse_args()
     if args.build is not None:
-        build_all(args.build or list(PIPELINES), jobs=args.jobs)
+        build_all(args.build or list(PIPELINES), jobs=args.jobs, dataset=args.dataset)
     if args.scan_rejection:
         scan_rejection()
     if args.build is None and not args.scan_rejection:
