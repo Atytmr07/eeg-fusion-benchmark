@@ -741,7 +741,10 @@ any ranking of the operators, and neither run's ordering should be cited as one.
 ### 5.5 Third corpus: Siena Scalp EEG (in progress)
 
 The Siena Scalp EEG Database (Detti et al. 2020; PhysioNet) holds 41 recordings of 14
-adult patients (128 hours, 47 seizures, 512 Hz, referential 10-20 montage). It is
+adult patients (47 seizures, 512 Hz, referential 10-20 montage; 141.0 hours by the EDF
+headers, where the database description gives about 128). After windowing and the same
+1:4 subsampling as CHB-MIT, the corpus has 1,640 windows (328 ictal) and 14 leave one
+subject out folds, confirmed free of leakage by the same checker. It is
 converted to exactly the CHB-MIT form, so every driver is shared: the 18 channels of
 the CHB-MIT bipolar montage are derived from the referential electrodes, the signal
 is resampled to 256 Hz on the continuous recording, and windowing, labelling and
