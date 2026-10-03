@@ -1,0 +1,7 @@
+# LaTeX intermediates (build.py regenerates everything)
+*.aux
+*.log
+*.out
+*.toc
+main.md
+arxiv.zip

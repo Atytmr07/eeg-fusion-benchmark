@@ -13,7 +13,7 @@ the data into the CHB-MIT form; no model has been trained on it yet.
 | License | Creative Commons Attribution 4.0 International |
 | Cite | Detti, Vatti, Zabalo Manrique de Lara (2020), *EEG synchronization analysis for seizure prediction: a study on data of noninvasive recordings*, Processes 8(7):846; Detti (2020), PhysioNet, doi:10.13026/5d4a-j060; Goldberger et al. (2000), Circulation 101(23) |
 | Patients | 14 adults (PN00, PN01, PN03, PN05, PN06, PN07, PN09, PN10, PN11, PN12, PN13, PN14, PN16, PN17), one recording session each |
-| Recordings | 41 EDF files, 128 hours, 20.3 GB; every recording contains at least one seizure |
+| Recordings | 41 EDF files, 141.0 hours by the EDF headers (the description says about 128; Section 8), 20.3 GB; every recording contains at least one seizure |
 | Seizures | 47, 47.7 minutes in total, median 63 s (PN10's ten seizures last 5 to 69 s) |
 | Sampling rate | 512 Hz |
 | Montage | referential 10-20 with older names (T3, T4, T5, T6), 29 EEG electrodes (19 in PN10's seizure list), plus EKG and other signals |
@@ -224,3 +224,95 @@ downloaded on the lab machine.
 PN00's seizure 3 lasts 60 s when its end is read as 18.29.29, so the patient's total
 is 325 s rather than the 326 s expected from a 61 s reading. LOSO cannot be checked
 on one subject; it runs once two or more subjects are present.
+
+## 8. Total recording time: 141.0 or 128 hours
+
+`verify_siena` sums the EDF headers to **141.0 hours**. The PhysioNet description
+says "about 128 recording hours", and `subject_info.csv` gives 7704 minutes
+(128.4 hours). The description's figure is that column's total, so there is one
+disagreement to explain, not two independent measurements.
+
+`python -m src.siena_durations` puts three measurements side by side for each
+patient. It needs only the header audit and `subject_info.csv`, not the signals.
+The output is in `data/siena/durations.csv`.
+
+- **header:** n_records × record duration from each EDF header. The file sizes
+  match these headers (Section 3).
+- **list:** "Registration end − start" in the seizure lists, modulo 24 hours, one
+  term per file.
+- **info:** `rec_time_minutes` in `subject_info.csv`.
+
+| Patient | Files | Header (min) | List (min) | subject_info (min) | info − header |
+|---|---|---|---|---|---|
+| PN00 | 5 | 194.7 | 193.0 | 198 | +3.3 |
+| PN01 | 1 | 809.3 | 809.0 | 809 | −0.3 |
+| **PN03** | 2 | 1453.6 | 1453.0 | 752 | **−701.6** |
+| PN05 | 3 | 362.1 | 361.1 | 359 | −3.1 |
+| PN06 | 5 | 724.4 | 723.4 | 722 | −2.4 |
+| PN07 | 1 | 524.1 | 523.8 | 523 | −1.1 |
+| PN09 | 3 | 410.9 | 410.2 | 410 | −0.9 |
+| **PN10** | 6 | 1123.6 | 1123.0 | 1002 | **−121.6** |
+| PN11 | 1 | 144.6 | 144.6 | 145 | +0.4 |
+| **PN12** | 3 | 366.0 | 366.0 | 246 | **−120.0** |
+| PN13 | 3 | 519.9 | 519.9 | 519 | −0.9 |
+| **PN14** | 4 | 1227.8 | 1407.8 | 1408 | **+180.2** |
+| PN16 | 2 | 292.8 | 292.8 | 303 | +10.2 |
+| PN17 | 2 | 307.5 | 307.5 | 308 | +0.5 |
+| Total | 41 | 8461.2 (141.0 h) | 8634.9 (143.9 h) | 7704 (128.4 h) | −757.2 |
+
+Four patients account for the whole 12.6-hour gap: −701.6 − 121.6 − 120.0 + 180.2
+= −763.0 minutes. The other ten patients together differ by +5.7 minutes, which
+is rounding plus the list's habit of ending 20 s before the file.
+
+The header and list columns agree for 40 of 41 files. The exception is PN14-3,
+whose list start is three hours early (Section 5.3). Where each of the four
+differences comes from:
+
+- **PN14, +180.2 min: explained.** `subject_info.csv` matches the list column to
+  0.2 minutes, so its value was computed from the seizure list. It inherits the
+  three-hour typo in PN14-3's start time (16.17.45 for 19.17.45). The header is
+  right: its start plus its 41995 s gives the listed end time exactly. The
+  correct value for PN14 is 1227.8 min (20.5 h), not 1408 (23.5 h).
+- **PN03, −701.6 min: not explained by the files.**
+  - Both files are complete. PN03-1 has 46637 one-second records, and its size
+    matches the header. PN03-2 has 40580.
+  - Header and list agree to the second, apart from the usual 20 s at the end.
+  - 752 min does not match either file (777.3 and 676.3 min) or any sum of them.
+    The value in `subject_info.csv` looks like an entry error.
+  - That file has at least one other entry that disagrees with the data: it
+    gives PN10 20 EEG channels, where the list names 19 and the headers carry 29
+    (Section 5.4).
+- **PN10, −121.6 min, and PN12, −120.0 min: not explained by the files.**
+  - Both patients have files merged from several recordings: PN10-4.5.6,
+    PN10-7.8.9 and PN12-1.2.
+  - Their headers are plain continuous EDF ("reserved" field empty, so not
+    EDF+D), with one-second records and no annotation channel. Each file's size
+    matches its header, and the list gives the same span as the header.
+  - The difference may therefore be the time between the original recordings
+    inside the merged files. Those stretches would be counted by the header but
+    not by `subject_info.csv`. This is a hypothesis.
+  - Checking it needs the signals: flat or filler stretches in the three merged
+    files (about 1.9 GB together), which are not on this machine.
+  - The two differences do not fit a simple rule: PN12 has one junction and
+    PN10 has four, yet both are about 120 min. This is a reason for caution, not
+    a refutation.
+
+**Consequences for this project.**
+
+- The corpus is built from the EDF files, so every window comes from the
+  recordings as they are. The 141.0 hours is what the pipeline reads, and no
+  window count depends on `subject_info.csv`.
+- If the merged files do contain filler, it would sit in non-ictal time. Some of
+  it could end up among the subsampled non-ictal windows. The amplitude check of
+  P4 (flat channel, constant segment) would reject such windows in P4 only.
+  Checking this is part of the full download on the lab machine.
+
+**Suggested wording for the manuscript (Section 5.5).** Keep 141.0 hours as the
+figure, because it is measured from the files. Say where 128 comes from:
+
+> 141.0 hours by the EDF headers. The database description gives about 128 hours,
+> the total of its `subject_info.csv`, which differs from the recordings for four
+> patients: for PN14 it inherits a three-hour error in the seizure list, and for
+> PN03, PN10 and PN12 it is 11.7, 2.0 and 2.0 hours shorter than the files without
+> an explanation in the data (`docs/SIENA.md`, Section 8).
+
