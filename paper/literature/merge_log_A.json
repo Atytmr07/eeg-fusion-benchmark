@@ -1,0 +1,18 @@
+{
+  "exports": {
+    "arxiv_A-broad_2026-10-03.xml": 17,
+    "arxiv_A_2026-10-03.xml": 10,
+    "ieee_A_2026-10-03_p1.ris": 100,
+    "ieee_A_2026-10-03_p2.ris": 59,
+    "scopus_A_2026-10-03.csv": 475,
+    "wos_A_2026-10-03.txt": 251
+  },
+  "per_database_unique": {
+    "arxiv": 17,
+    "ieee": 159,
+    "scopus": 462,
+    "wos": 251
+  },
+  "records_raw": 912,
+  "records_unique": 555
+}

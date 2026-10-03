@@ -1,0 +1,12 @@
+{
+  "exports": {
+    "arxiv_B1_2026-10-03.xml": 42,
+    "scopus_B1_2026-10-03.csv": 116
+  },
+  "per_database_unique": {
+    "arxiv": 42,
+    "scopus": 116
+  },
+  "records_raw": 158,
+  "records_unique": 153
+}

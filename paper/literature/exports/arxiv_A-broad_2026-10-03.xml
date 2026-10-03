@@ -1,0 +1,522 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/FNA3Pen7zs1pd5bF4MevBQMnJ5c</id>
+  <title>arXiv Query: search_query=(abs:EEG OR abs:electroencephalogra*) AND (abs:seizure OR abs:epilep*) AND (abs:fusion OR abs:multimodal OR abs:"multi-modal") AND (abs:"deep learning" OR abs:CNN OR abs:"convolutional neural network" OR abs:"neural network")&amp;id_list=&amp;start=0&amp;max_results=2000</title>
+  <updated>2026-10-03T13:03:25Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=(abs:EEG+OR+abs:electroencephalogra*)+AND+((abs:seizure+OR+abs:epilep*)+AND+((abs:fusion+OR+(abs:multimodal+OR+abs:%22multi-modal%22))+AND+(abs:%22deep+learning%22+OR+(abs:CNN+OR+(abs:%22convolutional+neural+network%22+OR+abs:%22neural+network%22)))))&amp;start=0&amp;max_results=2000&amp;id_list=" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>2000</opensearch:itemsPerPage>
+  <opensearch:totalResults>17</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2607.16296v1</id>
+    <title>Efficient EEG Seizure Detection Using INT8 Quantization, Channel Pruning, and Spiking Neural Networks</title>
+    <updated>2026-07-13T11:14:29Z</updated>
+    <link href="https://arxiv.org/abs/2607.16296v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2607.16296v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Continuous EEG monitoring for epilepsy is constrained by the limited power and memory budgets of wearable and implantable devices. Deep neural networks can detect seizures with high accuracy, but their computational cost and model size make them difficult to deploy on such platforms. In this work we use a single 1D CNN seizure detector on the CHB-MIT scalp EEG dataset as a common baseline, and then investigate three brain-inspired efficiency strategies: (i) conversion of the CNN into a spiking neural network (SNN) via parameter transfer, (ii) EEG channel pruning combined with 2:4 structured weight sparsity, and (iii) INT8 quantization using FX- and ONNX-based workflows, including quantization-aware training and operator fusion. The quantized CNN variants reduce stored model size from 1.63 MB to 0.44 MB, lower estimated energy per inference by up to 64%, and achieve as much as 2.8 times speedup in CPU latency while preserving, and in one case slightly improving, AUC. The pruned CNN halves the number of input channels and non-zero weights with only a modest accuracy drop, and the SNN conversion provides a spiking implementation with sparse temporal activity. Together, these experiments characterize three complementary efficiency directions for seizure detection.</summary>
+    <category term="eess.SP" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-07-13T11:14:29Z</published>
+    <arxiv:primary_category term="eess.SP"/>
+    <author>
+      <name>Kartikey Ahlawat</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2606.08240v1</id>
+    <title>A dual-system approach for epilepsy diagnosis: integrating mamba-Bi-LSTM architecture with SHAP-based verification</title>
+    <updated>2026-06-06T15:54:31Z</updated>
+    <link href="https://arxiv.org/abs/2606.08240v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2606.08240v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>This study develops a medical AI-assisted diagnosis system based on deep learning, which provides intelligent diagnostic solutions for epilepsy, a disease that seriously threatens the life and health of patients. Epilepsy has sudden and unpredictable seizures. Traditional diagnostic methods mainly rely on doctors' manual interpretation of EEG, which is time-consuming and dependent by experience. In response to the above challenges, this study designed a dual-system intelligent diagnosis framework, which includes two core components: the main discrimination system and the verification system. The main discrimination system uses a deep learning model that combines the innovative Mamba architecture with the Bi-LSTM structure to integrate and analyze heterogeneous data to achieve extremely high diagnostic accuracy; the verification system provides an explainable diagnostic basis through the SHAP method to enhance the credibility of the results. This system establishes a cross-modal database to realize intelligent analysis of multi-source heterogeneous data-fusion EEG signals and clinical text data for epilepsy. The system outputs results based on diagnostic consistency and confidence levels, and high-confidence predictions can also be used as automatic feedback sources to optimize the model. The experimental results show that the accuracy of the main discriminant model of the intelligent diagnosis system for epilepsy has increased from 92.6% to 98.7% and the F1 score has increased from 0.895 to 0.992, all of which have exceeded the existing optimal methods; the average processing time for verification system feedback integration is only 220 ms, which increases the overall diagnostic accuracy by 5.1%.</summary>
+    <category term="eess.SP" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-06-06T15:54:31Z</published>
+    <arxiv:comment>18 pages, 11 figures, 16 tables</arxiv:comment>
+    <arxiv:primary_category term="eess.SP"/>
+    <arxiv:journal_ref>Biomedical Engineering Advances 11 (2026) 100218</arxiv:journal_ref>
+    <author>
+      <name>Mufeng Chen</name>
+    </author>
+    <author>
+      <name>Jia Xie</name>
+    </author>
+    <author>
+      <name>Fuchang Luo</name>
+    </author>
+    <author>
+      <name>Quansheng Ren</name>
+    </author>
+    <arxiv:doi>10.1016/j.bea.2026.100218</arxiv:doi>
+    <link rel="related" href="https://doi.org/10.1016/j.bea.2026.100218" title="doi"/>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2606.02166v2</id>
+    <title>EEG-FuseFormer: A Transformer-Driven Feature Fusion Framework for Seizure Onset Prediction</title>
+    <updated>2026-06-03T13:33:52Z</updated>
+    <link href="https://arxiv.org/abs/2606.02166v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2606.02166v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Epilepsy is one of the most common neurological disorders globally, characterized by recurring seizures and significantly impacting the quality of life. Despite advancements in diagnostic techniques, the mitigation of risks faced by epilepsy patients remains challenging due to the unpredictability of seizure events. An accurate forecast of seizure onset helps to reduce risks in epilepsy patients. In this paper, we propose EEG-FuseFormer, a transformer-based feature fusion framework for seizure-onset prediction that combines intermediate features extracted from Convolutional Neural Networks-Long Short-Term Memory (CNN-LSTM) and ResNet-18 networks. The CNN-LSTM architecture captures both spatial and temporal features directly from the raw signal, whereas the ResNet-18 extracts features from the Short-Time Fourier Transform (STFT) representation of the EEG signals. Fusion is carried out using a transformer encoder, and the final prediction is generated using fully connected dense layers. The CHB-MIT dataset was used to validate the proposed model. The results show that the proposed model achieves a mean recall of 98.85% and outperforms most of the state-of-the-art methods. This study evaluates the ability of the proposed feature fusion model to generalize in cross-patient testing scenarios. Fine-tuning pre-trained models on limited target patient data (target adaptation) within the cross-patient validation framework results in higher recall, precision, and F1-score metrics in comparison to the conventional cross-patient validation approach. Finally, the runtime-based computational complexity of the model is assessed across diverse hardware platforms to highlight the performance-complexity trade-off.</summary>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-06-01T12:27:01Z</published>
+    <arxiv:comment>IEEE International Instrumentation and Measurement Technology Conference (I2MTC) 2026</arxiv:comment>
+    <arxiv:primary_category term="cs.LG"/>
+    <author>
+      <name>Vigneshwar Hariharan</name>
+    </author>
+    <author>
+      <name>Chithra Reghuvaran</name>
+    </author>
+    <author>
+      <name>Arlene John</name>
+    </author>
+    <author>
+      <name>Nhat Pham</name>
+    </author>
+    <author>
+      <name>Omer Rana</name>
+    </author>
+    <author>
+      <name>Deepu John</name>
+    </author>
+    <author>
+      <name>Ganesh Neelakanta Iyer</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2601.00670v1</id>
+    <title>Wave2Word: A Multimodal Transformer Framework for Joint EEG-Text Alignment and Multi-Task Representation Learning in Neurocritical Care</title>
+    <updated>2026-01-02T12:35:12Z</updated>
+    <link href="https://arxiv.org/abs/2601.00670v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2601.00670v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Continuous electroencephalography (EEG) is routinely used in neurocritical care to monitor seizures and other harmful brain activity, including rhythmic and periodic patterns that are clinically significant. Although deep learning methods have achieved high accuracy in seizure detection, most existing approaches remain seizure-centric, rely on discrete-label supervision, and are primarily evaluated using accuracy-based metrics. A central limitation of current EEG modeling practice is the weak correspondence between learned representations and how EEG findings are interpreted and summarized in clinical workflows. Harmful EEG activity exhibits overlapping patterns, graded expert agreement, and temporal persistence, which are not well captured by classification objectives alone. This work proposes a multimodal EEG representation learning framework that integrates signal-domain modeling with structured clinical language supervision. First, raw EEG is transformed into a longitudinal bipolar montage and time-frequency representations. Second, dual transformer-based encoders model complementary temporal and frequency-centric dependencies and are fused using an adaptive gating mechanism. Third, EEG embeddings are aligned with structured expert consensus descriptions through a contrastive objective. Finally, an EEG-conditioned text reconstruction loss is introduced as a representation-level constraint alongside standard classification loss. Experimental evaluation using a controlled train-validation-test split achieves a six-class test accuracy of 0.9797. Ablation analyses show that removing contrastive alignment reduces cross-modal retrieval performance from Recall@10 of 0.3390 to 0.0045, despite minimal change in classification accuracy. These findings demonstrate that discriminative accuracy does not reliably reflect representation quality for clinically meaningful EEG modeling.</summary>
+    <category term="cs.HC" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-01-02T12:35:12Z</published>
+    <arxiv:primary_category term="cs.HC"/>
+    <author>
+      <name>Argha Kamal Samanta</name>
+    </author>
+    <author>
+      <name>Deepak Mewada</name>
+    </author>
+    <author>
+      <name>Monalisa Sarma</name>
+    </author>
+    <author>
+      <name>Debasis Samanta</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2512.08257v1</id>
+    <title>Geometric-Stochastic Multimodal Deep Learning for Predictive Modeling of SUDEP and Stroke Vulnerability</title>
+    <updated>2025-12-09T05:28:09Z</updated>
+    <link href="https://arxiv.org/abs/2512.08257v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2512.08257v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Sudden Unexpected Death in Epilepsy (SUDEP) and acute ischemic stroke are life-threatening conditions involving complex interactions across cortical, brainstem, and autonomic systems. We present a unified geometric-stochastic multimodal deep learning framework that integrates EEG, ECG, respiration, SpO2, EMG, and fMRI signals to model SUDEP and stroke vulnerability. The approach combines Riemannian manifold embeddings, Lie-group invariant feature representations, fractional stochastic dynamics, Hamiltonian energy-flow modeling, and cross-modal attention mechanisms. Stroke propagation is modeled using fractional epidemic diffusion over structural brain graphs. Experiments on the MULTI-CLARID dataset demonstrate improved predictive accuracy and interpretable biomarkers derived from manifold curvature, fractional memory indices, attention entropy, and diffusion centrality. The proposed framework provides a mathematically principled foundation for early detection, risk stratification, and interpretable multimodal modeling in neural-autonomic disorders.</summary>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="eess.IV" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2025-12-09T05:28:09Z</published>
+    <arxiv:comment>7 pages, 3 figures</arxiv:comment>
+    <arxiv:primary_category term="cs.LG"/>
+    <author>
+      <name>Preksha Girish</name>
+    </author>
+    <author>
+      <name>Rachana Mysore</name>
+    </author>
+    <author>
+      <name>Mahanthesha U</name>
+    </author>
+    <author>
+      <name>Shrey Kumar</name>
+    </author>
+    <author>
+      <name>Misbah Fatimah Annigeri</name>
+    </author>
+    <author>
+      <name>Tanish Jain</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2510.13497v1</id>
+    <title>DistilCLIP-EEG: Enhancing Epileptic Seizure Detection Through Multi-modal Learning and Knowledge Distillation</title>
+    <updated>2025-10-15T12:49:28Z</updated>
+    <link href="https://arxiv.org/abs/2510.13497v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2510.13497v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Epilepsy is a prevalent neurological disorder marked by sudden, brief episodes of excessive neuronal activity caused by abnormal electrical discharges, which may lead to some mental disorders. Most existing deep learning methods for epilepsy detection rely solely on unimodal EEG signals, neglecting the potential benefits of multimodal information. To address this, we propose a novel multimodal model, DistilCLIP-EEG, based on the CLIP framework, which integrates both EEG signals and text descriptions to capture comprehensive features of epileptic seizures. The model involves an EEG encoder based on the Conformer architecture as a text encoder, the proposed Learnable BERT (BERT-LP) as prompt learning within the encoders. Both operate in a shared latent space for effective cross-modal representation learning. To enhance efficiency and adaptability, we introduce a knowledge distillation method where the trained DistilCLIP-EEG serves as a teacher to guide a more compact student model to reduce training complexity and time. On the TUSZ, AUBMC, and CHB-MIT datasets, both the teacher and student models achieved accuracy rates exceeding 97%. Across all datasets, the F1-scores were consistently above 0.94, demonstrating the robustness and reliability of the proposed framework. Moreover, the student model's parameter count and model size are approximately 58.1% of those of the teacher model, significantly reducing model complexity and storage requirements while maintaining high performance. These results highlight the potential of our proposed model for EEG-based epilepsy detection and establish a solid foundation for deploying lightweight models in resource-constrained settings.</summary>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2025-10-15T12:49:28Z</published>
+    <arxiv:comment>16 pages, 9 figures, 5 tables</arxiv:comment>
+    <arxiv:primary_category term="cs.LG"/>
+    <author>
+      <name>Zexin Wang</name>
+    </author>
+    <author>
+      <name>Lin Shi</name>
+    </author>
+    <author>
+      <name>Haoyu Wu</name>
+    </author>
+    <author>
+      <name>Junru Luo</name>
+    </author>
+    <author>
+      <name>Xiangzeng Kong</name>
+    </author>
+    <author>
+      <name>Jun Qi</name>
+    </author>
+    <arxiv:doi>10.1109/JBHI.2025.3603022</arxiv:doi>
+    <link rel="related" href="https://doi.org/10.1109/JBHI.2025.3603022" title="doi"/>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2508.08602v1</id>
+    <title>Biomedical Signal Processing: EEG and ECG Classification with Discrete Wavelet Transforms, Energy Distribution, and Convolutional Neural Networks</title>
+    <updated>2025-08-12T03:35:24Z</updated>
+    <link href="https://arxiv.org/abs/2508.08602v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2508.08602v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Biomedical signal processing extract meaningful information from physiological signals like electrocardiograms (ECGs), electroencephalograms (EEGs), and electromyograms (EMGs) to diagnose, monitor, and treat medical conditions and diseases such as seizures, cardiomyopathy, and neuromuscular disorders, respectively. Traditional manual physician analysis of electrical recordings is prone to human error as subtle anomolies may not be detected. Recently, advanced deep learning has significantly improved the accuracy of biomedical signal analysis. A multi-modal deep learning model is proposed that utilizes discrete wavelet transforms for signal pre-processing to reduce noise. A multi-modal image fusion and multimodal feature fusion framework is utilized that converts numeric biomedical signals into 2D and 3D images for image processing using Gramian angular fields, recurrency plots, and Markov transition fields. In this paper, deep learning models are applied to ECG, EEG, and human activity signals using actual medical datasets, brain, and heart recordings. The results demonstrate that using a multi-modal approach using wavelet transforms improves the accuracy of disease and disorder classification.</summary>
+    <category term="eess.SP" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2025-08-12T03:35:24Z</published>
+    <arxiv:primary_category term="eess.SP"/>
+    <author>
+      <name>Justin London</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2507.12645v1</id>
+    <title>A Novel Data Augmentation Strategy for Robust Deep Learning Classification of Biomedical Time-Series Data: Application to ECG and EEG Analysis</title>
+    <updated>2025-07-16T21:38:10Z</updated>
+    <link href="https://arxiv.org/abs/2507.12645v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2507.12645v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>The increasing need for accurate and unified analysis of diverse biological signals, such as ECG and EEG, is paramount for comprehensive patient assessment, especially in synchronous monitoring. Despite advances in multi-sensor fusion, a critical gap remains in developing unified architectures that effectively process and extract features from fundamentally different physiological signals. Another challenge is the inherent class imbalance in many biomedical datasets, often causing biased performance in traditional methods. This study addresses these issues by proposing a novel and unified deep learning framework that achieves state-of-the-art performance across different signal types. Our method integrates a ResNet-based CNN with an attention mechanism, enhanced by a novel data augmentation strategy: time-domain concatenation of multiple augmented variants of each signal to generate richer representations. Unlike prior work, we scientifically increase signal complexity to achieve future-reaching capabilities, which resulted in the best predictions compared to the state of the art. Preprocessing steps included wavelet denoising, baseline removal, and standardization. Class imbalance was effectively managed through the combined use of this advanced data augmentation and the Focal Loss function. Regularization techniques were applied during training to ensure generalization. We rigorously evaluated the proposed architecture on three benchmark datasets: UCI Seizure EEG, MIT-BIH Arrhythmia, and PTB Diagnostic ECG. It achieved accuracies of 99.96%, 99.78%, and 100%, respectively, demonstrating robustness across diverse signal types and clinical contexts. Finally, the architecture requires ~130 MB of memory and processes each sample in ~10 ms, suggesting suitability for deployment on low-end or wearable devices.</summary>
+    <category term="eess.SP" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2025-07-16T21:38:10Z</published>
+    <arxiv:primary_category term="eess.SP"/>
+    <author>
+      <name>Mohammed Guhdar</name>
+    </author>
+    <author>
+      <name>Ramadhan J. Mstafa</name>
+    </author>
+    <author>
+      <name>Abdulhakeem O. Mohammed</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2503.23338v3</id>
+    <title>An Active Dry-Contact Continuous EEG Monitoring System for Seizure Detection Applications in Clinical Neurophysiology</title>
+    <updated>2025-11-25T06:37:17Z</updated>
+    <link href="https://arxiv.org/abs/2503.23338v3" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2503.23338v3" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Objective: Young children and infants, especially newborns, are highly susceptible to seizures, which, if undetected and untreated, can lead to severe long-term neurological consequences. Early detection typically requires continuous electroencephalography (cEEG) monitoring in hospital settings, involving costly equipment and highly trained specialists. This study presents a low-cost, active dry-contact electrode-based, adjustable electroencephalography (EEG) headset, combined with an explainable deep learning model for seizure detection from reduced-montage EEG, and a multimodal artifact removal algorithm to enhance signal quality. Methods: EEG signals were acquired via active electrodes and processed through a custom-designed analog front end for filtering and digitization. The adjustable headset was fabricated using three-dimensional printing and laser cutting to accommodate varying head sizes. The deep learning model was trained to detect neonatal seizures in real time, and a dedicated multimodal algorithm was implemented for artifact removal while preserving seizure-relevant information. System performance was evaluated in a representative clinical setting on a pediatric patient with absence seizures, with simultaneous recordings obtained from the proposed device and a commercial wet-electrode cEEG system for comparison. Results: Signals from the proposed system exhibited a correlation coefficient exceeding 0.8 with those from the commercial device. Signal-to-noise ratio analysis indicated noise mitigation performance comparable to the commercial system. The deep learning model achieved accuracy and recall improvements of 2.76% and 16.33%, respectively, over state-of-the-art approaches. The artifact removal algorithm effectively identified and eliminated noise while preserving seizure-related EEG features.</summary>
+    <category term="eess.SP" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2025-03-30T06:44:15Z</published>
+    <arxiv:comment>10 pages, 9 figures, Work is accepted for publication in IEEE TBME</arxiv:comment>
+    <arxiv:primary_category term="eess.SP"/>
+    <author>
+      <name>Nima L. Wickramasinghe</name>
+    </author>
+    <author>
+      <name>Dinuka Sandun Udayantha</name>
+    </author>
+    <author>
+      <name>Akila Abeyratne</name>
+    </author>
+    <author>
+      <name>Kavindu Weerasinghe</name>
+    </author>
+    <author>
+      <name>Kithmin Wickremasinghe</name>
+    </author>
+    <author>
+      <name>Jithangi Wanigasinghe</name>
+    </author>
+    <author>
+      <name>Anjula De Silva</name>
+    </author>
+    <author>
+      <name>Chamira U. S. Edussooriya</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2501.08585v1</id>
+    <title>A Systematic Review of Machine Learning Methods for Multimodal EEG Data in Clinical Application</title>
+    <updated>2024-12-31T07:20:56Z</updated>
+    <link href="https://arxiv.org/abs/2501.08585v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2501.08585v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Machine learning (ML) and deep learning (DL) techniques have been widely applied to analyze electroencephalography (EEG) signals for disease diagnosis and brain-computer interfaces (BCI). The integration of multimodal data has been shown to enhance the accuracy of ML and DL models. Combining EEG with other modalities can improve clinical decision-making by addressing complex tasks in clinical populations. This systematic literature review explores the use of multimodal EEG data in ML and DL models for clinical applications. A comprehensive search was conducted across PubMed, Web of Science, and Google Scholar, yielding 16 relevant studies after three rounds of filtering. These studies demonstrate the application of multimodal EEG data in addressing clinical challenges, including neuropsychiatric disorders, neurological conditions (e.g., seizure detection), neurodevelopmental disorders (e.g., autism spectrum disorder), and sleep stage classification. Data fusion occurred at three levels: signal, feature, and decision levels. The most commonly used ML models were support vector machines (SVM) and decision trees. Notably, 11 out of the 16 studies reported improvements in model accuracy with multimodal EEG data. This review highlights the potential of multimodal EEG-based ML models in enhancing clinical diagnostics and problem-solving.</summary>
+    <category term="eess.SP" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.CV" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2024-12-31T07:20:56Z</published>
+    <arxiv:comment>This paper includes 4 figures, 6 tables, and totals 18 pages</arxiv:comment>
+    <arxiv:primary_category term="eess.SP"/>
+    <author>
+      <name>Siqi Zhao</name>
+      <arxiv:affiliation>WBooth School of Engineering Practice and Technology, McMaster University, Hamilton, Ontario Canada</arxiv:affiliation>
+    </author>
+    <author>
+      <name>Wangyang Li</name>
+      <arxiv:affiliation>WBooth School of Engineering Practice and Technology, McMaster University, Hamilton, Ontario Canada</arxiv:affiliation>
+    </author>
+    <author>
+      <name>Xiru Wang</name>
+      <arxiv:affiliation>WBooth School of Engineering Practice and Technology, McMaster University, Hamilton, Ontario Canada</arxiv:affiliation>
+    </author>
+    <author>
+      <name>Stevie Foglia</name>
+      <arxiv:affiliation>School of Biomedical Engineering, McMaster University, Hamilton, Ontario, Canada</arxiv:affiliation>
+    </author>
+    <author>
+      <name>Hongzhao Tan</name>
+      <arxiv:affiliation>WBooth School of Engineering Practice and Technology, McMaster University, Hamilton, Ontario Canada</arxiv:affiliation>
+    </author>
+    <author>
+      <name>Bohan Zhang</name>
+      <arxiv:affiliation>WBooth School of Engineering Practice and Technology, McMaster University, Hamilton, Ontario Canada</arxiv:affiliation>
+    </author>
+    <author>
+      <name>Ameer Hamoodi</name>
+      <arxiv:affiliation>School of Biomedical Engineering, McMaster University, Hamilton, Ontario, Canada</arxiv:affiliation>
+    </author>
+    <author>
+      <name>Aimee Nelson</name>
+      <arxiv:affiliation>School of Biomedical Engineering, McMaster University, Hamilton, Ontario, Canada</arxiv:affiliation>
+      <arxiv:affiliation>Department of Kinesiology, McMaster University, Hamilton, Ontario, Canada</arxiv:affiliation>
+    </author>
+    <author>
+      <name>Zhen Gao</name>
+      <arxiv:affiliation>WBooth School of Engineering Practice and Technology, McMaster University, Hamilton, Ontario Canada</arxiv:affiliation>
+      <arxiv:affiliation>School of Biomedical Engineering, McMaster University, Hamilton, Ontario, Canada</arxiv:affiliation>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2412.17835v1</id>
+    <title>SCFNet:A Transferable IIIC EEG Classification Network</title>
+    <updated>2024-12-16T02:08:19Z</updated>
+    <link href="https://arxiv.org/abs/2412.17835v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2412.17835v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Epilepsy and epileptiform discharges are common harmful brain activities, and electroencephalogram (EEG) signals are widely used to monitor the onset status of patients. However, due to the lack of unified EEG signal acquisition standards, there are many obstacles in practical applications, especially the difficulty in transferring and using models trained on different numbers of channels. To address this issue, we proposes a neural network architecture with a single-channel feature extraction (Singal Channel Feature) model backend fusion (SCFNet). The feature extractor of the model is an RCNN network with single-channel input, which does not depend on other channels, thereby enabling easier migration to data with different numbers of channels. Experimental results show that on the IIIC-Seizure dataset, the accuracy of EEG-SCFNet has improved by 4% compared to the baseline model and also increased by 1.3% compared to the original RCNN neural network model. Even with only fine-tuning the classification head, its performance can still maintain a level comparable to the baseline. In addition, in terms of cross-dataset transfer, EEG-SCFNet can still maintain certain performance even if the channel leads are different.</summary>
+    <category term="eess.SP" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2024-12-16T02:08:19Z</published>
+    <arxiv:primary_category term="eess.SP"/>
+    <author>
+      <name>Weijin Xu</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2412.07878v1</id>
+    <title>Comparative Analysis of Deep Learning Approaches for Harmful Brain Activity Detection Using EEG</title>
+    <updated>2024-12-10T19:27:19Z</updated>
+    <link href="https://arxiv.org/abs/2412.07878v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2412.07878v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>The classification of harmful brain activities, such as seizures and periodic discharges, play a vital role in neurocritical care, enabling timely diagnosis and intervention. Electroencephalography (EEG) provides a non-invasive method for monitoring brain activity, but the manual interpretation of EEG signals are time-consuming and rely heavily on expert judgment. This study presents a comparative analysis of deep learning architectures, including Convolutional Neural Networks (CNNs), Vision Transformers (ViTs), and EEGNet, applied to the classification of harmful brain activities using both raw EEG data and time-frequency representations generated through Continuous Wavelet Transform (CWT). We evaluate the performance of these models use multimodal data representations, including high-resolution spectrograms and waveform data, and introduce a multi-stage training strategy to improve model robustness. Our results show that training strategies, data preprocessing, and augmentation techniques are as critical to model success as architecture choice, with multi-stage TinyViT and EfficientNet demonstrating superior performance. The findings underscore the importance of robust training regimes in achieving accurate and efficient EEG classification, providing valuable insights for deploying AI models in clinical practice.</summary>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="eess.SP" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="q-bio.NC" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2024-12-10T19:27:19Z</published>
+    <arxiv:comment>6 pages, 5 figures. Presented at IEEE CICT 2024. The paper discusses the application of multimodal data and training strategies in EEG-based brain activity classification</arxiv:comment>
+    <arxiv:primary_category term="cs.LG"/>
+    <arxiv:journal_ref>2024 IEEE 8th Int. Conf. on Info. and Comm. Tech. (CICT), pp. 1-6</arxiv:journal_ref>
+    <author>
+      <name>Shivraj Singh Bhatti</name>
+    </author>
+    <author>
+      <name>Aryan Yadav</name>
+    </author>
+    <author>
+      <name>Mitali Monga</name>
+    </author>
+    <author>
+      <name>Neeraj Kumar</name>
+    </author>
+    <arxiv:doi>10.1109/CICT64037.2024.10899480</arxiv:doi>
+    <link rel="related" href="https://doi.org/10.1109/CICT64037.2024.10899480" title="doi"/>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2411.05817v2</id>
+    <title>Demo: Multi-Modal Seizure Prediction System</title>
+    <updated>2024-11-15T18:36:30Z</updated>
+    <link href="https://arxiv.org/abs/2411.05817v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2411.05817v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>This demo presents SeizNet, an innovative system for predicting epileptic seizures benefiting from a multi-modal sensor network and utilizing Deep Learning (DL) techniques. Epilepsy affects approximately 65 million people worldwide, many of whom experience drug-resistant seizures. SeizNet aims at providing highly accurate alerts, allowing individuals to take preventive measures without being disturbed by false alarms. SeizNet uses a combination of data collected through either invasive (intracranial electroencephalogram (iEEG)) or non-invasive (electroencephalogram (EEG) and electrocardiogram (ECG)) sensors, and processed by advanced DL algorithms that are optimized for real-time inference at the edge, ensuring privacy and minimizing data transmission. SeizNet achieves &gt; 97% accuracy in seizure prediction while keeping the size and energy restrictions of an implantable device.</summary>
+    <category term="eess.SP" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2024-11-01T18:21:37Z</published>
+    <arxiv:comment>1 page, 1 figure, Proceedings of the IEEE 20th International Conference on Body Sensor Networks (BSN), October 2024</arxiv:comment>
+    <arxiv:primary_category term="eess.SP"/>
+    <author>
+      <name>Ali Saeizadeh</name>
+    </author>
+    <author>
+      <name>Pietro Brach del Prever</name>
+    </author>
+    <author>
+      <name>Douglas Schonholtz</name>
+    </author>
+    <author>
+      <name>Raffaele Guida</name>
+    </author>
+    <author>
+      <name>Emrecan Demirors</name>
+    </author>
+    <author>
+      <name>Jorge M. Jimenez</name>
+    </author>
+    <author>
+      <name>Pedram Johari</name>
+    </author>
+    <author>
+      <name>Tommaso Melodia</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2410.20066v2</id>
+    <title>A Multi-Modal Non-Invasive Deep Learning Framework for Progressive Prediction of Seizures</title>
+    <updated>2024-11-01T18:20:51Z</updated>
+    <link href="https://arxiv.org/abs/2410.20066v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2410.20066v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>This paper introduces an innovative framework designed for progressive (granular in time to onset) prediction of seizures through the utilization of a Deep Learning (DL) methodology based on non-invasive multi-modal sensor networks. Epilepsy, a debilitating neurological condition, affects an estimated 65 million individuals globally, with a substantial proportion facing drug-resistant epilepsy despite pharmacological interventions. To address this challenge, we advocate for predictive systems that provide timely alerts to individuals at risk, enabling them to take precautionary actions. Our framework employs advanced DL techniques and uses personalized data from a network of non-invasive electroencephalogram (EEG) and electrocardiogram (ECG) sensors, thereby enhancing prediction accuracy. The algorithms are optimized for real-time processing on edge devices, mitigating privacy concerns and minimizing data transmission overhead inherent in cloud-based solutions, ultimately preserving battery energy. Additionally, our system predicts the countdown time to seizures (with 15-minute intervals up to an hour prior to the onset), offering critical lead time for preventive actions. Our multi-modal model achieves 95% sensitivity, 98% specificity, and 97% accuracy, averaged among 29 patients.</summary>
+    <category term="eess.SP" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2024-10-26T04:06:09Z</published>
+    <arxiv:comment>4 pages, 5 figures, Proceedings of the IEEE 20th International Conference on Body Sensor Networks (BSN), October 2024</arxiv:comment>
+    <arxiv:primary_category term="eess.SP"/>
+    <arxiv:journal_ref>2024 IEEE 20th International Conference on Body Sensor Networks (BSN)</arxiv:journal_ref>
+    <author>
+      <name>Ali Saeizadeh</name>
+    </author>
+    <author>
+      <name>Douglas Schonholtz</name>
+    </author>
+    <author>
+      <name>Joseph S. Neimat</name>
+    </author>
+    <author>
+      <name>Pedram Johari</name>
+    </author>
+    <author>
+      <name>Tommaso Melodia</name>
+    </author>
+    <arxiv:doi>10.1109/BSN63547.2024.10780713</arxiv:doi>
+    <link rel="related" href="https://doi.org/10.1109/BSN63547.2024.10780713" title="doi"/>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2409.02957v1</id>
+    <title>Comparison of Epilepsy Induced by Ischemic Hypoxic Brain Injury and Hypoglycemic Brain Injury using Multilevel Fusion of Data Features</title>
+    <updated>2024-09-03T08:25:52Z</updated>
+    <link href="https://arxiv.org/abs/2409.02957v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2409.02957v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>The study aims to investigate the similarities and differences in the brain damage caused by Hypoxia-Ischemia (HI), Hypoglycemia, and Epilepsy. Hypoglycemia poses a significant challenge in improving glycemic regulation for insulin-treated patients, while HI brain disease in neonates is associated with low oxygen levels. The study examines the possibility of using a combination of medical data and Electroencephalography (EEG) measurements to predict outcomes over a two-year period. The study employs a multilevel fusion of data features to enhance the accuracy of the predictions. Therefore this paper suggests a hybridized classification model for Hypoxia-Ischemia and Hypoglycemia, Epilepsy brain injury (HCM-BI). A Support Vector Machine is applied with clinical details to define the Hypoxia-Ischemia outcomes of each infant. The newborn babies are assessed every two years again to know the neural development results. A selection of four attributes is derived from the Electroencephalography records, and SVM does not get conclusions regarding the classification of diseases. The final feature extraction of the EEG signal is optimized by the Bayesian Neural Network (BNN) to get the clear health condition of Hypoglycemia and Epilepsy patients. Through monitoring and assessing physical effects resulting from Electroencephalography, The Bayesian Neural Network (BNN) is used to extract the test samples with the most log data and to report hypoglycemia and epilepsy Keywords- Hypoxia-Ischemia , Hypoglycemia , Epilepsy , Multilevel Fusion of Data Features , Bayesian Neural Network (BNN) , Support Vector Machine (SVM)</summary>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="eess.SP" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="q-bio.NC" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2024-09-03T08:25:52Z</published>
+    <arxiv:comment>16 Pages, 12 Figures, 2 Tables</arxiv:comment>
+    <arxiv:primary_category term="cs.LG"/>
+    <arxiv:journal_ref>Fusion: Practice and Applications Volume 10 , Issue 1 , PP: 100-115, 2023</arxiv:journal_ref>
+    <author>
+      <name>Sameer Kadem</name>
+    </author>
+    <author>
+      <name>Noor Sami</name>
+    </author>
+    <author>
+      <name>Ahmed Elaraby</name>
+    </author>
+    <author>
+      <name>Shahad Alyousif</name>
+    </author>
+    <author>
+      <name>Mohammed Jalil</name>
+    </author>
+    <author>
+      <name>M. Altaee</name>
+    </author>
+    <author>
+      <name>Muntather Almusawi</name>
+    </author>
+    <author>
+      <name>A. Ghany Ismaeel</name>
+    </author>
+    <author>
+      <name>Ali Kamil Kareem</name>
+    </author>
+    <author>
+      <name>Massila Kamalrudin</name>
+    </author>
+    <author>
+      <name>Adnan Allwi ftaiet</name>
+    </author>
+    <arxiv:doi>10.54216/FPA.100106</arxiv:doi>
+    <link rel="related" href="https://doi.org/10.54216/FPA.100106" title="doi"/>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2112.11218v1</id>
+    <title>Multiple Time Series Fusion Based on LSTM An Application to CAP A Phase Classification Using EEG</title>
+    <updated>2021-12-18T14:17:49Z</updated>
+    <link href="https://arxiv.org/abs/2112.11218v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2112.11218v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Biomedical decision making involves multiple signal processing, either from different sensors or from different channels. In both cases, information fusion plays a significant role. A deep learning based electroencephalogram channels' feature level fusion is carried out in this work for the electroencephalogram cyclic alternating pattern A phase classification. Channel selection, fusion, and classification procedures were optimized by two optimization algorithms, namely, Genetic Algorithm and Particle Swarm Optimization. The developed methodologies were evaluated by fusing the information from multiple electroencephalogram channels for patients with nocturnal frontal lobe epilepsy and patients without any neurological disorder, which was significantly more challenging when compared to other state of the art works. Results showed that both optimization algorithms selected a comparable structure with similar feature level fusion, consisting of three electroencephalogram channels, which is in line with the CAP protocol to ensure multiple channels' arousals for CAP detection. Moreover, the two optimized models reached an area under the receiver operating characteristic curve of 0.82, with average accuracy ranging from 77% to 79%, a result which is in the upper range of the specialist agreement. The proposed approach is still in the upper range of the best state of the art works despite a difficult dataset, and has the advantage of providing a fully automatic analysis without requiring any manual procedure. Ultimately, the models revealed to be noise resistant and resilient to multiple channel loss.</summary>
+    <category term="eess.SP" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.NE" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2021-12-18T14:17:49Z</published>
+    <arxiv:comment>47 pages, 7 figures, 4 tables, for journal publication</arxiv:comment>
+    <arxiv:primary_category term="eess.SP"/>
+    <author>
+      <name>Fábio Mendonça</name>
+    </author>
+    <author>
+      <name>Sheikh Shanawaz Mostafa</name>
+    </author>
+    <author>
+      <name>Diogo Freitas</name>
+    </author>
+    <author>
+      <name>Fernando Morgado-Dias</name>
+    </author>
+    <author>
+      <name>Antonio G. Ravelo-García</name>
+    </author>
+    <arxiv:doi>10.3390/ijerph191710892</arxiv:doi>
+    <link rel="related" href="https://doi.org/10.3390/ijerph191710892" title="doi"/>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/1906.00511v2</id>
+    <title>Deep learning from wristband sensor data: towards wearable, non-invasive seizure forecasting</title>
+    <updated>2019-06-07T03:13:24Z</updated>
+    <link href="https://arxiv.org/abs/1906.00511v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/1906.00511v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Seizure forecasting may provide patients with timely warnings to adapt their daily activities and help clinicians deliver more objective, personalized treatments. While recent work has convincingly demonstrated that seizure risk assessment is possible, these early approaches relied largely on complex, often invasive setups including intracranial electrocorticography, implanted devices and multi-channel EEG, which limits translation of these methods to broad clinical application. To facilitate broader adaptation of seizure forecasting in clinical practice, non-invasive, easily applicable techniques that reliably assess seizure risk, in combination with clinical information, are crucial. Wristbands that continuously record physiological parameters, including electrodermal activity, body temperature, blood volume pressure and actigraphy, may afford monitoring of autonomous nervous system function and movement relevant for such a task, hence minimizing potential complications associated with invasive monitoring, and avoiding stigma associated with bulky external monitoring devices on the head. Here, we use deep learning to analyze long-term, multi-modal wristband sensor data from 50 patients with epilepsy (total duration $&gt;$1400 hours) to assess its capability to distinguish preictal from interictal states. Prediction performance is assessed using area under the receiver operating charateristic (AUC) and improvement over chance (IoC) based on F1 scores. Using one- and two-dimensional convolutional neural networks, we identified better-than-chance predictability in out-of-sample test data in 60\% of the patients in leave-one-out and 43\% of patients in pseudo-prospective approaches. These results provide a step towards developing easier to apply, non-invasive methods for seizure risk assessments in patients with epilepsy.</summary>
+    <category term="q-bio.NC" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="eess.SP" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2019-06-03T00:34:55Z</published>
+    <arxiv:primary_category term="q-bio.NC"/>
+    <author>
+      <name>Christian Meisel</name>
+    </author>
+    <author>
+      <name>Rima El Atrache</name>
+    </author>
+    <author>
+      <name>Michele Jackson</name>
+    </author>
+    <author>
+      <name>Sarah Schubach</name>
+    </author>
+    <author>
+      <name>Claire Ufongene</name>
+    </author>
+    <author>
+      <name>Tobias Loddenkemper</name>
+    </author>
+  </entry>
+</feed>

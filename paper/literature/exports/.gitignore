@@ -1,0 +1,7 @@
+# Full Scopus, Web of Science and IEEE exports contain publisher abstracts, which may not
+# be redistributed in this public repository; they stay local. The *_meta.csv files
+# (citation fields only, from `python paper/literature/screen.py strip`) are committed.
+scopus_*
+wos_*
+ieee_*
+!*_meta.csv

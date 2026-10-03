@@ -1,0 +1,50 @@
+{
+  "A-protocol": {
+    "database": "arXiv API",
+    "date": "2026-10-03",
+    "query": "abs:EEG AND abs:seizure AND (abs:fusion OR abs:multimodal) AND (abs:\"deep learning\" OR abs:CNN)",
+    "results": 10,
+    "file": "arxiv_A_2026-10-03.xml",
+    "note": "protocol docs/14 Section 3, verbatim in arXiv API syntax"
+  },
+  "A-broad": {
+    "database": "arXiv API",
+    "date": "2026-10-03",
+    "query": "(abs:EEG OR abs:electroencephalogra*) AND (abs:seizure OR abs:epilep*) AND (abs:fusion OR abs:multimodal OR abs:\"multi-modal\") AND (abs:\"deep learning\" OR abs:CNN OR abs:\"convolutional neural network\" OR abs:\"neural network\")",
+    "results": 17,
+    "file": "arxiv_A-broad_2026-10-03.xml",
+    "note": "the Scopus string of docs/14 Section 3 in arXiv API syntax; contains all 10 protocol results"
+  },
+  "B1": {
+    "database": "arXiv API",
+    "date": "2026-10-03",
+    "query": "(abs:EEG OR abs:ERP OR abs:electroencephalogra*) AND ((abs:multiverse OR abs:\"many analysts\" OR abs:\"analytical flexibility\" OR abs:\"analytic flexibility\" OR abs:\"forking paths\") OR ((abs:preprocessing OR abs:\"pre-processing\") AND abs:\"deep learning\" AND (abs:impact OR abs:effect OR abs:role OR abs:compar*)))",
+    "results": 42,
+    "file": "arxiv_B1_2026-10-03.xml",
+    "error": false
+  },
+  "B2": {
+    "database": "arXiv API",
+    "date": "2026-10-03",
+    "query": "(abs:\"random seed\" OR abs:\"random seeds\" OR abs:\"seed variance\" OR abs:\"run-to-run\" OR abs:nondeterminism OR abs:\"non-determinism\" OR abs:nondeterministic) AND (abs:\"deep learning\" OR abs:\"neural network\" OR abs:\"neural networks\") AND (abs:reproducib* OR abs:variance OR abs:variability)",
+    "results": 48,
+    "file": "arxiv_B2_2026-10-03.xml",
+    "error": false
+  },
+  "B3": {
+    "database": "arXiv API",
+    "date": "2026-10-03",
+    "query": "(abs:EEG OR abs:electroencephalogra*) AND (abs:ICA OR abs:\"independent component analysis\") AND (abs:infomax OR abs:AMICA OR abs:FastICA OR abs:GEDAI OR abs:ICLabel OR abs:\"ocular artifact\" OR abs:\"ocular artifacts\" OR abs:\"eye movement\" OR abs:EOG) AND (abs:compar* OR abs:automat*)",
+    "results": 12,
+    "file": "arxiv_B3_2026-10-03.xml",
+    "error": false
+  },
+  "B4": {
+    "database": "arXiv API",
+    "date": "2026-10-03",
+    "query": "(abs:EEG OR abs:electroencephalogra*) AND abs:seizure AND (abs:SzCORE OR abs:\"event-based\" OR abs:\"false alarm\" OR abs:\"false alarms\" OR abs:\"evaluation framework\" OR abs:\"evaluation metrics\" OR abs:\"performance metrics\")",
+    "results": 37,
+    "file": "arxiv_B4_2026-10-03.xml",
+    "error": false
+  }
+}
