@@ -24,7 +24,9 @@ reads every pipeline x seed run of one dataset and produces all analyses and fig
                      and, as the noise reference, between seeds
 
 Runs are found by name in results_v2/<dataset>/: loso_<P> (seed 0), loso_<P>_r<k>
-(seed k), and loso_grouped for P0 seed 0 (src/run_queue.py: tag_for). Missing runs are
+(seed k), and loso_grouped for P0 seed 0 (src/run_queue.py: tag_for). With --device
+cuda, only GPU runs are read (the same names with a _cuda suffix, P0 seed 0 being
+loso_P0_cuda): CPU and GPU runs are never mixed in one analysis. Missing runs are
 skipped: every analysis uses the largest complete (balanced) subset that exists and
 says which runs it used, so the module can be run while results arrive.
 
@@ -67,7 +69,8 @@ EQUIV_MARGIN = 0.02         # macro F1; the wider ROPE of src/chbmit_stats.py
 N_PERM = 10000
 SEED = 20260727
 
-RUN_NAME = re.compile(r"^loso_(P\d[a-z]?)(?:_r(\d+))?$")
+RUN_NAME = {"cpu": re.compile(r"^loso_(P\d[a-z]?)(?:_r(\d+))?$"),
+            "cuda": re.compile(r"^loso_(P\d[a-z]?)(?:_r(\d+))?_cuda$")}
 
 
 # --- Loading ------------------------------------------------------------------------------
@@ -80,12 +83,12 @@ class Run:
     path: Path
 
 
-def parse_run_name(name: str) -> tuple[str, int] | None:
-    """(pipeline, seed) of a run folder name, or None for anything else (loso_main,
-    *_cuda, timing runs)."""
+def parse_run_name(name: str, device: str = "cpu") -> tuple[str, int] | None:
+    """(pipeline, seed) of a run folder name on the given device, or None for anything
+    else (loso_main, runs of the other device, timing runs)."""
     if name == "loso_grouped":
-        return "P0", 0
-    m = RUN_NAME.match(name)
+        return ("P0", 0) if device == "cpu" else None
+    m = RUN_NAME[device].match(name)
     return (m.group(1), int(m.group(2) or 0)) if m else None
 
 
@@ -93,10 +96,10 @@ def _pipeline_key(p: str) -> tuple[int, str]:
     return (PIPELINE_ORDER.index(p), p) if p in PIPELINE_ORDER else (len(PIPELINE_ORDER), p)
 
 
-def discover_runs(root: Path, pipelines=None, seeds=None) -> list[Run]:
+def discover_runs(root: Path, pipelines=None, seeds=None, device: str = "cpu") -> list[Run]:
     runs = []
     for d in sorted(root.iterdir()) if root.exists() else []:
-        key = parse_run_name(d.name)
+        key = parse_run_name(d.name, device)
         if key is None or not (d / "perfold.csv").exists():
             continue
         p, s = key
@@ -662,14 +665,15 @@ def fig_equivalence(eq: pd.DataFrame, margin: float, out: Path, title: str) -> N
 # --- Driver ---------------------------------------------------------------------------------------
 
 def analyze(root: Path, out: Path, label: str, pipelines=None, seeds=None,
-            margin: float = EQUIV_MARGIN, n_perm: int = N_PERM, verbose: bool = True) -> dict:
+            margin: float = EQUIV_MARGIN, n_perm: int = N_PERM, verbose: bool = True,
+            device: str = "cpu") -> dict:
     """Run every analysis on the runs under `root`; write CSV, PNG and summary.md to
     `out`. Returns the key numbers (used by the synthetic validation)."""
     def say(msg=""):
         if verbose:
             print(msg)
 
-    runs = discover_runs(root, pipelines, seeds)
+    runs = discover_runs(root, pipelines, seeds, device)
     if not runs:
         raise SystemExit(f"no pipeline runs under {root}")
     out.mkdir(parents=True, exist_ok=True)
@@ -1048,6 +1052,8 @@ def main() -> None:
     ap.add_argument("--margin", type=float, default=EQUIV_MARGIN,
                     help="equivalence margin in macro F1")
     ap.add_argument("--perms", type=int, default=N_PERM)
+    ap.add_argument("--device", default="cpu", choices=["cpu", "cuda"],
+                    help="analyse the CPU runs or the GPU (_cuda) runs")
     ap.add_argument("--out", default=None, help="output folder")
     ap.add_argument("--synthetic", action="store_true",
                     help="validate the analyses on synthetic runs with known effects")
@@ -1056,9 +1062,10 @@ def main() -> None:
         out = Path(args.out) if args.out else RESULTS_ROOT / "multiverse" / "synthetic"
         ok = synthetic_validation(out, n_perm=min(args.perms, 2000))
         sys.exit(0 if ok else 1)
-    out = Path(args.out) if args.out else RESULTS_ROOT / "multiverse" / args.dataset
-    analyze(RESULTS_ROOT / args.dataset, out, args.dataset, args.pipelines, args.seeds,
-            args.margin, args.perms)
+    name = args.dataset + ("_cuda" if args.device == "cuda" else "")
+    out = Path(args.out) if args.out else RESULTS_ROOT / "multiverse" / name
+    analyze(RESULTS_ROOT / args.dataset, out, name, args.pipelines, args.seeds,
+            args.margin, args.perms, device=args.device)
 
 
 if __name__ == "__main__":

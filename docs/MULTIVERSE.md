@@ -27,7 +27,7 @@ Runs are found by folder name under `results_v2/<dataset>/`, following
 | `loso_P1`, `loso_P6a`, ... | P1, P6a, ... | 0 |
 | `loso_P1_r1`, `loso_P1_r2`, ... | P1 | 1, 2, ... |
 
-Other folders (`loso_main`, `*_cuda`, timing runs) are ignored. Each run contributes
+Other folders (`loso_main`, timing runs) are ignored. GPU runs carry a `_cuda` suffix (`loso_P0_cuda`, `loso_P1_r1_cuda`, ...) and are analysed separately with `--device cuda`; CPU and GPU runs are never mixed. Each run contributes
 `perfold.csv` (one row per fold and model) and `preds/fold<k>.npz` (`idx_te`, `y_te`
 and the test probabilities of every deep model).
 
