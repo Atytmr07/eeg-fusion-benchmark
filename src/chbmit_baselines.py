@@ -17,7 +17,9 @@ the benchmark was saturated. Whether CHB-MIT is hard or easy cannot be claimed w
 the same check.
 
 Results are appended to the perfold.csv of the chbmit_run run given by --run, so the
-baselines line up with the deep models fold by fold. The preprocessing pipeline is read
+baselines line up with the deep models fold by fold, and their test probabilities are
+added to the run's preds/fold<k>.npz (keys "logvar" and "shallow"), so that AUPRC and
+prediction stability can be computed for them as for the deep models. The preprocessing pipeline is read
 from that run's meta.json, so the baselines see the same signal-level preprocessing and,
 for P4, the same artefact rejection of training windows. Normalisation does not apply:
 the features are computed from microvolt signals.
@@ -101,6 +103,7 @@ def main() -> None:
           f"({time.time() - t0:.1f}s)")
 
     rows = []
+    probs: dict[int, tuple[np.ndarray, dict[str, np.ndarray]]] = {}
     splits = list(leave_one_subject_out(group))
     for fi, (key, tr, te) in enumerate(splits):
         tr = tr[~rejected[tr]]
@@ -109,6 +112,7 @@ def main() -> None:
         for name, feat in (("logvar", feat_logvar), ("shallow", feat_shallow)):
             t0 = time.time()
             prob = baselines.fit_predict(feat[tr], y[tr], feat[te])
+            probs.setdefault(fi, (te, {}))[1][name] = prob.astype(np.float32)
             mm = metrics(y[te], prob, ncls)
             mm.update(clinical_metrics(y[te], prob, hrs))
             mm.update(model=name, fold=fi, test_subjects=",".join(te_subs),
@@ -139,6 +143,22 @@ def main() -> None:
         merged = new_df
 
     merged.to_csv(csv_path, index=False)
+
+    # Add the baseline probabilities to the run's stored predictions, fold by fold, only
+    # where the stored test indices are exactly this fold's.
+    added = 0
+    for fi, (te, pr) in probs.items():
+        f = out_dir / "preds" / f"fold{fi}.npz"
+        if not f.exists():
+            continue
+        z = dict(np.load(f))
+        if not np.array_equal(z["idx_te"], te):
+            raise SystemExit(f"{f}: stored test indices differ from this split")
+        z.update(pr)
+        np.savez(f, **z)
+        added += 1
+    if added:
+        print(f"baseline probabilities added to {added} prediction files")
     print(f"\nsaved: {csv_path} ({len(merged)} rows)")
     print(new_df.groupby("model")[["f1_macro", "auc", "brier"]].mean().round(4).to_string())
 
