@@ -1,0 +1,33 @@
+{
+  "identified": {
+    "arxiv": 17,
+    "ieee": 159,
+    "scopus": 475,
+    "wos": 251
+  },
+  "identified_total": 902,
+  "duplicates_removed": 347,
+  "screened": 555,
+  "stage1": {
+    "include": 103,
+    "exclude": 427,
+    "unclear": 25
+  },
+  "stage1_exclusion_reasons": {
+    "1": 169,
+    "2": 195,
+    "3": 63
+  },
+  "sought_full_text": 128,
+  "full_text_assessed": 6,
+  "full_text_excluded": 2,
+  "full_text_exclusion_reasons": {
+    "2": 1,
+    "1": 1
+  },
+  "included_full_text_verified": 4,
+  "awaiting_full_text": 122,
+  "review_bucket": 63,
+  "other_sources": 10,
+  "other_sources_pending_or_included": 2
+}

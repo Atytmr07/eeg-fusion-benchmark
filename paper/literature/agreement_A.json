@@ -1,0 +1,53 @@
+{
+  "n": 111,
+  "agreement": 0.918918918918919,
+  "kappa": 0.8062451512800622,
+  "agreement_to_full_text": 0.9459459459459459,
+  "disagreements": [
+    [
+      "A0102",
+      "unclear",
+      "exclude"
+    ],
+    [
+      "A0147",
+      "exclude",
+      "unclear"
+    ],
+    [
+      "A0170",
+      "exclude",
+      "unclear"
+    ],
+    [
+      "A0267",
+      "include",
+      "unclear"
+    ],
+    [
+      "A0355",
+      "exclude",
+      "include"
+    ],
+    [
+      "A0356",
+      "include",
+      "unclear"
+    ],
+    [
+      "A0386",
+      "include",
+      "unclear"
+    ],
+    [
+      "A0431",
+      "exclude",
+      "include"
+    ],
+    [
+      "A0524",
+      "exclude",
+      "include"
+    ]
+  ]
+}

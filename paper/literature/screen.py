@@ -469,7 +469,13 @@ def prisma() -> dict:
     log = json.loads((HERE / "merge_log_A.json").read_text())
     rows = read_csv(records_path("A"))
     ext = read_csv(HERE / "extraction.csv") if (HERE / "extraction.csv").exists() else []
-    per_db = log["per_database_unique"]
+    # raw counts per database; a database searched with two strings (arXiv, part A) is
+    # counted once per record, so the overlap between its strings is not "duplicates"
+    multi = {}
+    for f in log["exports"]:
+        multi.setdefault(f.split("_")[0], []).append(f)
+    per_db = {db: (log["per_database_unique"][db] if len({f.split("_")[1] for f in fs}) > 1
+                   else sum(log["exports"][f] for f in fs)) for db, fs in multi.items()}
     stage1 = {}
     reasons = {}
     for r in rows:
@@ -477,7 +483,7 @@ def prisma() -> dict:
         if r["stage1"] == "exclude":
             reasons[r["stage1_reason"]] = reasons.get(r["stage1_reason"], 0) + 1
     search_ext = [e for e in ext if e.get("origin", "search") == "search"]
-    ft = [e for e in search_ext if e.get("stage2")]
+    ft = [e for e in search_ext if e.get("full_text_read") == "yes"]
     ft_reasons = {}
     for e in ft:
         if e["stage2"] == "exclude":
@@ -486,12 +492,17 @@ def prisma() -> dict:
         "identified": per_db, "identified_total": sum(per_db.values()),
         "duplicates_removed": sum(per_db.values()) - log["records_unique"],
         "screened": len(rows), "stage1": stage1, "stage1_exclusion_reasons": reasons,
+        "sought_full_text": len(search_ext),
         "full_text_assessed": len(ft),
         "full_text_excluded": sum(e["stage2"] == "exclude" for e in ft),
         "full_text_exclusion_reasons": ft_reasons,
-        "included_main": sum(e["stage2"] == "include" for e in ft),
-        "included_review_bucket": sum(e["stage2"] == "review" for e in ft),
+        "included_full_text_verified": sum(e["stage2"] == "include" for e in ft),
+        "awaiting_full_text": sum(e["stage2"] == "pending" for e in search_ext),
+        "review_bucket": reasons.get("3", 0),
         "other_sources": sum(e.get("origin") == "previous" for e in ext),
+        "other_sources_pending_or_included": sum(e.get("origin") == "previous" and
+                                                 e["stage2"] in ("include", "pending")
+                                                 for e in ext),
     }
     (HERE / "prisma_counts.json").write_text(json.dumps(counts, indent=2))
     print(json.dumps(counts, indent=2))
@@ -499,7 +510,8 @@ def prisma() -> dict:
     return counts
 
 
-REASON_TEXT = {"1": "not EEG / seizure", "2": "single modality, no fusion",
+REASON_TEXT = {"1": "not EEG seizure detection/prediction",
+               "2": "no DL fusion of two representations/modalities",
                "3": "review only", "4": "full text not accessible"}
 
 
@@ -541,15 +553,17 @@ def _draw_prisma(c: dict, out: Path) -> None:
     box(6.0, 6.3, 3.6, 2.3, f"Records excluded\nn = {s1.get('exclude', 0)}\n"
         + reasons(c["stage1_exclusion_reasons"]), "#f7f0e8")
     arrow(5.2, 7.45, 6.0, 7.45)
-    box(0.6, 4.0, 4.6, 1.3, f"Full texts assessed for eligibility\nn = {c['full_text_assessed']}"
-        + (f"\n(+ {c['other_sources']} from the earlier scoping review)" if c["other_sources"] else ""))
+    box(0.6, 4.0, 4.6, 1.3, f"Reports sought for full-text assessment\nn = {c['sought_full_text']}"
+        f"\nfull text assessed so far: n = {c['full_text_assessed']}")
     arrow(2.9, 6.8, 2.9, 5.3)
     box(6.0, 3.5, 3.6, 2.3, f"Full texts excluded\nn = {c['full_text_excluded']}\n"
         + reasons(c["full_text_exclusion_reasons"]), "#f7f0e8")
     arrow(5.2, 4.65, 6.0, 4.65)
-    box(0.6, 0.7, 4.6, 1.5, f"Included in the comparison table\nn = {c['included_main']}\n"
-        f"Review bucket (context only)\nn = {c['included_review_bucket']}", "#e8f4ea")
-    arrow(2.9, 4.0, 2.9, 2.2)
+    box(0.6, 0.5, 4.6, 1.9, f"Included, full text verified: n = {c['included_full_text_verified']}\n"
+        f"Included on title/abstract, full text pending: n = {c['awaiting_full_text']}\n"
+        f"Other sources (scoping review, Table 1): n = {c['other_sources']}\n"
+        f"Review bucket (context only): n = {c['review_bucket']}", "#e8f4ea")
+    arrow(2.9, 4.0, 2.9, 2.4)
     fig.savefig(out, dpi=150, bbox_inches="tight")
     plt.close(fig)
     print(f"figure: {out}")
