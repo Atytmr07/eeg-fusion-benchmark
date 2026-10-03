@@ -1,5 +1,6 @@
 > **DRAFT, NOT FOR SUBMISSION.** This manuscript is a working draft. The systematic
-> literature search committed to in `paper/proposal.md` has not been run yet. The
+> literature search has had its first round (`docs/15_LITERATUR_SONUCLARI.md`); 122
+> full texts and a human second screening are still open. The
 > study is being extended, at the advisor's request, from a single comparison into a
 > preprocessing and training multiverse: its design is described in Section 3.6 and
 > the third corpus in Section 5.5, while their results (Section 5.6) are pending and
@@ -117,10 +118,16 @@ search was actually conducted (Section 2 and `docs/09`, `docs/14`).
 ## 2. Related Work
 
 Table 1 summarises the closest published work to this comparison, restricted to what
-we have verified through Crossref by DOI (see `paper/proposal.md` Section 3 and
-`docs/09_LITERATUR_TARAMASI.md` for the underlying search; this is a scoping search,
-not yet the registered systematic search committed to in the proposal and protocolled
-in `docs/14_SISTEMATIK_TARAMA_PROTOKOLU.md`).
+we have verified through Crossref by DOI. It draws on a systematic search run on 3
+October 2026 under a protocol fixed beforehand (`docs/14_SISTEMATIK_TARAMA_PROTOKOLU.md`):
+Scopus, Web of Science, IEEE Xplore and arXiv returned 902 records, 555 after
+deduplication, of which 128 passed title and abstract screening; the studies closest
+to ours were read in full, and every claim Table 1 makes about them is traced to a
+section or table of the paper (`paper/literature/extraction.csv`, `docs/15_LITERATUR_SONUCLARI.md`).
+Title and abstract screening was done by an AI assistant applying the protocol's
+criteria; an independent AI pass over a random 20 percent agreed on 91.9 percent of
+records (Cohen's kappa 0.81). A human second screening and 122 full texts are still
+outstanding (Section 7).
 
 **Table 1. Closest related work.**
 
@@ -137,16 +144,23 @@ in `docs/14_SISTEMATIK_TARAMA_PROTOKOLU.md`).
 | Narotamo et al. (2024) | Compares 1D and 2D representations plus early, late, and joint fusion, the same design question as ours | ECG, not EEG; no parameter matching or corrected/equivalence statistics |
 | Roy (2019), Shoeibi (2021), Xu (2024) | Reviews of deep learning for EEG | Document inconsistent evaluation protocols, do not resolve them |
 | Ali et al. (2024) | Shows CHB-MIT results depend heavily on evaluation choices | Concerns evaluation of CHB-MIT generally, not fusion operators |
+| Dan et al. (2024), SzCORE | Standard datasets, event based scoring and metrics for EEG seizure detection | An evaluation framework, not a fusion operator comparison |
 | Rheude et al. (2025) | Multimodal complexity often does not pay off | General multimodal setting, not EEG |
 | **Daşdemir (2025)** | **Self described fair, protocol controlled comparison of two fusion strategies for EEG** | Seizure *prediction*, not detection; two operators; reports a 0.20 point accuracy difference (97.50 vs 97.70) without a stated statistical test or parameter matching |
-| **An et al. (2026), fastSeizureNet** | **Compares five fusion strategies for EEG seizure detection**, within and across patients, with several backbones (semi-supervised) | Fuses hand-crafted feature knowledge with deep features rather than a raw waveform with its spectrogram; the strategies are not parameter matched and are not compared with a statistical test |
+| **An et al. (2026), fastSeizureNet** | **Compares five fusion strategies for EEG seizure detection**, within and across patients, with several backbones (semi-supervised) | Fuses hand-crafted feature knowledge with deep features rather than a raw waveform with its spectrogram; the strategies are not parameter matched and are not compared with each other by a statistical test (a Wilcoxon test with Holm correction is used only against prior methods) |
+| Einizade et al. (2023), fAttNet | Compares four fusion operators (majority vote, averaging, concatenation, attention) over raw EEG, wavelet packet and hand-engineered views, leave one subject out on TUH | No parameter matching and no statistical test; the operators lie within one standard deviation of each other |
+| Basheer and Mishra (2026) | Compares concatenation, element-wise addition and KAN gating for seizure detection, with paired t-tests over six seeds | Both streams come from the same raw EEG rather than two representations; uncorrected tests against concatenation only; no parameter matching |
+| Wang et al. (2026), *Neurocomputing* | Cross-attention fusion of time domain and S-transform views, CHB-MIT and Siena | One ablation against concatenation, patient specific evaluation, no statistical test |
 | Camastra et al. (2026), *Brain Sciences* | Controlled fusion benchmark, concludes strategy matters more than architecture | Tabular neuroimaging features, not EEG time series; no paired or equivalence testing |
 | Mohamady et al. (2026) | Seven fusion techniques compared on one benchmark | Human activity recognition, not EEG; states this kind of head to head comparison did not previously exist in that field either |
 | Kontras et al. (2026), NeuroAtlas | Reports Bonn is saturated (11 models at AUROC ≥ 0.99) and carries no subject identifiers | Foundation model benchmark, not a fusion operator comparison |
 
 Reading this table, fusion operators for EEG seizure detection are proposed
-frequently but are usually proposed and evaluated one at a time, against baselines
-that differ in capacity from the proposed model. Two studies come closest. Daşdemir
+frequently, often one at a time against baselines that differ in capacity from the
+proposed model, and several studies now compare two to five operators (Einizade et
+al. 2023; An et al. 2026; Basheer and Mishra 2026), but none we read in full matches
+parameter counts or tests the operators against each other with corrected or
+equivalence tests. Two studies come closest. Daşdemir
 (2025) holds two branches fixed and compares two fusion points, but on a prediction
 rather than detection task, without a stated parameter matching procedure or
 significance test on the 0.20 point difference it reports. An et al. (2026) compare
@@ -157,8 +171,8 @@ statistical test between them. We have not found a study that compares three or 
 fusion operators for EEG seizure detection under a matched parameter budget with
 paired statistical testing and equivalence testing. This
 is the gap this paper addresses, stated at this narrower scope rather than as a
-categorical absence, and subject to revision once the registered search (`docs/14`)
-is complete. An independent review across the wider EEG-based multimodal
+categorical absence, and subject to revision once the remaining full texts of the
+systematic search (`docs/15`) have been read. An independent review across the wider EEG-based multimodal
 human-computer interface literature is consistent with this being a real gap rather
 than a search artifact: Lee et al. (2025), surveying over 120 hybrid EEG studies,
 report that only two explored more than one fusion strategy and only one directly
@@ -878,11 +892,12 @@ defects found during this project's own development rather than omitting them.
   primary ratio, on log loss (Section 5.3), is not significant under the
   conservative one. This addresses the objection empirically for our
   design; it does not replace a correction derived for nested splits.
-- **The literature gap claimed in Section 2 rests on a scoping search, not yet the
-  registered systematic search** described in `paper/proposal.md` and protocolled in
-  `docs/14_SISTEMATIK_TARAMA_PROTOKOLU.md`. The closest work, Daşdemir (2025), has
-  been read only at the abstract level; its full text may show it already
-  addresses part of the gap claimed here.
+- **The systematic literature search is incomplete.** Its title and abstract
+  screening was done by an AI assistant, checked by a second, independent AI pass
+  (agreement 91.9 percent, kappa 0.81) but not yet by a human reviewer, which a PRISMA
+  conforming review would require; and 122 of the 128 candidates have not been read
+  in full. The gap claimed in Section 2 rests on the closest studies, which were read
+  in full (`docs/15_LITERATUR_SONUCLARI.md`).
 - **CHB-MIT's clinically relevant false alarm rate has not been computed on the true,
   unsubsampled time base**; the subsampled rate we could report would not be
   clinically meaningful and we have chosen not to report it rather than report a
@@ -932,16 +947,19 @@ only to build the P6 caches are listed in `requirements-ica.txt`.
 - Acharya, U. R. et al. (2018) Deep convolutional neural network for the automated detection and diagnosis of seizure using EEG signals. *Computers in Biology and Medicine* 100:270-278. doi:10.1016/j.compbiomed.2017.09.017
 - An, J., Peng, R., Yang, X., Wu, D. (2026) fastSeizureNet: Accurate and efficient knowledge-data fusion for semi-supervised seizure detection. *Neural Networks* 202:109078. doi:10.1016/j.neunet.2026.109078
 - Andrzejak, R. G. et al. (2001) Indications of nonlinear deterministic and finite-dimensional structures in time series of brain electrical activity. *Physical Review E* 64(6):061907. doi:10.1103/PhysRevE.64.061907
+- Basheer, R., Mishra, D. (2026) Learning feature-wise temporal-spatial gating with Kolmogorov-Arnold networks for EEG seizure detection. *Pattern Recognition Letters* 208:1-6. doi:10.1016/j.patrec.2026.07.016
 - Camastra, C., Pelagi, A., Quattrone, A., Sarica, A. (2026) Benchmarking Multimodal Deep Fusion Strategies for Heterogeneous Neuroimaging and Cognitive Data Using a Controlled Sex Classification Task. *Brain Sciences* 16(4):405. doi:10.3390/brainsci16040405
 - Bouckaert, R. R., Frank, E. (2004) Evaluating the Replicability of Significance Tests for Comparing Learning Algorithms. *Lecture Notes in Computer Science* (PAKDD 2004). doi:10.1007/978-3-540-24775-3_3
 - Chatzichristos, C. et al. (2020) Epileptic Seizure Detection in EEG via Fusion of Multi-View Attention-Gated U-Net Deep Neural Networks. *IEEE SPMB*. doi:10.1109/spmb50085.2020.9353630
 - Corani, G., Benavoli, A. (2015) A Bayesian approach for comparing cross-validated algorithms on multiple data sets. *Machine Learning* 100:285-304. doi:10.1007/s10994-015-5486-z
 - Corani, G., Benavoli, A., Demšar, J., Mangili, F. (2017) Statistical comparison of classifiers through Bayesian hierarchical modelling. *Machine Learning* 106:1817-1837. doi:10.1007/s10994-017-5641-9
+- Dan, J. et al. (2024) SzCORE: Seizure Community Open-Source Research Evaluation framework for the validation of electroencephalography-based automated seizure detection algorithms. *Epilepsia* 66(S3). doi:10.1111/epi.18113
 - Daşdemir, A. (2025) Epileptic seizure prediction with deep learning-based fusion methods. *Engineering Science and Technology, an International Journal* 72:102212. doi:10.1016/j.jestch.2025.102212
 - Das, S. et al. (2024) Epileptic Seizure Detection from Decomposed EEG Signal through 1D and 2D Feature Representation and Convolutional Neural Network. *Information* 15(5):256. doi:10.3390/info15050256
 - Detti, P., Vatti, G., Zabalo Manrique de Lara, G. (2020) EEG Synchronization Analysis for Seizure Prediction: A Study on Data of Noninvasive Recordings. *Processes* 8(7):846. doi:10.3390/pr8070846
 - Del Pup, F., Zanola, A., Tshimanga, L. F., Bertoldo, A., Atzori, M. (2025) The More, the Better? Evaluating the Role of EEG Preprocessing for Deep Learning Applications. *IEEE Transactions on Neural Systems and Rehabilitation Engineering* 33:1061-1070. doi:10.1109/TNSRE.2025.3547616
 - Goldberger, A. L. et al. (2000) PhysioBank, PhysioToolkit, and PhysioNet: Components of a New Research Resource for Complex Physiologic Signals. *Circulation* 101(23):e215-e220. doi:10.1161/01.cir.101.23.e215
+- Einizade, A., Nasiri, S., Mozafari, M., Sardouie, S. H., Clifford, G. D. (2023) Explainable automated seizure detection using attentive deep multi-view networks. *Biomedical Signal Processing and Control* 79:104076. doi:10.1016/j.bspc.2022.104076
 - Golrizkhatami, Z., Acan, A. (2018) ECG classification using three-level fusion of different feature descriptors. *Expert Systems with Applications* 114:54-64.
 - Jafrasteh, B., Adeli, E., Pohl, K. M., Kuceyeski, A., Sabuncu, M. R., Zhao, Q. (2025) Statistical variability in comparing accuracy of neuroimaging based classification models via cross validation. *Scientific Reports* 15:28745. doi:10.1038/s41598-025-12026-2
 - Gramfort, A. et al. (2013) MEG and EEG data analysis with MNE-Python. *Frontiers in Neuroscience* 7:267. doi:10.3389/fnins.2013.00267
@@ -962,4 +980,5 @@ only to build the P6 caches are listed in `requirements-ica.txt`.
 - Steegen, S., Tuerlinckx, F., Gelman, A., Vanpaemel, W. (2016) Increasing Transparency Through a Multiverse Analysis. *Perspectives on Psychological Science* 11(5):702-712. doi:10.1177/1745691616658637
 - Truong, N. D. et al. (2018) Convolutional neural networks for seizure prediction using intracranial and scalp electroencephalogram. *Neural Networks* 105:104-111. doi:10.1016/j.neunet.2018.04.018
 - Wang, X. et al. (2020) One and Two Dimensional Convolutional Neural Networks for Seizure Detection Using EEG Signals. *EUSIPCO 2020*. doi:10.23919/eusipco47968.2020.9287640
+- Wang, J., Wei, L., Qian, Z., Shi, C., Liu, Y., Xu, Y. (2026) An explainable multi-view representation fusion learning framework with hybrid MetaFormer for EEG-based epileptic seizure detection. *Neurocomputing* 675:132929. doi:10.1016/j.neucom.2026.132929
 - Xu, J. et al. (2024) EEG-based epileptic seizure detection using deep learning techniques: A survey. *Neurocomputing* 610:128644. doi:10.1016/j.neucom.2024.128644
