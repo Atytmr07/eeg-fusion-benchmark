@@ -139,18 +139,23 @@ in `docs/14_SISTEMATIK_TARAMA_PROTOKOLU.md`).
 | Ali et al. (2024) | Shows CHB-MIT results depend heavily on evaluation choices | Concerns evaluation of CHB-MIT generally, not fusion operators |
 | Rheude et al. (2025) | Multimodal complexity often does not pay off | General multimodal setting, not EEG |
 | **Daşdemir (2025)** | **Self described fair, protocol controlled comparison of two fusion strategies for EEG** | Seizure *prediction*, not detection; two operators; reports a 0.20 point accuracy difference (97.50 vs 97.70) without a stated statistical test or parameter matching |
+| **An et al. (2026), fastSeizureNet** | **Compares five fusion strategies for EEG seizure detection**, within and across patients, with several backbones (semi-supervised) | Fuses hand-crafted feature knowledge with deep features rather than a raw waveform with its spectrogram; the strategies are not parameter matched and are not compared with a statistical test |
 | Camastra et al. (2026), *Brain Sciences* | Controlled fusion benchmark, concludes strategy matters more than architecture | Tabular neuroimaging features, not EEG time series; no paired or equivalence testing |
 | Mohamady et al. (2026) | Seven fusion techniques compared on one benchmark | Human activity recognition, not EEG; states this kind of head to head comparison did not previously exist in that field either |
 | Kontras et al. (2026), NeuroAtlas | Reports Bonn is saturated (11 models at AUROC ≥ 0.99) and carries no subject identifiers | Foundation model benchmark, not a fusion operator comparison |
 
 Reading this table, fusion operators for EEG seizure detection are proposed
 frequently but are usually proposed and evaluated one at a time, against baselines
-that differ in capacity from the proposed model. The closest work, Daşdemir (2025),
-does hold two branches fixed and compares two fusion points, but on a prediction
+that differ in capacity from the proposed model. Two studies come closest. Daşdemir
+(2025) holds two branches fixed and compares two fusion points, but on a prediction
 rather than detection task, without a stated parameter matching procedure or
-significance test on the 0.20 point difference it reports. We have not found a study
-that compares three or more fusion operators for EEG seizure detection under a
-matched parameter budget with paired statistical testing and equivalence testing. This
+significance test on the 0.20 point difference it reports. An et al. (2026) compare
+five fusion strategies for seizure detection, the closest design to ours in breadth,
+but between hand-crafted and deep features rather than between a raw waveform and its
+spectrogram, without matching the strategies' parameter counts and without a
+statistical test between them. We have not found a study that compares three or more
+fusion operators for EEG seizure detection under a matched parameter budget with
+paired statistical testing and equivalence testing. This
 is the gap this paper addresses, stated at this narrower scope rather than as a
 categorical absence, and subject to revision once the registered search (`docs/14`)
 is complete. An independent review across the wider EEG-based multimodal
@@ -925,6 +930,7 @@ only to build the P6 caches are listed in `requirements-ica.txt`.
 
 - Ali, E. et al. (2024) Epileptic seizure detection using CHB-MIT dataset: The overlooked perspectives. *Royal Society Open Science* 11(5):230601. doi:10.1098/rsos.230601
 - Acharya, U. R. et al. (2018) Deep convolutional neural network for the automated detection and diagnosis of seizure using EEG signals. *Computers in Biology and Medicine* 100:270-278. doi:10.1016/j.compbiomed.2017.09.017
+- An, J., Peng, R., Yang, X., Wu, D. (2026) fastSeizureNet: Accurate and efficient knowledge-data fusion for semi-supervised seizure detection. *Neural Networks* 202:109078. doi:10.1016/j.neunet.2026.109078
 - Andrzejak, R. G. et al. (2001) Indications of nonlinear deterministic and finite-dimensional structures in time series of brain electrical activity. *Physical Review E* 64(6):061907. doi:10.1103/PhysRevE.64.061907
 - Camastra, C., Pelagi, A., Quattrone, A., Sarica, A. (2026) Benchmarking Multimodal Deep Fusion Strategies for Heterogeneous Neuroimaging and Cognitive Data Using a Controlled Sex Classification Task. *Brain Sciences* 16(4):405. doi:10.3390/brainsci16040405
 - Bouckaert, R. R., Frank, E. (2004) Evaluating the Replicability of Significance Tests for Comparing Learning Algorithms. *Lecture Notes in Computer Science* (PAKDD 2004). doi:10.1007/978-3-540-24775-3_3
