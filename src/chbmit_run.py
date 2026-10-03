@@ -58,6 +58,12 @@ DEFAULT_MODELS = ("raw1d", "spec2d", "raw1d_wide", "spec2d_wide",
                   "late", "gated", "attention", "early", "score")
 
 
+def run_tag(split: str, pipeline: str, repeat: int, device: str) -> str:
+    """Default output name of a pipeline run, e.g. loso_P1, loso_P1_r2, loso_P0_r1_cuda."""
+    return (f"{split}_{pipeline}" + (f"_r{repeat}" if repeat else "")
+            + ("_cuda" if device == "cuda" else ""))
+
+
 def inner_split(subject: np.ndarray, tr: np.ndarray, y: np.ndarray,
                 val_frac: float = 0.2) -> tuple[np.ndarray, np.ndarray]:
     """Split a training fold into training and validation by whole persons.
@@ -243,12 +249,10 @@ def main() -> None:
 
     if args.tag:
         tag = args.tag
-    elif pipe.name != "P0" or args.repeat:
-        tag = f"{args.split}_{pipe.name}" + (f"_r{args.repeat}" if args.repeat else "")
+    elif pipe.name != "P0" or args.repeat or args.device == "cuda":
+        tag = run_tag(args.split, pipe.name, args.repeat, args.device)
     else:
         tag = f"{args.split}_{args.norm}" + (f"_notch{args.notch:g}" if args.notch else "")
-    if not args.tag and args.device == "cuda":
-        tag += "_cuda"
     outdir = Path(args.outdir) if args.outdir else OUT_ROOT / tag
     outdir.mkdir(parents=True, exist_ok=True)
     (outdir / "preds").mkdir(exist_ok=True)

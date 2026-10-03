@@ -380,13 +380,17 @@ remains available in the repository history (commit `804709c`).
 1. Build the pipeline caches once (needs the raw EDF files; P6 takes the longest because
    of ICA): `python -m src.preprocess --build`. It stops with an error if any pipeline's
    windows differ from P0's.
-2. Per pipeline and repeat: `python -m src.chbmit_run --split loso --threads 16 --pipeline P1 --repeat 0`
-   (output `results_v2/chbmit/loso_P1/`; with `--repeat 1`, `loso_P1_r1/`), then
-   `python -m src.chbmit_baselines --run loso_P1` and `python -m src.chbmit_stats --run loso_P1`.
-   P0 with repeat 0 is the existing `loso_grouped` run.
+2. Run the pipeline x seed queue: `python -m src.run_queue --pipelines P0 P1 P2 P3 P5 --repeats 0 1 2 --threads 16`
+   (add `--device cuda` for the GPU). For each run it trains the models, then adds the
+   baselines and the statistics, and skips whatever is already complete, so the same
+   command resumes after an interruption. Output names: `loso_P1` (seed set 0),
+   `loso_P1_r1`, `loso_P1_r2`, with a `_cuda` suffix on the GPU; P0 with seed set 0 on
+   the CPU is the existing `loso_grouped` run. Single runs:
+   `python -m src.chbmit_run --split loso --threads 16 --pipeline P1 --repeat 0`.
 3. All runs use the same thread count (16, as `loso_grouped`). Runs at the same thread
    count are deterministic, so several can run side by side on a machine with enough
-   cores without changing the results.
+   cores without changing the results: `--worker 1/2` and `--worker 2/2` in two windows
+   split the queue.
 
 ### GPU check
 
@@ -397,11 +401,19 @@ tested rather than assumed: run the same fold twice and compare.
 ```
 python -m src.chbmit_run --split loso --limit-folds 1 --device cuda --threads 16 --tag gpu_a
 python -m src.chbmit_run --split loso --limit-folds 1 --device cuda --threads 16 --tag gpu_b
-python -m src.compare_runs results_v2/chbmit/gpu_a results_v2/chbmit/gpu_b
+python -m src.chbmit_run --split loso --limit-folds 1 --pipeline P0 --repeat 1 --threads 16 --tag cpu_r1
+python -m src.compare_runs results_v2/chbmit/gpu_a results_v2/chbmit/gpu_b         # GPU repeatability
+python -m src.compare_runs results_v2/chbmit/gpu_a results_v2/chbmit/loso_grouped  # CPU vs GPU, same seeds
+python -m src.compare_runs results_v2/chbmit/cpu_r1 results_v2/chbmit/loso_grouped # CPU, different seeds
 ```
 
-GPU results are not comparable with CPU results, so all pipelines of one analysis must
-run on the same device. This needs the CUDA build of torch, installed into a separate
+CPU and GPU kernels sum in different orders, so a CPU and a GPU run are not expected to
+be bit identical, just as two CPU thread counts are not. The criterion is therefore
+relative: the GPU is acceptable if two GPU runs repeat exactly (or nearly) and the
+CPU-GPU difference at the same seeds (mean |F1 difference|, share of windows given the
+same class) is no larger than the difference between two CPU seed sets. Even then,
+GPU results are not mixed with CPU results: all pipelines and seeds of one analysis run
+on the same device, including P0. This needs the CUDA build of torch, installed into a separate
 environment so the CPU environment stays as it is.
 
 ## 9. Known issues and open items

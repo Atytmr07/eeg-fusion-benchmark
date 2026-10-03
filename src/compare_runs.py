@@ -3,6 +3,11 @@
 Used to check reproducibility: the same fold run twice on the GPU, or a pipeline
 refactor against the code it replaced. Wall clock time is reported, not compared.
 
+When two runs are not identical, the per model table says how far apart they are:
+the macro F1 difference and the share of test windows given the same class. Comparing
+a CPU and a GPU run with the same seeds against two CPU runs with different seeds
+(--repeat) tells whether the device matters more than the seed does.
+
 Usage:  python -m src.compare_runs results_v2/chbmit/gpu_a results_v2/chbmit/gpu_b
 """
 from __future__ import annotations
@@ -49,6 +54,7 @@ def main() -> None:
         same &= eq
 
     n_pred = n_diff = 0
+    agree: dict[str, list[float]] = {}
     for f in sorted((a / "preds").glob("*.npz")):
         g = b / "preds" / f.name
         if not g.exists():
@@ -58,8 +64,23 @@ def main() -> None:
         if set(za.files) != set(zb.files) or any(not np.array_equal(za[k], zb[k])
                                                  for k in za.files):
             n_diff += 1
+        if not np.array_equal(za["idx_te"], zb["idx_te"]):
+            continue
+        for k in set(za.files) & set(zb.files) - {"idx_te", "y_te"}:
+            agree.setdefault(k, []).append(
+                float((za[k].argmax(1) == zb[k].argmax(1)).mean()))
     print(f"prediction files: {n_pred} compared, {n_diff} differ")
     same &= n_diff == 0 and n_pred > 0
+
+    if "f1_macro_a" in m:
+        tab = m.groupby("model")[["f1_macro_a", "f1_macro_b"]].mean()
+        tab["abs_diff"] = (m.assign(d=(m.f1_macro_a - m.f1_macro_b).abs())
+                           .groupby("model")["d"].mean())
+        tab["same_class"] = pd.Series({k: np.mean(v) for k, v in agree.items()})
+        print("\nper model (mean over matched folds): macro F1 in a and b, mean |difference|,"
+              "\nshare of test windows given the same class")
+        print(tab.round(4).to_string())
+        print(f"mean |F1 difference| over models: {tab['abs_diff'].mean():.4f}")
 
     for name, d in (("a", da), ("b", db)):
         if "sec" in d:
