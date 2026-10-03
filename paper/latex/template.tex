@@ -1,0 +1,111 @@
+% Pandoc template for paper/manuscript.md -> main.tex (see build.py).
+% Compiles with plain pdflatex, as arXiv does.
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{textcomp}
+\usepackage{microtype}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{newunicodechar}
+
+% Fallbacks for symbols that build.py does not rewrite into math itself.
+\newunicodechar{δ}{\ensuremath{\delta}}
+\newunicodechar{α}{\ensuremath{\alpha}}
+\newunicodechar{β}{\ensuremath{\beta}}
+\newunicodechar{μ}{\ensuremath{\mu}}
+\newunicodechar{σ}{\ensuremath{\sigma}}
+\newunicodechar{±}{\ensuremath{\pm}}
+\newunicodechar{≥}{\ensuremath{\geq}}
+\newunicodechar{≤}{\ensuremath{\leq}}
+\newunicodechar{≈}{\ensuremath{\approx}}
+\newunicodechar{×}{\ensuremath{\times}}
+\newunicodechar{−}{\ensuremath{-}}
+\newunicodechar{√}{\ensuremath{\surd}}
+\newunicodechar{→}{\ensuremath{\rightarrow}}
+
+% Tables and figures
+\usepackage{longtable,booktabs,array}
+\usepackage{calc}
+\usepackage{caption}
+\captionsetup{font=small,labelfont=bf}
+\captionsetup[table]{skip=6pt}
+\newcounter{none} % pandoc uses it for unnumbered tables
+\usepackage{etoolbox}
+\makeatletter
+\patchcmd\longtable{\par}{\if@noskipsec\mbox{}\fi\par}{}{}
+\makeatother
+\usepackage{graphicx}
+\graphicspath{{figures/}{../figures_manuscript/}}
+\makeatletter
+\newsavebox\pandoc@box
+\newcommand*\pandocbounded[1]{%
+  \sbox\pandoc@box{#1}%
+  \Gscale@div\@tempa{\textheight}{\dimexpr\ht\pandoc@box+\dp\pandoc@box\relax}%
+  \Gscale@div\@tempb{\linewidth}{\wd\pandoc@box}%
+  \ifdim\@tempb\p@<\@tempa\p@\let\@tempa\@tempb\fi
+  \ifdim\@tempa\p@<\p@\scalebox{\@tempa}{\usebox\pandoc@box}%
+  \else\usebox{\pandoc@box}%
+  \fi}
+\def\fps@figure{htbp}
+\makeatother
+
+% Inline code: file paths and identifiers, breakable anywhere.
+\usepackage{xurl}
+\urlstyle{tt}
+
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+
+% Section titles in manuscript.md already carry their numbers.
+\setcounter{secnumdepth}{0}
+
+% The text cites as Author (Year): reference list without numeric labels, with a
+% hanging indent.
+\makeatletter
+\renewenvironment{thebibliography}[1]{%
+  \section*{\refname}\small
+  \list{}{\setlength{\leftmargin}{1.5em}\setlength{\itemindent}{-1.5em}%
+    \setlength{\labelwidth}{0pt}\setlength{\labelsep}{0pt}%
+    \setlength{\itemsep}{3pt}\usecounter{enumiv}}%
+  \sloppy\clubpenalty4000\widowpenalty4000\sfcode`\.\@m}
+  {\endlist}
+\renewcommand\@biblabel[1]{}
+\makeatother
+
+\setlength{\emergencystretch}{3em}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt plus 2pt minus 1pt}
+
+\usepackage[hidelinks]{hyperref}
+\hypersetup{pdftitle={$title-meta$}, pdfauthor={Emre Atay Tümer, Hasan Berk Berber, Sevgi Şengül Ayan}}
+
+\title{$title$}
+% Authors and affiliation: provisional, order and final form to be confirmed with
+% the advisor (see README.md).
+\author{Emre Atay Tümer \and Hasan Berk Berber \and Sevgi Şengül Ayan\\[4pt]
+  \normalsize Antalya Bilim University}
+\date{}
+
+\begin{document}
+\maketitle
+
+$if(draftnote)$
+\begin{center}
+\fbox{\begin{minipage}{0.92\linewidth}\small
+$draftnote$
+\end{minipage}}
+\end{center}
+$endif$
+
+$if(abstract)$
+\begin{abstract}
+$abstract$
+\end{abstract}
+$endif$
+
+$body$
+
+\end{document}
