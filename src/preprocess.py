@@ -260,7 +260,8 @@ def _gedai_bipolar_cov():
                           nfree=1, verbose=False)
 
 
-def _gedai_clean(x: np.ndarray, fs: float) -> tuple[np.ndarray, dict]:
+def _gedai_clean(x: np.ndarray, fs: float,
+                 noise_multiplier: float | str = GEDAI_NOISE) -> tuple[np.ndarray, dict]:
     """GEDAI on the bipolar signal. The mean over channels is removed before (GEDAI would
     otherwise average-reference the data itself) and added back after, so the output stays
     in the bipolar montage; that one common component is left uncleaned."""
@@ -269,7 +270,7 @@ def _gedai_clean(x: np.ndarray, fs: float) -> tuple[np.ndarray, dict]:
     common = x.astype(np.float64).mean(axis=0, keepdims=True)
     raw = _mne_raw(x - common, fs)
     g = gedai.Gedai(engine="numpy")
-    g.fit_raw(raw, reference_cov=_gedai_bipolar_cov(), noise_multiplier=GEDAI_NOISE,
+    g.fit_raw(raw, reference_cov=_gedai_bipolar_cov(), noise_multiplier=noise_multiplier,
               verbose=False)
     out = g.transform_raw(raw, verbose=False).get_data() * 1e6 + common
     thr = getattr(g, "threshold", None)

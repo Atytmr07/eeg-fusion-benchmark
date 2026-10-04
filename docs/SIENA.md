@@ -160,11 +160,15 @@ later and change at most one window. Both facts are for a later sensitivity chec
 
 ### 5.3 Start times of PN14-3 and PN05-3
 
-- **PN14-3: header used, list corrected.** The list's start (16.17.45) is three hours
+- **PN14-3: header used, list corrected (a verified metadata correction).** The list's start (16.17.45) is three hours
   early. The header's 19.17.45 plus the recording duration (41995 s) gives the listed
   end time 06.57.40 exactly, so the list's start is a typo; the seizure (21.10.05) lies
   1 h 52 min into the recording, not 4 h 52 min.
-- **PN05-3: header used (06.01.13), not resolved.** The list says 06.01.23. The header is
+- **PN05-3: a decision rule, not a correction.** Unlike PN14-3, the two sources here
+  cannot be reconciled from the data, so the choice below is a decision rule applied
+  uniformly (the EDF header's start time is used for every recording), not a verified
+  correction of this one; the advisor asked that it be reported as such (4 October 2026).
+  The header says 06.01.13, the list 06.01.23. The header is
   used for every recording because its start time belongs to the first sample by
   definition, and 39 of 41 recordings agree with their list to the second. Against it:
   the list's value fits the 20 s end offset seen in 18 other recordings, the header's

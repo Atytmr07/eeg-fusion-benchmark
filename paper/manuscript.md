@@ -781,8 +781,11 @@ differ.
 
 The published seizure lists required checks before use (`docs/SIENA.md`). All 41
 headers are internally consistent; the listed recording start agrees with the header
-in 39 recordings (in PN14-3 the list is three hours off and the header is right; in
-PN05-3 they differ by 10 s, and the header is used). One seizure end in PN00 lies 32
+in 39 recordings. In PN14-3 the list is three hours off and the header is verifiably
+right (its start plus the recording's duration gives the listed end exactly). In PN05-3
+they differ by 10 s and neither source can be confirmed; using the header there is a
+decision rule (the header's start is used for every recording), not a verified
+correction, and moves the labels of two windows. One seizure end in PN00 lies 32
 minutes after its recording ends; we accepted the evident correction (one hour
 earlier, a 60 s seizure) only after the signal confirmed it: measured with the same
 rule as the patient's other four seizures, the ictal rhythm ends 14 s after the
