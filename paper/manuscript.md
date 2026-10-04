@@ -444,7 +444,11 @@ reference implementation `timescoring` 0.0.7, default parameters: 30 s tolerance
 onset and 60 s after offset, any overlap counts, events closer than 90 s merged, events
 longer than 5 min split). Sensitivity is the share of seizure events detected per
 person, and the false alarm rate the number of false-positive events per hour of
-recording, on the true, unsubsampled time base. On Siena only sensitivity is reported:
+recording, on the true, unsubsampled time base. The scored recordings are those of the corpus, the
+ones that carry all 18 channels: 187 annotated seizures in 979.9 h of CHB-MIT and 47
+seizures in 141.0 h of Siena. Scoring the window labels themselves as predictions
+detects every one of them without a false alarm, which checks the reference, the
+windows and the scoring together. On Siena only sensitivity is reported:
 its recordings are cut around seizures, so a false alarm rate would not represent
 continuous monitoring (Section 7).
 

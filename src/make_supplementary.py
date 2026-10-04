@@ -52,8 +52,8 @@ def table_s1() -> str:
                      "min": v.min(), "share < 0.5": (v < 0.5).mean(),
                      "components removed, mean": g.n_removed.mean() if g.n_removed.notna().any()
                      else np.nan,
-                     "seconds per recording, median": g.seconds.median(),
-                     "CPU hours, total": g.seconds.sum() / 3600})
+                     "seconds per recording, median": f"{g.seconds.median():.0f}",
+                     "CPU hours, total": f"{g.seconds.sum() / 3600:.1f}"})
     return md(pd.DataFrame(rows))
 
 
@@ -61,6 +61,8 @@ def table_s2() -> str:
     t = pd.read_csv(QC / "gedai_settings" / "summary.csv")
     t = t.rename(columns={"setting": "preset", "unit": "unit", "share_below_0.5": "share < 0.5",
                           "share_below_0.1": "share < 0.1"})
+    t["preset"] = t.preset.map({"auto": "default (auto)",
+                                "auto-": "conservative (auto-), used"}).fillna(t.preset)
     return md(t[["preset", "unit", "n", "p5", "p25", "median", "p75", "share < 0.5", "share < 0.1"]])
 
 
@@ -81,9 +83,9 @@ def table_s3() -> str:
         t.to_csv(f, index=False)
     t = pd.read_csv(f)
     tot = t.drop(columns="person").sum()
-    t["rejected %"] = 100 * (t["ictal rejected"] + t["non-ictal rejected"]) / t.windows
-    t.loc[len(t)] = ["all", *tot.values, 100 * (tot["ictal rejected"] + tot["non-ictal rejected"])
-                     / tot.windows]
+    t.loc[len(t)] = ["all", *tot.values]
+    t["ictal rejected %"] = 100 * t["ictal rejected"] / t.ictal
+    t["non-ictal rejected %"] = 100 * t["non-ictal rejected"] / t["non-ictal"]
     t[["windows", "ictal", "ictal rejected", "non-ictal", "non-ictal rejected"]] = \
         t[["windows", "ictal", "ictal rejected", "non-ictal", "non-ictal rejected"]].astype(int)
     return md(t, "{:.1f}")
@@ -116,7 +118,8 @@ signal); no classification result was used for the choice (`src/gedai_qc.py`).
 
 A window is rejected if a channel is flat (standard deviation below 1 uV) or holds one
 constant value for at least 0.5 s, on the unfiltered signal. Rejected windows are removed
-from training and validation only; test windows are unchanged.
+from training and validation only; test windows are unchanged. Rejection rates are given
+for ictal and non-ictal windows separately. chb01 includes chb21, the same person.
 
 {table_s3()}
 """
