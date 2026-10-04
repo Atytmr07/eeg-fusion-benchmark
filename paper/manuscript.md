@@ -417,11 +417,40 @@ permutation test that permutes pipeline labels within each seed set, and the sam
 comparison among P6a, P6b and P6c to ask whether the artefact algorithm alone changes
 the ranking; (3) the Fusion x Preprocessing interaction in a repeated measures ANOVA
 over folds (Greenhouse-Geisser corrected); (4) variance components for subject,
-pipeline, fusion, their interaction and seed; (5) robust equivalence, a fusion pair
-being equivalent in every pipeline under the corrected test of Section 3.5;
+pipeline, fusion, their interaction and seed, so that the preprocessing effect, the
+seed effect and the interaction are reported separately; (5) robust equivalence, a
+fusion pair being equivalent in every pipeline under the corrected test of Section 3.5;
 (6) robustness against performance, the mean macro F1 of each operator against the
 spread of its pipeline means; and (7) prediction stability, the agreement of window
-level predictions between pipelines compared with the agreement between seeds.
+level predictions between pipelines compared with the agreement between seeds. Rank
+stability is reported as the full distribution of each operator's rank over all
+pipelines and seeds, not only its mean rank.
+
+**Fixed before the runs.** Three choices were fixed, and committed to the repository,
+before any multiverse run existed, so that none could be adjusted to the results. The
+equivalence margin is 0.05 macro F1 for the main analysis, with 0.02 reported as a strict
+sensitivity analysis showing how much an equivalence conclusion depends on the margin.
+GEDAI's preset was chosen on signal preservation alone (above). The event-based metrics
+are defined as follows (`docs/EVENTS.md`).
+
+**Event-based metrics.** Window-level macro F1 and AUPRC remain the primary metrics;
+seizure-level sensitivity and false alarms per hour are secondary, clinical metrics. For
+them, every model saved for a fold is applied to every 10 s window of every recording of
+the held-out person, not only the subsampled test windows, after the pipeline's own
+preprocessing; a window is positive when its predicted ictal probability exceeds 0.5,
+the rule of the window-level metrics, with no further post-processing. Detections are
+scored against the annotated seizures with SzCORE's event scoring (Dan et al. 2024;
+reference implementation `timescoring` 0.0.7, default parameters: 30 s tolerance before
+onset and 60 s after offset, any overlap counts, events closer than 90 s merged, events
+longer than 5 min split). Sensitivity is the share of seizure events detected per
+person, and the false alarm rate the number of false-positive events per hour of
+recording, on the true, unsubsampled time base. On Siena only sensitivity is reported:
+its recordings are cut around seizures, so a false alarm rate would not represent
+continuous monitoring (Section 7).
+
+Supplementary Tables S1 to S3 (`paper/supplementary.md`) give the signal retention and
+compute of the three artefact removal methods, the GEDAI preset comparison, and P4's
+rejections per person.
 
 ## 4. Bonn Results
 
@@ -888,6 +917,10 @@ defects found during this project's own development rather than omitting them.
   pipeline with three seed sets for this reason; until its results are in, no ranking
   of operators on CHB-MIT should be cited. Case chb24's identity as a distinct person
   is assumed rather than documented (Section 5.2).
+- **False alarms per hour are not reported for Siena.** Its recordings were cut around
+  seizures for a seizure prediction study, so their seizure-free time is not
+  representative of continuous monitoring; Siena contributes seizure-level sensitivity
+  only.
 - **The artefact removal algorithms are not compared on equal terms in one respect.**
   Infomax and AMICA share one automatic component rule, but GEDAI selects what to
   remove by its own criterion (Section 3.6), so differences involving GEDAI combine
@@ -915,10 +948,9 @@ defects found during this project's own development rather than omitting them.
   conforming review would require; and 122 of the 128 candidates have not been read
   in full. The gap claimed in Section 2 rests on the closest studies, which were read
   in full (`docs/15_LITERATUR_SONUCLARI.md`).
-- **CHB-MIT's clinically relevant false alarm rate has not been computed on the true,
-  unsubsampled time base**; the subsampled rate we could report would not be
-  clinically meaningful and we have chosen not to report it rather than report a
-  number likely to be misread (Section 5.2).
+- **The clinically relevant false alarm rate of the original comparison (Section 5.3)
+  was not computed.** The event-based evaluation of Section 3.6 computes it on the true,
+  unsubsampled time base for every multiverse run, including P0.
 - **No sensitivity analysis has been run on CHB-MIT** corresponding to Section 4.4's
   Bonn analysis (window length, frequency ceiling, line noise removal, subsampling
   ratio, and whether the 25.7 percent of ictal windows that only partly overlap a
