@@ -73,3 +73,63 @@ corrected paired framework as the window-level metrics (`src/stats.py`, test/tra
 The runs save every fold's model weights (`chbmit_run`, `models/fold<k>_<model>.pt`),
 which is all the evaluation needs from training. The evaluation itself (`src/events.py`)
 runs afterwards on the saved models and is not part of the training queue.
+
+## Siena and the cross-dataset experiment: implementation notes
+
+Added on 4 October 2026. The definition above is unchanged; this section only says how
+`src/events.py` applies it to Siena and to the CHB-MIT to Siena experiment.
+
+```bash
+python -m src.events --dataset siena --pipeline P1 --repeats 0 1 2   # Siena LOSO runs
+python -m src.events --cross chbmit_to_siena_P0                      # cross-dataset run
+python -m src.events --dataset siena --oracle                        # scoring check
+```
+
+**Siena LOSO (`--dataset siena`).** The procedure is the same as for CHB-MIT, with
+these inputs:
+
+- **Recordings, seizures and DECISIONS** come from `src/siena.py`:
+  - Recordings are listed in RECORDS.
+  - Seizures come from `parse_seizure_list`, with the DECISIONS recorded in the
+    corpus info.
+  - `seizures_in_record` converts seizure times to seconds from the first sample,
+    relative to the EDF header start time.
+  - If a DECISION excludes a seizure, scoring stops at its onset. The corpus drops
+    those windows too.
+- **Signal.** It is read with `read_bipolar` (18 bipolar channels, 256 Hz), with the
+  pipeline's `apply_signal`, as `siena_corpus` builds the corpus.
+- **Folds and baselines.** The 14 folds come from `siena_corpus.build_corpus` and
+  `leave_one_subject_out`. Each fold is checked against the person that the run's
+  `perfold.csv` tested.
+- **Output** goes to `results_v2/siena/<run>/events/`.
+
+**What is reported for Siena.** Seizure-level sensitivity, pooled and per person, is
+the main column of `summary.csv`. False alarms per hour are still computed but kept
+in separate columns whose header says "not representative for Siena, not compared".
+`meta.json` states the same, and no comparison uses them.
+
+**Cross-dataset (`--cross <tag>`).** This mode reads what `src/cross_dataset.py`
+saved under `results_v2/cross/<tag>/`:
+
+- the models of its single CHB-MIT training (`models/<model>.pt`),
+- the score fusion weight (`score_blend_w` in `meta.json`).
+
+It applies them to every recording of every Siena patient. The classical baselines
+are refitted as in `cross_dataset`: on the windows of the inner training and
+validation split of all CHB-MIT persons, without P4's rejected windows. This needs
+the CHB-MIT corpus; `--skip-baselines` exists for tests only.
+
+The output (`results_v2/cross/<tag>/events/`) gives seizure-level sensitivity per
+Siena patient, with the same false-alarm note.
+
+**Checks (4 October 2026, on PN00, PN05 and PN11).**
+
+- **Oracle.** With the window labels scored as predictions, all 9 seizures are
+  detected and there are no false alarms (11.7 h).
+- **Windows.** The windows scored here are identical to the corpus windows (maximum
+  difference 0, P0 and P1).
+- **Cross mode vs LOSO.** With the same models, cross mode reproduces the LOSO
+  counts.
+- **CHB-MIT.** On the same synthetic CHB-MIT inputs, the previous and the current
+  `events.py` write byte-identical `perperson.csv` and `summary.csv` for P0, P1
+  and P4.
