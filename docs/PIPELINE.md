@@ -171,8 +171,13 @@ settings, models, training and evaluation stay the same.
     bundled reference covariance C (referential 10-05 layout) is mapped onto the bipolar
     montage as D C D^T (D: electrode difference matrix), and the channel mean is removed
     before and added back after, because GEDAI would otherwise average-reference the
-    bipolar channels. The shared component rule cannot apply to GEDAI; its default
-    threshold is used.
+    bipolar channels. The shared component rule cannot apply to GEDAI. Its threshold
+    preset was chosen before any classification run, on signal preservation only
+    (`python -m src.gedai_qc`, six subjects): the default ("auto") removed more than half
+    of the power of 39 percent of recordings and of 33 percent of ictal windows, the
+    conservative preset ("auto-") of 17 and 13 percent, so P6b uses "auto-". Within a
+    recording, neither setting removed more from ictal than from non-ictal windows. The
+    default's cache is kept for the robustness report.
   - In trials on single recordings all three were bit-for-bit reproducible with a fixed
     seed. Cost per one-hour recording on a laptop: GEDAI about 11 s, Infomax about 45 s,
     AMICA about 130 s (300 iterations; 1000 iterations removed the same components and

@@ -99,7 +99,13 @@ ICA_MAX_ITER = {"infomax": 1000, "amica": 300}   # AMICA: same components remove
                                                  # and 1000 iterations in a trial, 3x faster
 EOG_PROXY = ("FP1-F7", "FP1-F3", "FP2-F4", "FP2-F8")
 EOG_Z = 3.0                 # find_bads_eog threshold (MNE default)
-GEDAI_NOISE = "auto"        # GEDAI's default threshold preset
+# GEDAI's threshold preset. "auto-" (noise multiplier 6, more conservative than the
+# default "auto") was chosen on signal preservation only, before any classification run
+# (src/gedai_qc.py, results_v2/qc/gedai_settings, 4 October 2026): on six subjects the
+# default removed more than half the power of 39 % of recordings, "auto-" of 17 %. The
+# default's cache is kept under the tag bp0.5-40_gedai for the robustness report.
+GEDAI_NOISE = "auto-"
+GEDAI_TAG = {"auto": "gedai", "auto-": "gedai-conservative"}
 ICA_LOG_ROOT = DATA_ROOT / "ica_logs"
 ALIAS_1020 = {"T3": "T7", "T4": "T8", "T5": "P7", "T6": "P8"}
 
@@ -122,7 +128,7 @@ class Pipeline:
         if self.notch_hz:
             parts.append(f"n{self.notch_hz:g}")
         if self.ica:
-            parts.append(self.ica)
+            parts.append(GEDAI_TAG[GEDAI_NOISE] if self.ica == "gedai" else self.ica)
         return "_".join(parts)
 
     @property
