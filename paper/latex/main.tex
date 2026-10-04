@@ -216,9 +216,9 @@ outstanding (Section 7).
 \begingroup\small
 
 \begin{longtable}[]{@{}
-  >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.2373}}
-  >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3390}}
-  >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.4237}}@{}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.2150}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3500}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.4350}}@{}}
 \caption{\textbf{Closest related work.}}\tabularnewline
 \toprule\noalign{}
 \begin{minipage}[b]{\linewidth}\raggedright
@@ -451,12 +451,12 @@ and parameter counts do not change), models, training and evaluation stay fixed
 
 {\def\LTcaptype{none} % do not increment counter
 \begin{longtable}[]{@{}
-  >{\raggedright\arraybackslash}p{(\linewidth - 10\tabcolsep) * \real{0.1148}}
-  >{\raggedright\arraybackslash}p{(\linewidth - 10\tabcolsep) * \real{0.1639}}
-  >{\raggedright\arraybackslash}p{(\linewidth - 10\tabcolsep) * \real{0.1148}}
-  >{\raggedright\arraybackslash}p{(\linewidth - 10\tabcolsep) * \real{0.1967}}
-  >{\raggedright\arraybackslash}p{(\linewidth - 10\tabcolsep) * \real{0.1639}}
-  >{\raggedright\arraybackslash}p{(\linewidth - 10\tabcolsep) * \real{0.2459}}@{}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 10\tabcolsep) * \real{0.1206}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 10\tabcolsep) * \real{0.1558}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 10\tabcolsep) * \real{0.1106}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 10\tabcolsep) * \real{0.1960}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 10\tabcolsep) * \real{0.1859}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 10\tabcolsep) * \real{0.2312}}@{}}
 \toprule\noalign{}
 \begin{minipage}[b]{\linewidth}\raggedright
 Pipeline
@@ -562,11 +562,40 @@ permutation test that permutes pipeline labels within each seed set, and the sam
 comparison among P6a, P6b and P6c to ask whether the artefact algorithm alone changes
 the ranking; (3) the Fusion x Preprocessing interaction in a repeated measures ANOVA
 over folds (Greenhouse-Geisser corrected); (4) variance components for subject,
-pipeline, fusion, their interaction and seed; (5) robust equivalence, a fusion pair
-being equivalent in every pipeline under the corrected test of Section 3.5;
+pipeline, fusion, their interaction and seed, so that the preprocessing effect, the
+seed effect and the interaction are reported separately; (5) robust equivalence, a
+fusion pair being equivalent in every pipeline under the corrected test of Section 3.5;
 (6) robustness against performance, the mean macro F1 of each operator against the
 spread of its pipeline means; and (7) prediction stability, the agreement of window
-level predictions between pipelines compared with the agreement between seeds.
+level predictions between pipelines compared with the agreement between seeds. Rank
+stability is reported as the full distribution of each operator's rank over all
+pipelines and seeds, not only its mean rank.
+
+\textbf{Fixed before the runs.} Three choices were fixed, and committed to the repository,
+before any multiverse run existed, so that none could be adjusted to the results. The
+equivalence margin is 0.05 macro F1 for the main analysis, with 0.02 reported as a strict
+sensitivity analysis showing how much an equivalence conclusion depends on the margin.
+GEDAI's preset was chosen on signal preservation alone (above). The event-based metrics
+are defined as follows (\nolinkurl{docs/EVENTS.md}).
+
+\textbf{Event-based metrics.} Window-level macro F1 and AUPRC remain the primary metrics;
+seizure-level sensitivity and false alarms per hour are secondary, clinical metrics. For
+them, every model saved for a fold is applied to every 10 s window of every recording of
+the held-out person, not only the subsampled test windows, after the pipeline's own
+preprocessing; a window is positive when its predicted ictal probability exceeds 0.5,
+the rule of the window-level metrics, with no further post-processing. Detections are
+scored against the annotated seizures with SzCORE's event scoring (\citealp{Dan_2024};
+reference implementation \nolinkurl{timescoring} 0.0.7, default parameters: 30 s tolerance before
+onset and 60 s after offset, any overlap counts, events closer than 90 s merged, events
+longer than 5 min split). Sensitivity is the share of seizure events detected per
+person, and the false alarm rate the number of false-positive events per hour of
+recording, on the true, unsubsampled time base. On Siena only sensitivity is reported:
+its recordings are cut around seizures, so a false alarm rate would not represent
+continuous monitoring (Section 7).
+
+Supplementary Tables S1 to S3 (\nolinkurl{paper/supplementary.md}) give the signal retention and
+compute of the three artefact removal methods, the GEDAI preset comparison, and P4's
+rejections per person.
 
 \section{4. Bonn Results}\label{bonn-results}
 
@@ -589,14 +618,14 @@ independently consistent with NeuroAtlas's report that this split saturates.
 \begingroup\small
 
 \begin{longtable}[]{@{}
-  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1552}}
-  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1207}}
-  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1207}}
-  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1207}}
-  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1207}}
-  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1207}}
-  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1207}}
-  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1207}}@{}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1683}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1188}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1188}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1188}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1188}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1188}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1188}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1188}}@{}}
 \caption{\textbf{Bonn, macro F1 and AUC, mean over 25 paired measurements (5x5 repeated stratified CV).} Source: \nolinkurl{results_v2/T{1,2,3}_*_N2_z_zspec_*/perfold.csv}.}\tabularnewline
 \toprule\noalign{}
 \begin{minipage}[b]{\linewidth}\raggedright
@@ -1059,9 +1088,9 @@ defects found during this project's own development rather than omitting them.
 
 {\def\LTcaptype{none} % do not increment counter
 \begin{longtable}[]{@{}
-  >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.2833}}
-  >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3333}}
-  >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3833}}@{}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.2915}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3266}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3819}}@{}}
 \toprule\noalign{}
 \begin{minipage}[b]{\linewidth}\raggedright
 Defect
@@ -1098,6 +1127,11 @@ CHB-MIT trained with Adam, Bonn with AdamW & Documentation of the training proto
   of operators on CHB-MIT should be cited. Case chb24's identity as a distinct person
   is assumed rather than documented (Section 5.2).
 \item
+  \textbf{False alarms per hour are not reported for Siena.} Its recordings were cut around
+  seizures for a seizure prediction study, so their seizure-free time is not
+  representative of continuous monitoring; Siena contributes seizure-level sensitivity
+  only.
+\item
   \textbf{The artefact removal algorithms are not compared on equal terms in one respect.}
   Infomax and AMICA share one automatic component rule, but GEDAI selects what to
   remove by its own criterion (Section 3.6), so differences involving GEDAI combine
@@ -1128,10 +1162,9 @@ CHB-MIT trained with Adam, Bonn with AdamW & Documentation of the training proto
   in full. The gap claimed in Section 2 rests on the closest studies, which were read
   in full (\nolinkurl{docs/15_LITERATUR_SONUCLARI.md}).
 \item
-  \textbf{CHB-MIT's clinically relevant false alarm rate has not been computed on the true,
-  unsubsampled time base}; the subsampled rate we could report would not be
-  clinically meaningful and we have chosen not to report it rather than report a
-  number likely to be misread (Section 5.2).
+  \textbf{The clinically relevant false alarm rate of the original comparison (Section 5.3)
+  was not computed.} The event-based evaluation of Section 3.6 computes it on the true,
+  unsubsampled time base for every multiverse run, including P0.
 \item
   \textbf{No sensitivity analysis has been run on CHB-MIT} corresponding to Section 4.4's
   Bonn analysis (window length, frequency ceiling, line noise removal, subsampling
@@ -1176,5 +1209,227 @@ only to build the P6 caches are listed in \nolinkurl{requirements-ica.txt}.
 
 \bibliographystyle{plainnat}
 \bibliography{main}
+
+\clearpage
+\section*{Supplementary Material}
+\setcounter{table}{0}
+\renewcommand{\thetable}{S\arabic{table}}
+\renewcommand{\theHtable}{S\arabic{table}}
+\setcounter{figure}{0}
+\renewcommand{\thefigure}{S\arabic{figure}}
+\renewcommand{\theHfigure}{S\arabic{figure}}
+
+\begingroup\footnotesize
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\linewidth - 16\tabcolsep) * \real{0.1542}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 16\tabcolsep) * \real{0.1294}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 16\tabcolsep) * \real{0.0846}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 16\tabcolsep) * \real{0.1393}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 16\tabcolsep) * \real{0.0746}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 16\tabcolsep) * \real{0.0746}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 16\tabcolsep) * \real{0.1294}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 16\tabcolsep) * \real{0.1294}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 16\tabcolsep) * \real{0.0846}}@{}}
+\caption{\textbf{Artefact removal in P6: signal retention and compute.} Per recording of CHB-MIT with selected windows (670), on the 0.5 to 40 Hz signal. Power kept = signal power after removal / before. Extended Infomax and AMICA share 16 components, fitting on every 8th sample and the same automatic ocular component rule; GEDAI selects what to remove by its own criterion. Compute on a laptop CPU (Intel Core Ultra 7 155U), six recordings in parallel.}\tabularnewline
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+method
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+recordings
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+power kept, median
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+IQR
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+min
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+share \textless{} 0.5
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+components removed, mean
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+seconds per recording, median
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+CPU hours, total
+\end{minipage} \\
+\midrule\noalign{}
+\endfirsthead
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+method
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+recordings
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+power kept, median
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+IQR
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+min
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+share \textless{} 0.5
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+components removed, mean
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+seconds per recording, median
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+CPU hours, total
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+P6a Extended Infomax & 670 & 0.784 & 0.531-0.899 & 0.090 & 0.222 & 1.491 & 32.700 & 8.451 \\
+P6b GEDAI, conservative (used) & 670 & 0.999 & 0.717-0.999 & 0.041 & 0.206 & & 18.100 & 4.705 \\
+P6c AMICA & 670 & 0.784 & 0.535-0.885 & 0.076 & 0.228 & 1.531 & 212.550 & 73.091 \\
+GEDAI, default (not used) & 670 & 0.658 & 0.317-0.999 & 0.041 & 0.433 & & 21.900 & 5.595 \\
+\end{longtable}
+
+\endgroup
+
+\begingroup\small
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\linewidth - 16\tabcolsep) * \real{0.1050}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 16\tabcolsep) * \real{0.1500}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 16\tabcolsep) * \real{0.1000}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 16\tabcolsep) * \real{0.1000}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 16\tabcolsep) * \real{0.1000}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 16\tabcolsep) * \real{0.1050}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 16\tabcolsep) * \real{0.1000}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 16\tabcolsep) * \real{0.1200}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 16\tabcolsep) * \real{0.1200}}@{}}
+\caption{\textbf{GEDAI preset, chosen on signal preservation only.} Six CHB-MIT subjects (chb01, chb03, chb05, chb08, chb12, chb15), the same windows under both presets. Power kept per recording and per window (relative to the same 0.5 to 40 Hz signal); no classification result was used for the choice (\nolinkurl{src/gedai_qc.py}).}\tabularnewline
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+preset
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+unit
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+n
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+p5
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+p25
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+median
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+p75
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+share \textless{} 0.5
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+share \textless{} 0.1
+\end{minipage} \\
+\midrule\noalign{}
+\endfirsthead
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+preset
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+unit
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+n
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+p5
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+p25
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+median
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+p75
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+share \textless{} 0.5
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+share \textless{} 0.1
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+auto & recording & 199 & 0.197 & 0.324 & 0.843 & 0.999 & 0.387 & 0.000 \\
+auto & ictal window & 591 & 0.241 & 0.367 & 0.779 & 1.000 & 0.333 & 0.005 \\
+auto & non-ictal window & 2364 & 0.263 & 0.395 & 0.999 & 0.999 & 0.328 & 0.003 \\
+auto- & recording & 199 & 0.263 & 0.957 & 0.999 & 0.999 & 0.166 & 0.000 \\
+auto- & ictal window & 591 & 0.313 & 0.999 & 1.000 & 1.000 & 0.134 & 0.000 \\
+auto- & non-ictal window & 2364 & 0.331 & 0.999 & 0.999 & 1.000 & 0.126 & 0.002 \\
+\end{longtable}
+
+\endgroup
+
+\begingroup\small
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.1343}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.1343}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.1343}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.1493}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.1393}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.1692}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.1393}}@{}}
+\caption{\textbf{P4: technical artefact rejection per person.} A window is rejected if a channel is flat (standard deviation below 1~\(\mu\)V) or holds one constant value for at least 0.5 s, on the unfiltered signal. Rejected windows are removed from training and validation only; test windows are unchanged.}\tabularnewline
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+person
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+windows
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+ictal
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+ictal rejected
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+non-ictal
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+non-ictal rejected
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+rejected \%
+\end{minipage} \\
+\midrule\noalign{}
+\endfirsthead
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+person
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+windows
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+ictal
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+ictal rejected
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+non-ictal
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+non-ictal rejected
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+rejected \%
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+chb01 & 370 & 74 & 0 & 296 & 1 & 0.3 \\
+chb02 & 100 & 20 & 2 & 80 & 2 & 4.0 \\
+chb03 & 225 & 45 & 7 & 180 & 1 & 3.6 \\
+chb04 & 210 & 42 & 5 & 168 & 5 & 4.8 \\
+chb05 & 310 & 62 & 0 & 248 & 0 & 0.0 \\
+chb06 & 120 & 24 & 1 & 96 & 0 & 0.8 \\
+chb07 & 180 & 36 & 2 & 144 & 1 & 1.7 \\
+chb08 & 485 & 97 & 4 & 388 & 3 & 1.4 \\
+chb09 & 155 & 31 & 3 & 124 & 0 & 1.9 \\
+chb10 & 245 & 49 & 11 & 196 & 4 & 6.1 \\
+chb11 & 415 & 83 & 1 & 332 & 0 & 0.2 \\
+chb12 & 615 & 123 & 1 & 492 & 7 & 1.3 \\
+chb13 & 335 & 67 & 0 & 268 & 5 & 1.5 \\
+chb14 & 120 & 24 & 0 & 96 & 0 & 0.0 \\
+chb15 & 1070 & 214 & 0 & 856 & 1 & 0.1 \\
+chb16 & 70 & 14 & 0 & 56 & 1 & 1.4 \\
+chb17 & 160 & 32 & 0 & 128 & 6 & 3.8 \\
+chb18 & 190 & 38 & 1 & 152 & 0 & 0.5 \\
+chb19 & 135 & 27 & 3 & 108 & 0 & 2.2 \\
+chb20 & 180 & 36 & 1 & 144 & 2 & 1.7 \\
+chb22 & 120 & 24 & 0 & 96 & 0 & 0.0 \\
+chb23 & 245 & 49 & 0 & 196 & 0 & 0.0 \\
+chb24 & 325 & 65 & 0 & 260 & 0 & 0.0 \\
+all & 6380 & 1276 & 42 & 5104 & 39 & 1.3 \\
+\end{longtable}
+
+\endgroup
 
 \end{document}

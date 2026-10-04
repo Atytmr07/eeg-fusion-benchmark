@@ -36,6 +36,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 PAPER = HERE.parent
 MANUSCRIPT = PAPER / "manuscript.md"
+SUPPLEMENT = PAPER / "supplementary.md"
 FIGDIR = PAPER / "figures_manuscript"
 BIBFILE = PAPER / "literature" / "references.bib"
 ARXIV = HERE / "arxiv"
@@ -156,23 +157,52 @@ def cells(row: str):
     return [c.strip() for c in row.strip().strip("|").split("|")]
 
 
-def widen_table(par: str) -> tuple[str, bool]:
-    """Proportional column widths for tables pandoc would wrap anyway."""
+TEXT_PT = 455.0                              # \linewidth of template.tex (A4, 2.5 cm)
+CHAR_PT = {"small": 4.9, "footnotesize": 4.3}   # mean character width (lmodern), with margin
+
+
+def widen_table(par: str) -> tuple[str, str | None]:
+    r"""Proportional column widths for tables pandoc would wrap anyway, and the font
+    size to set them in (None: leave the table as it is).
+
+    Widths follow the cell lengths (square-root damped, so short label columns such as
+    author names still get room), but no column is narrower than its longest word, so
+    headers like "recordings" do not run into the next column. If the longest words
+    alone do not fit at \small, the table is set in \footnotesize."""
     rows = par.strip().splitlines()
     if max(len(r) for r in rows) <= 72:
-        return par, False
-    data = [cells(r) for i, r in enumerate(rows) if i != 1]
+        return par, None
+    def printed(c: str) -> str:       # measure a citation as about what natbib prints
+        c = re.sub(r"`\\cite\w*\{[^}]*\}`\{=latex\}", "Author et al. (2000)", c)
+        return re.sub(r"[*`]", "", c)
+    data = [[printed(c) for c in cells(r)] for i, r in enumerate(rows) if i != 1]
     ncol = len(data[0])
-    lens = []
+    lens, longest = [], []
     for j in range(ncol):
-        col = [len(re.sub(r"[*`]", "", d[j])) for d in data if j < len(d)]
-        # square root damps the long prose columns so short label columns
-        # (author names) still get enough room to avoid one-word lines
-        lens.append(max(6, sum(col) / len(col) * 0.5 + max(col) * 0.5) ** 0.5)
-    total = sum(lens)
-    sep = "|" + "|".join("-" * max(3, round(60 * l / total)) for l in lens) + "|"
-    rows[1] = sep
-    return "\n".join(rows), True
+        col = [d[j] for d in data if j < len(d)]
+        n = [len(c) for c in col]
+        lens.append(max(6, sum(n) / len(n) * 0.5 + max(n) * 0.5) ** 0.5)
+        longest.append(max((len(w) for c in col for w in c.split()), default=1))
+    for size in CHAR_PT:
+        avail = (TEXT_PT - 12.0 * ncol) / CHAR_PT[size]       # characters, minus tabcolsep
+        need = [(w + 1.5) / avail for w in longest]
+        if sum(need) <= 1:
+            break
+    else:                             # even the longest words do not fit: share by them
+        need = [x / sum(need) for x in need]
+    share = [l / sum(lens) for l in lens]
+    fixed: set[int] = set()
+    while True:                       # raise columns below their minimum, rescale the rest
+        rest = [j for j in range(ncol) if j not in fixed]
+        room = 1 - sum(need[j] for j in fixed)
+        tot = sum(share[j] for j in rest)
+        w = [need[j] if j in fixed else share[j] * room / tot for j in range(ncol)]
+        low = {j for j in rest if w[j] < need[j]}
+        if not low or len(fixed | low) == ncol:
+            break
+        fixed |= low
+    rows[1] = "|" + "|".join("-" * max(3, round(200 * x)) for x in w) + "|"
+    return "\n".join(rows), size
 
 
 TABLE_CAP = re.compile(r"^\*\*Table (\d+)\.\s*(.+?)\*\*\s*(.*)$", re.S)
@@ -203,13 +233,13 @@ def restructure(body: str, report: dict) -> str:
             i += 1
             continue
         if is_table(p):
-            table, wide = widen_table(p)
+            table, size = widen_table(p)
             block = table
             if pending_caption:
                 block += f"\n\n: {pending_caption}"
                 pending_caption = None
-            if wide:
-                block = "```{=latex}\n\\begingroup\\small\n```\n\n" + block + \
+            if size:
+                block = f"```{{=latex}}\n\\begingroup\\{size}\n```\n\n" + block + \
                         "\n\n```{=latex}\n\\endgroup\n```"
             out.append(block)
             i += 1
@@ -235,6 +265,74 @@ def restructure(body: str, report: dict) -> str:
     report["tables"] = tables
     report["figures"] = figures
     return "\n\n".join(out) + "\n"
+
+
+# ------------------------------------------------------------- supplement
+
+SUPP_TABLE = re.compile(r"^## Table S(\d+)\.\s*(.+)$")
+SUPP_HEADER = r"""```{=latex}
+\clearpage
+\section*{Supplementary Material}
+\setcounter{table}{0}
+\renewcommand{\thetable}{S\arabic{table}}
+\renewcommand{\theHtable}{S\arabic{table}}
+\setcounter{figure}{0}
+\renewcommand{\thefigure}{S\arabic{figure}}
+\renewcommand{\theHfigure}{S\arabic{figure}}
+```"""
+
+
+def supplement_markdown(text: str, report: dict) -> str:
+    """paper/supplementary.md as an appendix after the references: tables numbered S1,
+    S2, ... by LaTeX, each "## Table Sk. Title" heading and the paragraph under it
+    becoming the caption of the table that follows. The document title and the
+    "Generated by ... do not edit by hand" note are repository notes and are dropped."""
+    out, nums, pending = [SUPP_HEADER], [], None
+    for par in paragraphs(text):
+        p = par.strip()
+        flat = " ".join(p.split())
+        if not p or p.startswith("# ") or re.fullmatch(r"\*Generated by .*\*", flat):
+            continue
+        m = SUPP_TABLE.match(flat)
+        if m:
+            nums.append(int(m.group(1)))
+            pending = {"title": m.group(2).strip(), "text": []}
+            continue
+        if is_table(p):
+            table, size = widen_table(p)
+            block = table
+            if pending:
+                title = pending["title"]
+                title += "" if title[-1] in ".:?!" else "."
+                block += f"\n\n: **{title}**" + (" " + " ".join(pending["text"])
+                                                   if pending["text"] else "")
+                pending = None
+            if size:
+                block = f"```{{=latex}}\n\\begingroup\\{size}\n```\n\n" + block + \
+                        "\n\n```{=latex}\n\\endgroup\n```"
+            out.append(block)
+            continue
+        if pending is not None:
+            pending["text"].append(flat)
+            continue
+        out.append(p)
+    report["supp_tables"] = nums
+    return "\n\n".join(out) + "\n"
+
+
+def check_supplement(report: dict, body: str):
+    nums = report.get("supp_tables", [])
+    issues = []
+    if nums != list(range(1, len(nums) + 1)):
+        issues.append(f"supplementary tables are numbered S{nums}, LaTeX numbers them "
+                      f"S1..S{len(nums)}")
+    flat = " ".join(CODE_SPAN.sub(" ", body).split())
+    cited = set()
+    for a, b in re.findall(r"\bTables?\s+S(\d+)(?:\s+(?:to|-|and)\s+S(\d+))?", flat):
+        cited |= set(range(int(a), int(b or a) + 1))
+    for n in sorted(cited - set(nums)):
+        issues.append(f"the manuscript refers to Table S{n}, which the supplement lacks")
+    report["numbering"] += issues
 
 
 # --------------------------------------------------------------- references
@@ -568,20 +666,23 @@ def compile_tex(tex: Path, use_bibtex: bool, report: dict):
 
 # --------------------------------------------------------------------- main
 
-def build(draft: bool, make_pdf: bool, bibmode: str = "natbib"):
+def build(draft: bool, make_pdf: bool, bibmode: str = "natbib", supplement: bool = True):
     text = MANUSCRIPT.read_text(encoding="utf-8")
     draftnote, title, abstract, body, refs_md = split_manuscript(text)
     report = {"missing_figures": []}
+    supp = SUPPLEMENT.read_text(encoding="utf-8") if supplement and SUPPLEMENT.exists() else ""
+    report["supplement"] = bool(supp)
+    SEP = "\n\n<!-- supplement -->\n\n"
 
     refs = parse_references(refs_md)
-    citation_report(body, refs, report)
+    citation_report(body + SEP + supp, refs, report)
     if bibmode == "natbib" and report["bib_unmapped"]:
         print("natbib needs every reference in references.bib; missing: "
               + ", ".join(report["bib_unmapped"]) + ". Falling back to option (a).")
         bibmode = "plain"
     report["bibmode"] = bibmode
     if bibmode == "natbib":
-        body = natbib_body(body, refs, report["bib"], report)
+        body, supp = natbib_body(body + SEP + supp, refs, report["bib"], report).split(SEP)
         write_main_bib(refs, report["bib"], HERE / "main.bib")
         bibliography = "```{=latex}\n\\bibliographystyle{plainnat}\n\\bibliography{main}\n```\n"
     else:
@@ -590,7 +691,11 @@ def build(draft: bool, make_pdf: bool, bibmode: str = "natbib"):
     body = restructure(body, report)
     check_numbering(report, body)
     body = rewrite_math(body)
-    report["unknown_chars"] = unknown_chars(body + abstract + title)
+    appendix = ""
+    if supp:
+        appendix = rewrite_math(supplement_markdown(supp, report))
+        check_supplement(report, body)
+    report["unknown_chars"] = unknown_chars(body + appendix + abstract + title)
 
     def yaml_block(s):
         return "|\n" + "\n".join("  " + l for l in s.splitlines())
@@ -601,7 +706,7 @@ def build(draft: bool, make_pdf: bool, bibmode: str = "natbib"):
     if bibmode == "natbib":
         meta.append("natbib: true")
     meta.append("---")
-    md = "\n".join(meta) + "\n\n" + body + "\n\n" + bibliography
+    md = "\n".join(meta) + "\n\n" + body + "\n\n" + bibliography + "\n\n" + appendix
 
     src = HERE / "main.md"
     src.write_text(md, encoding="utf-8")
@@ -649,6 +754,9 @@ def print_report(r: dict, pages: int, w, nrefs: int):
     if pages:
         print(f"main.pdf: {pages} pages")
     print(f"tables captioned: {r['tables']}, figures captioned: {r['figures']}")
+    print("supplement: " + (f"appended after the references, tables "
+                            f"{', '.join(f'S{n}' for n in r.get('supp_tables', []))}"
+                            if r.get("supplement") else "not included"))
     print("numbering: " + ("ok" if not r["numbering"] else "; ".join(r["numbering"])))
     print("missing figures: " + (", ".join(r["missing_figures"]) or "none"))
     if r["unknown_chars"]:
@@ -689,8 +797,10 @@ def main():
     ap.add_argument("--bib", choices=["natbib", "plain"], default="natbib",
                     help="natbib from references.bib (option b, default) or the "
                          "manuscript's list as written (option a)")
+    ap.add_argument("--no-supplementary", action="store_true",
+                    help="leave out paper/supplementary.md (appended by default)")
     a = ap.parse_args()
-    build(a.draft, not a.no_pdf, a.bib)
+    build(a.draft, not a.no_pdf, a.bib, not a.no_supplementary)
 
 
 if __name__ == "__main__":
