@@ -9,7 +9,9 @@ pipelines before the next seed starts:
   3. src.chbmit_stats    unless its output folder exists
 
 so the same command can be started again after an interruption and only does what is
-missing. P0 with repeat 0 on the CPU is the existing loso_grouped run (CHB-MIT only).
+missing. P0 with seed set 0 is run again as loso_P0 although loso_grouped holds the same
+configuration: loso_grouped did not save its models, which the event-based metrics need
+(docs/EVENTS.md). On the same machine and thread count the two are identical.
 --dataset siena runs the same queue on Siena (results_v2/siena/).
 
 Parallel use: with --worker k/n, this process takes every n-th item starting at k, so
@@ -44,8 +46,6 @@ DEEP = [m for m in DEFAULT_MODELS]
 
 
 def tag_for(pipeline: str, repeat: int, device: str, dataset: str = "chbmit") -> str:
-    if dataset == "chbmit" and pipeline == "P0" and repeat == 0 and device == "cpu":
-        return "loso_grouped"
     return run_tag("loso", pipeline, repeat, device)
 
 

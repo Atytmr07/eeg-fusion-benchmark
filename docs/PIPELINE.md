@@ -383,6 +383,7 @@ the statistics and figures can be regenerated without the raw data or a GPU.
 | CHB-MIT statistics | `python -m src.chbmit_stats` (default `--run loso_grouped`) | `results_v2/chbmit/phase0_loso_grouped/` |
 | CHB-MIT statistics, earlier 24 fold run (Section 5.4 comparison) | `python -m src.chbmit_stats --run loso_main` | `results_v2/chbmit/phase0/` |
 | Manuscript figures | `python -m src.make_manuscript_figures` | `paper/figures_manuscript/` |
+| Event-based metrics (after the runs of a pipeline) | `python -m src.events --pipeline P1 --repeats 0 1 2 --threads 16 --jobs 8` (P6 needs requirements-ica.txt) | `results_v2/chbmit/<run>/events/` |
 | Parameter counts (Section 3.3) | `python -m src.models` | printed |
 
 The CHB-MIT runs need only the cached corpus
@@ -416,8 +417,8 @@ remains available in the repository history (commit `804709c`).
    (add `--device cuda` for the GPU). For each run it trains the models, then adds the
    baselines and the statistics, and skips whatever is already complete, so the same
    command resumes after an interruption. Output names: `loso_P1` (seed set 0),
-   `loso_P1_r1`, `loso_P1_r2`, with a `_cuda` suffix on the GPU; P0 with seed set 0 on
-   the CPU is the existing `loso_grouped` run. Single runs:
+   `loso_P1_r1`, `loso_P1_r2`, with a `_cuda` suffix on the GPU. P0 with seed set 0 is
+   run again as `loso_P0` (identical to `loso_grouped`, but with saved models). Single runs:
    `python -m src.chbmit_run --split loso --threads 16 --pipeline P1 --repeat 0`.
 3. All runs use the same thread count (16, as `loso_grouped`). Runs at the same thread
    count are deterministic, so several can run side by side on a machine with enough

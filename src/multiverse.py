@@ -110,6 +110,9 @@ def discover_runs(root: Path, pipelines=None, seeds=None, device: str = "cpu") -
         if (pipelines and p not in pipelines) or (seeds is not None and s not in seeds):
             continue
         runs.append(Run(d.name, p, s, d))
+    # loso_grouped is the earlier P0 seed 0 run; loso_P0 repeats it with saved models.
+    if any(r.name == "loso_P0" for r in runs):
+        runs = [r for r in runs if r.name != "loso_grouped"]
     if len({(r.pipeline, r.seed) for r in runs}) != len(runs):
         raise RuntimeError(f"two runs map to the same (pipeline, seed) in {root}")
     return sorted(runs, key=lambda r: (_pipeline_key(r.pipeline), r.seed))
