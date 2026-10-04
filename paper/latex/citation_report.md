@@ -37,6 +37,7 @@ as written (option a). Nothing is added to references.bib by the build.
 | Mohamady (2026) | yes | Mohamady_2026 |
 | Nadeau (2003) | yes | Nadeau_2003 |
 | Narotamo (2024) | yes | Narotamo_2024 |
+| Palmer (2008) | yes | Palmer_2008 |
 | Rheude (2025) | yes | Rheude_2025 |
 | Ros (2025) | yes | Ros_2025 |
 | Roy (2019) | yes | Roy_2019 |
@@ -48,7 +49,7 @@ as written (option a). Nothing is added to references.bib by the build.
 | Wang (2026) | yes | Wang_2026a |
 | Xu (2024) | yes | Xu_2024 |
 
-Mapped: 39 of 39.
+Mapped: 40 of 40.
 
 ## Author names natbib prints differently from the manuscript text
 
@@ -57,15 +58,6 @@ natbib prints one surname, two surnames, or the first surname plus
 
 | Manuscript text | natbib prints |
 |---|---|
-| Corani, Benavoli, Demšar, and Mangili 2017 | Corani et al. 2017 |
-| Daşdemir 2025 | Daşdemir and Örnek 2025 |
 | Roy 2019 | Roy et al. 2019 |
 | Shoeibi 2021 | Shoeibi et al. 2021 |
 | Xu 2024 | Xu et al. 2024 |
-
-## Reference list entries that differ from references.bib
-
-| Reference | Difference |
-|---|---|
-| Corani (2017) | 5 authors in references.bib, reference list gives: Corani, G., Benavoli, A., Demšar, J., Mangili, F. |
-| Daşdemir (2025) | 2 authors in references.bib, reference list gives: Daşdemir, A. |
