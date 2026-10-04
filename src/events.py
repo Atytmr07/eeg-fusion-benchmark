@@ -76,6 +76,7 @@ THRESHOLD = 0.5                  # same decision rule as the window-level metric
 DEEP = [m for m in DEFAULT_MODELS if m != "score"]
 BASELINES = {"logvar": logvar_features, "shallow": shallow_features}
 FA_NOTE = "not representative for Siena, not compared"
+WINDOW_TOL = 1e-4                # largest window difference from the corpus, relative
 FA_COLUMNS = ("fa_per_hour_mean", "fa_per_hour_median", "fa_per_hour_pooled",
               "false_alarms", "hours")
 
@@ -188,10 +189,16 @@ def predict(model, x1: torch.Tensor, x2: torch.Tensor, device: str, batch: int =
 # --- Scoring the recordings of one test set ----------------------------------------------
 
 def score_recordings(recs, pipe, dataset: str, models: dict, blend: dict, clfs: dict,
-                     device: str, jobs: int, pool) -> dict:
+                     device: str, jobs: int, pool, check: dict | None = None) -> dict:
     """Apply every run's models and the baselines to every window of the recordings and
     sum the event counts: (run, model) -> [reference events, detected, false alarms,
-    hours]. blend: run -> score fusion weight (NaN: no score model)."""
+    hours]. blend: run -> score fusion weight (NaN: no score model).
+
+    check: recording name -> (start times, corpus windows) of the windows the runs were
+    trained and tested on. The same windows recomputed here are compared with them, and
+    the largest difference relative to the corpus amplitude is stored under
+    acc["_window_diff"]. It is 0 when the signal steps reproduce the corpus exactly; for
+    P6 on another machine it shows whether the decomposition came out the same."""
     # At most 2 x jobs recordings in flight, so finished windows do not pile up in memory.
     queue, pending = list(recs), []
 
@@ -209,6 +216,13 @@ def score_recordings(recs, pipe, dataset: str, models: dict, blend: dict, clfs: 
         windows, t0, hours = fut.result() if fut else recording_windows(f, pipe.name, dataset)
         if limit is not None:
             hours = limit / 3600.0
+        if check and f.name in check:
+            ts, ref_x = check[f.name]
+            k = np.searchsorted(t0, ts)
+            ok = (k < len(t0)) & (np.abs(t0[np.minimum(k, len(t0) - 1)] - ts) < 1e-3)
+            diff = (float(np.abs(windows[k[ok]] - ref_x[ok]).max() / np.abs(ref_x[ok]).max())
+                    if ok.all() else np.inf)       # a missing window counts as a mismatch
+            acc["_window_diff"] = max(acc.get("_window_diff", 0.0), diff)
         x1, x2, _ = prepare(windows, norm=pipe.norm)
         x1, x2 = torch.from_numpy(x1), torch.from_numpy(x2)
         probs: dict[str, dict[str, np.ndarray]] = {}
@@ -231,6 +245,7 @@ def score_recordings(recs, pipe, dataset: str, models: dict, blend: dict, clfs: 
 
 def event_rows(acc: dict, **fields) -> list[dict]:
     rows = []
+    acc = {k: v for k, v in acc.items() if k != "_window_diff"}
     for (tag, m), (n_ref, tp, fp, hours) in acc.items():
         rows.append({"run": tag, "model": m, **fields, "seizure_events": int(n_ref),
                      "detected": int(tp), "false_alarms": int(fp), "hours": hours,
@@ -312,7 +327,7 @@ def run_loso(args, pipe, t_start: float) -> None:
              for tag, pf in perfold.items()}
     decisions = corpus["info"].get("decisions") if args.dataset == "siena" else None
 
-    rows = []
+    rows, window_diff = [], np.nan
     pool = ProcessPoolExecutor(args.jobs) if args.jobs > 1 else None
     for fi, (key, tr_all, te) in enumerate(splits):
         t_fold = time.time()
@@ -328,12 +343,19 @@ def run_loso(args, pipe, t_start: float) -> None:
         models = {tag: load_fold_models(d, fi, args.device) for tag, d in runs.items()}
         recs = person_recordings(args.dataset, cases, decisions)
         w = {tag: float(blend[tag].get(fi, np.nan)) for tag in runs}
+        check = {r: (corpus["t0"][te][corpus["record"][te] == r].astype(float),
+                     corpus["X"][te][corpus["record"][te] == r])
+                 for r in set(corpus["record"][te])}
         acc = score_recordings(recs, pipe, args.dataset, models, w, clfs, args.device,
-                               args.jobs, pool)
+                               args.jobs, pool, check)
+        diff = acc.get("_window_diff", np.nan)
+        window_diff = max(window_diff, diff) if np.isfinite(window_diff) else diff
         person = str(corpus["group"][te][0])
         rows += event_rows(acc, fold=fi, person=person, cases=",".join(cases))
         print(f"[{fi + 1}/{len(splits)}] {','.join(cases)}: {len(recs)} recordings, "
-              f"{time.time() - t_fold:.0f}s", flush=True)
+              f"{time.time() - t_fold:.0f}s, windows vs corpus {diff:.1e}"
+              + ("  WARNING: the recomputed signal differs from the corpus"
+                 if diff > WINDOW_TOL else ""), flush=True)
     if pool:
         pool.shutdown()
 
@@ -344,6 +366,10 @@ def run_loso(args, pipe, t_start: float) -> None:
                 "scoring": "timescoring EventScoring defaults (SzCORE)",
                 "pipeline": pipe.describe(), "folds": len(splits),
                 "elapsed_s": round(time.time() - t_start, 1)}
+        meta["window_diff_vs_corpus"] = window_diff
+        meta["window_check"] = ("pass" if window_diff <= WINDOW_TOL else
+                                f"FAIL: the recomputed signal differs from the corpus by "
+                                f"{window_diff:.1e} of its amplitude (tolerance {WINDOW_TOL})")
         if decisions is not None:
             meta["decisions"] = decisions
         summ = write_outputs(d / "events", part, args.dataset, meta)
