@@ -146,7 +146,7 @@ outstanding (Section 7).
 | Ali et al. (2024) | Shows CHB-MIT results depend heavily on evaluation choices | Concerns evaluation of CHB-MIT generally, not fusion operators |
 | Dan et al. (2024), SzCORE | Standard datasets, event based scoring and metrics for EEG seizure detection | An evaluation framework, not a fusion operator comparison |
 | Rheude et al. (2025) | Multimodal complexity often does not pay off | General multimodal setting, not EEG |
-| **Daşdemir (2025)** | **Self described fair, protocol controlled comparison of two fusion strategies for EEG** | Seizure *prediction*, not detection; two operators; reports a 0.20 point accuracy difference (97.50 vs 97.70) without a stated statistical test or parameter matching |
+| **Daşdemir and Örnek (2025)** | **Self described fair, protocol controlled comparison of two fusion strategies for EEG** | Seizure *prediction*, not detection; two operators; reports a 0.20 point accuracy difference (97.50 vs 97.70) without a stated statistical test or parameter matching |
 | **An et al. (2026), fastSeizureNet** | **Compares five fusion strategies for EEG seizure detection**, within and across patients, with several backbones (semi-supervised) | Fuses hand-crafted feature knowledge with deep features rather than a raw waveform with its spectrogram; the strategies are not parameter matched and are not compared with each other by a statistical test (a Wilcoxon test with Holm correction is used only against prior methods) |
 | Einizade et al. (2023), fAttNet | Compares four fusion operators (majority vote, averaging, concatenation, attention) over raw EEG, wavelet packet and hand-engineered views, leave one subject out on TUH | No parameter matching and no statistical test; the operators lie within one standard deviation of each other |
 | Basheer and Mishra (2026) | Compares concatenation, element-wise addition and KAN gating for seizure detection, with paired t-tests over six seeds | Both streams come from the same raw EEG rather than two representations; uncorrected tests against concatenation only; no parameter matching |
@@ -161,7 +161,7 @@ proposed model, and several studies now compare two to five operators (Einizade 
 al. 2023; An et al. 2026; Basheer and Mishra 2026), but none we read in full matches
 parameter counts or tests the operators against each other with corrected or
 equivalence tests. Two studies come closest. Daşdemir
-(2025) holds two branches fixed and compares two fusion points, but on a prediction
+and Örnek (2025) holds two branches fixed and compares two fusion points, but on a prediction
 rather than detection task, without a stated parameter matching procedure or
 significance test on the 0.20 point difference it reports. An et al. (2026) compare
 five fusion strategies for seizure detection, the closest design to ours in breadth,
@@ -310,7 +310,7 @@ comparisons within a task and metric. Where a null result is claimed, we support
 with a two one sided equivalence test computed with the same corrected variance
 (`corrected_equivalence_bound`, reporting the minimum margin δmin at which
 equivalence would be established at α = 0.05), a correlated Bayesian t test
-(following Corani and Benavoli 2015; Corani, Benavoli, Demšar, and Mangili 2017)
+(following Corani and Benavoli 2015; Corani et al. 2017)
 reporting the posterior probability of practical equivalence within a stated region
 of practical equivalence (ROPE), and a sign test as a distribution free check. We
 report primary results on macro F1 and Brier score; log loss is reported but treated
@@ -369,7 +369,7 @@ validation only, so the test set is identical across pipelines.
 **P6: three artefact removal algorithms.** To separate the effect of the algorithm
 from the rest of the pipeline, P6 is run with Extended Infomax ICA (Lee et al. 1999,
 as implemented in MNE-Python, Gramfort et al. 2013), GEDAI (Ros et al. 2025), and
-AMICA (Palmer et al., reference to be verified in the literature search; Python
+AMICA (Palmer et al. 2008; Python
 implementation `jamica`), all on the same 0.5 to 40 Hz signal and per recording.
 Infomax and AMICA share every setting and the same automatic component rule: 16
 components, fitted on every 8th sample, and MNE's correlation based ocular component
@@ -963,21 +963,21 @@ only to build the P6 caches are listed in `requirements-ica.txt`.
 - Ali, E. et al. (2024) Epileptic seizure detection using CHB-MIT dataset: The overlooked perspectives. *Royal Society Open Science* 11(5):230601. doi:10.1098/rsos.230601
 - Acharya, U. R. et al. (2018) Deep convolutional neural network for the automated detection and diagnosis of seizure using EEG signals. *Computers in Biology and Medicine* 100:270-278. doi:10.1016/j.compbiomed.2017.09.017
 - An, J., Peng, R., Yang, X., Wu, D. (2026) fastSeizureNet: Accurate and efficient knowledge-data fusion for semi-supervised seizure detection. *Neural Networks* 202:109078. doi:10.1016/j.neunet.2026.109078
-- Andrzejak, R. G. et al. (2001) Indications of nonlinear deterministic and finite-dimensional structures in time series of brain electrical activity. *Physical Review E* 64(6):061907. doi:10.1103/PhysRevE.64.061907
+- Andrzejak, R. G. et al. (2001) Indications of nonlinear deterministic and finite-dimensional structures in time series of brain electrical activity: Dependence on recording region and brain state. *Physical Review E* 64(6):061907. doi:10.1103/PhysRevE.64.061907
 - Basheer, R., Mishra, D. (2026) Learning feature-wise temporal-spatial gating with Kolmogorov-Arnold networks for EEG seizure detection. *Pattern Recognition Letters* 208:1-6. doi:10.1016/j.patrec.2026.07.016
 - Camastra, C., Pelagi, A., Quattrone, A., Sarica, A. (2026) Benchmarking Multimodal Deep Fusion Strategies for Heterogeneous Neuroimaging and Cognitive Data Using a Controlled Sex Classification Task. *Brain Sciences* 16(4):405. doi:10.3390/brainsci16040405
 - Bouckaert, R. R., Frank, E. (2004) Evaluating the Replicability of Significance Tests for Comparing Learning Algorithms. *Lecture Notes in Computer Science* (PAKDD 2004). doi:10.1007/978-3-540-24775-3_3
 - Chatzichristos, C. et al. (2020) Epileptic Seizure Detection in EEG via Fusion of Multi-View Attention-Gated U-Net Deep Neural Networks. *IEEE SPMB*. doi:10.1109/spmb50085.2020.9353630
 - Corani, G., Benavoli, A. (2015) A Bayesian approach for comparing cross-validated algorithms on multiple data sets. *Machine Learning* 100:285-304. doi:10.1007/s10994-015-5486-z
-- Corani, G., Benavoli, A., Demšar, J., Mangili, F. (2017) Statistical comparison of classifiers through Bayesian hierarchical modelling. *Machine Learning* 106:1817-1837. doi:10.1007/s10994-017-5641-9
+- Corani, G., Benavoli, A., Demšar, J., Mangili, F., Zaffalon, M. (2017) Statistical comparison of classifiers through Bayesian hierarchical modelling. *Machine Learning* 106:1817-1837. doi:10.1007/s10994-017-5641-9
 - Dan, J. et al. (2024) SzCORE: Seizure Community Open-Source Research Evaluation framework for the validation of electroencephalography-based automated seizure detection algorithms. *Epilepsia* 66(S3). doi:10.1111/epi.18113
-- Daşdemir, A. (2025) Epileptic seizure prediction with deep learning-based fusion methods. *Engineering Science and Technology, an International Journal* 72:102212. doi:10.1016/j.jestch.2025.102212
+- Daşdemir, A., Örnek, H. K. (2025) Epileptic seizure prediction with deep learning-based fusion methods. *Engineering Science and Technology, an International Journal* 72:102212. doi:10.1016/j.jestch.2025.102212
 - Das, S. et al. (2024) Epileptic Seizure Detection from Decomposed EEG Signal through 1D and 2D Feature Representation and Convolutional Neural Network. *Information* 15(5):256. doi:10.3390/info15050256
 - Detti, P., Vatti, G., Zabalo Manrique de Lara, G. (2020) EEG Synchronization Analysis for Seizure Prediction: A Study on Data of Noninvasive Recordings. *Processes* 8(7):846. doi:10.3390/pr8070846
 - Del Pup, F., Zanola, A., Tshimanga, L. F., Bertoldo, A., Atzori, M. (2025) The More, the Better? Evaluating the Role of EEG Preprocessing for Deep Learning Applications. *IEEE Transactions on Neural Systems and Rehabilitation Engineering* 33:1061-1070. doi:10.1109/TNSRE.2025.3547616
 - Goldberger, A. L. et al. (2000) PhysioBank, PhysioToolkit, and PhysioNet: Components of a New Research Resource for Complex Physiologic Signals. *Circulation* 101(23):e215-e220. doi:10.1161/01.cir.101.23.e215
 - Einizade, A., Nasiri, S., Mozafari, M., Sardouie, S. H., Clifford, G. D. (2023) Explainable automated seizure detection using attentive deep multi-view networks. *Biomedical Signal Processing and Control* 79:104076. doi:10.1016/j.bspc.2022.104076
-- Golrizkhatami, Z., Acan, A. (2018) ECG classification using three-level fusion of different feature descriptors. *Expert Systems with Applications* 114:54-64.
+- Golrizkhatami, Z., Acan, A. (2018) ECG classification using three-level fusion of different feature descriptors. *Expert Systems with Applications* 114:54-64. doi:10.1016/j.eswa.2018.07.030
 - Jafrasteh, B., Adeli, E., Pohl, K. M., Kuceyeski, A., Sabuncu, M. R., Zhao, Q. (2025) Statistical variability in comparing accuracy of neuroimaging based classification models via cross validation. *Scientific Reports* 15:28745. doi:10.1038/s41598-025-12026-2
 - Gramfort, A. et al. (2013) MEG and EEG data analysis with MNE-Python. *Frontiers in Neuroscience* 7:267. doi:10.3389/fnins.2013.00267
 - Huang, J. et al. (2024) Multi-modal feature fusion with multi-head self-attention for epileptic EEG signals. *Mathematical Biosciences and Engineering* 21(2). doi:10.3934/mbe.2024304
@@ -989,6 +989,7 @@ only to build the P6 caches are listed in `requirements-ica.txt`.
 - Mohamady, A., Burchard, R., Van Laerhoven, K. (2026) A Comparison of Fusion Techniques for Multi-Modal Human Activity Recognition on the HARMES Dataset. arXiv:2606.27886.
 - Nadeau, C., Bengio, Y. (2003) Inference for the Generalization Error. *Machine Learning* 52:239-281. doi:10.1023/a:1024068626366
 - Narotamo, H., Dias, M., Santos, R., Carreiro, A. V., Gamboa, H., Silveira, M. (2024) Deep learning for ECG classification: A comparative study of 1D and 2D representations and multimodal fusion approaches. *Biomedical Signal Processing and Control* 93:106141. doi:10.1016/j.bspc.2024.106141
+- Palmer, J. A., Makeig, S., Kreutz-Delgado, K., Rao, B. D. (2008) Newton method for the ICA mixture model. *IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)*, 1805-1808. doi:10.1109/ICASSP.2008.4517982
 - Rheude, T., Eils, R., Wild, B. (2025) Fusion or Confusion? Multimodal Complexity Is Not All You Need. arXiv:2512.22991.
 - Ros, T., Férat, V., Huang, Y., Colangelo, C., Kia, S. M., Wolfers, T., Vulliemoz, S., Michela, A. (2025) Return of the GEDAI: Unsupervised EEG Denoising based on Leadfield Filtering. *bioRxiv*. doi:10.1101/2025.10.04.680449
 - Roy, Y. et al. (2019) Deep learning-based electroencephalography analysis: a systematic review. *Journal of Neural Engineering* 16:051001. doi:10.1088/1741-2552/ab260c
