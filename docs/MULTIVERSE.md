@@ -7,14 +7,23 @@ output is therefore the stability of the fusion ranking, next to mean performanc
 analyses and figures in one command.
 
 ```bash
-python -m src.multiverse --dataset chbmit            # all analyses, CSV + PNG + summary.md
-python -m src.multiverse --synthetic                 # validation on synthetic runs
+python -m src.multiverse --dataset chbmit                  # all analyses, CSV + PNG + summary.md
+python -m src.multiverse --dataset chbmit --first-report   # the advisor's first three items
+python -m src.multiverse --synthetic                       # validation on synthetic runs
 ```
 
 Options: `--pipelines P0 P1 ...` and `--seeds 0 1 2` restrict the runs, `--margin`
-sets the equivalence margin (default 0.02 macro F1), `--perms` the number of
-permutations (default 10000), `--out` the output folder (default
-`results_v2/multiverse/<dataset>/`).
+sets the main equivalence margin (fixed at 0.05 macro F1, strict analysis at 0.02),
+`--perms` the number of permutations (default 10000), `--device cuda` reads the GPU
+runs, `--no-corpus` skips loading the P0 corpus (P4's per-person table), `--out` the
+output folder (default `results_v2/multiverse/<dataset>/`).
+
+**The question (advisor, 4 October 2026):** does an observed advantage of a fusion
+operator survive changes of preprocessing, of the ICA method and of stochastic
+training? Preprocessing effect, seed effect and the Fusion x Preprocessing interaction
+are reported separately (the "Effects, separately" section at the top of
+`summary.md`). Primary metrics are window-level macro F1 and AUPRC; event-based
+metrics are secondary (docs/EVENTS.md).
 
 ## 1. Input
 
@@ -27,7 +36,23 @@ Runs are found by folder name under `results_v2/<dataset>/`, following
 | `loso_P1`, `loso_P6a`, ... | P1, P6a, ... | 0 |
 | `loso_P1_r1`, `loso_P1_r2`, ... | P1 | 1, 2, ... |
 
-Other folders (`loso_main`, timing runs) are ignored. GPU runs carry a `_cuda` suffix (`loso_P0_cuda`, `loso_P1_r1_cuda`, ...) and are analysed separately with `--device cuda`; CPU and GPU runs are never mixed. Each run contributes
+Other folders (`loso_main`, timing runs) are ignored.
+
+Two further inputs, used only by the P4 and P6 sections:
+
+- **P4 rejection**: the `rejection` field of each P4 run's `meta.json`
+  (`ictal_rejected`, `ictal_total`, `nonictal_rejected`, `nonictal_total`), and for
+  the per-person table the unfiltered P0 corpus (`build_corpus` from its cache or the
+  EDF files), on which `src/preprocess.py: artifact_mask` is recomputed. The rule
+  works on the signal, not on the model, so the per-person totals must equal the
+  `meta.json` totals; a mismatch is reported. Without the corpus the table is skipped
+  with a note.
+- **P6 logs**: `data/ica_logs/<signal tag>/<record>.json` (power kept, seconds,
+  components removed), written when the P6 caches are built. If that folder is not
+  on the machine, the collected copy in the repository is used
+  (`results_v2/qc/p6_recording_logs.csv`, CHB-MIT, 670 recordings x 4 variants: P6a,
+  P6b, P6c and GEDAI's default preset, which is not used for training). Without
+  either, the section is skipped with a warning. GPU runs carry a `_cuda` suffix (`loso_P0_cuda`, `loso_P1_r1_cuda`, ...) and are analysed separately with `--device cuda`; CPU and GPU runs are never mixed. Each run contributes
 `perfold.csv` (one row per fold and model) and `preds/fold<k>.npz` (`idx_te`, `y_te`
 and the test probabilities of every deep model).
 
@@ -48,12 +73,49 @@ performance table, and the deep ones in the prediction stability.
 | # | Analysis | Method | Outputs |
 |---|---|---|---|
 | 1 | Performance | Fold means of macro F1, AUROC, AUPRC, sensitivity, specificity, Brier, log loss per pipeline, seed and model; seed mean and SD per pipeline and model. AUPRC is not in `perfold.csv`: `average_precision_score` per fold from the stored probabilities, then averaged (logvar and shallow store no probabilities) | `performance.csv`, `performance_by_pipeline.csv` |
+| - | Effects, separately | Three headings at the top of `summary.md`, each with one sentence of numbers. **Preprocessing**: pipeline main effect (RM-ANOVA F, p_GG, variance share) and rank agreement between pipelines (tau between vs within, D, permutation p). **Seed**: all seed variance components together and rank agreement between seeds (tau, Kendall's W). **Fusion x Preprocessing**: RM-ANOVA F, p_GG, partial eta squared and the fusion x pipeline variance share | `summary.md`, `summary.json` (`effect_sentences`) |
 | 2 | Rank stability (main) | Ranking of the fusion operators per run by fold-mean F1 (1 = best). Within a pipeline: Kendall's W and pairwise Kendall tau between seeds. Between pipelines: tau between seed-averaged rankings (heatmap). Same scale: mean tau over pairs of runs of the same pipeline versus pairs of different pipelines, D = within - between, with a permutation test. Repeated for P6a/P6b/P6c (ICA algorithm) | `rank_per_run.csv`, `rank_within_pipeline.csv`, `rank_tau_between_pipelines.csv`, `rank_stability_heatmap.png`, `rank_stability_permutation.png` |
+| 2b | Rank distribution | Not only the mean rank: integer rank (1-5) of every operator in every (pipeline, seed) run; counts per operator and rank over all runs, per pipeline (over its seeds) and per seed (over the pipelines); mean, median, best and worst rank, share of runs won and lost. Figure: stacked rank counts and the rank map (every run's rank on the pipeline x seed grid) | `rank_distribution.csv` (scope all / pipeline / seed), `rank_summary.csv`, `rank_distribution.png` |
 | 3 | Fusion x Preprocessing | Interaction plot (seed means, error bars = SE over folds). Repeated-measures ANOVA with folds as subjects, pipeline and fusion as within factors, each effect against its interaction with fold, Greenhouse-Geisser corrected; sums of squares with numpy (no statsmodels) | `interaction.png`, `anova.csv` |
 | 4 | Variance components | Method of moments on the fully crossed fold x pipeline x fusion x seed design (generalizability theory: all facets random) | `variance_components.csv`, `variance_components_grouped.csv`, `variance_components.png` |
-| 5 | Equivalence, robust equivalence | Per pipeline and fusion pair: `src/stats.py: corrected_ttest` (Holm over the 10 pairs of a pipeline) and `corrected_equivalence_bound`, test/train ratio 1/(k-1) = 1/22 (`src/chbmit_stats.py: ratios`). Equivalent = bound <= margin. Robust equivalence = equivalent in every pipeline | `equivalence.csv`, `equivalence_robust.csv`, `equivalence.png` |
+| 5 | Equivalence, robust equivalence | Per pipeline and fusion pair: `src/stats.py: corrected_ttest` (Holm over the 10 pairs of a pipeline) and `corrected_equivalence_bound`, test/train ratio 1/(k-1) = 1/22 (`src/chbmit_stats.py: ratios`). Equivalent = bound <= margin. Robust equivalence = equivalent in every pipeline. Both margins (+-0.05 main, +-0.02 strict) side by side in one table | `equivalence.csv`, `equivalence_robust.csv`, `equivalence_strict.csv`, `equivalence_robust_strict.csv`, `equivalence_two_margins.csv`, `equivalence.png` |
 | 6 | Robustness and performance | Per fusion model: mean F1, SD and CV of the pipeline means, robustness = 1 - SD | `robustness_performance.csv`, `robustness_performance.png` |
 | 7 | Prediction stability | Predicted class (p > 0.5) per window, windows matched by `idx_te`. Pairwise agreement and Cohen's kappa between pipelines (same seed) and between seeds (same pipeline, the noise reference); share of windows on which all runs of a group agree | `prediction_stability.csv`, `prediction_stability_pairs.csv`, `prediction_kappa_pipelines_<model>.csv`, `prediction_stability.png` |
+| 8 | P4 rejection | Totals from the P4 runs' `meta.json`; per person (rejected ictal and non-ictal windows) recomputed with `artifact_mask` on the unfiltered P0 corpus and checked against the totals | `p4_rejection.csv`, `p4_rejection_per_person.csv`, `p4_rejection.png` |
+| 9 | P6 signal retention and cost | Per variant (Infomax, GEDAI as used, GEDAI default, AMICA): recordings, median and quartiles of power kept, share of recordings below 0.5 and 0.9, components removed (Infomax, AMICA). Cost table for the supplementary material: median and mean seconds per recording, total compute hours (sum of the logged per-recording times), components removed per recording | `p6_signal_retention.csv`, `p6_cost.csv`, `p6_signal_retention.png` |
+
+### First results report
+
+`python -m src.multiverse --dataset chbmit --first-report` writes
+`results_v2/multiverse/chbmit/first_report/first_report.md`, with two or three figures.
+It shows the three items the advisor asked to see together:
+
+1. P4's rejection distribution: totals and per person, with a figure.
+2. P6's signal retention for Infomax, GEDAI and AMICA, with the cost table and a
+   figure.
+3. The first rank stability table of the pipelines.
+
+**Partial runs.** The report works with whatever runs exist. A run is included when
+it has all folds (the most any run has) for the five fusion operators. Runs still in
+progress are listed as excluded, and a pipeline x seed grid shows what is complete,
+partial or not run yet.
+
+**The rank table.** For each pipeline it gives:
+
+- the seed-mean macro F1 of every operator, its rank in that pipeline and, where seeds
+  disagree, the range of its single-seed ranks;
+- the best operator;
+- Kendall's W over seeds.
+
+It is followed by:
+
+- an AUPRC table;
+- the rank counts and rank summary over all included runs;
+- the tau matrix between pipelines;
+- the rank distribution figure.
+
+No balanced block is needed, so the report can run before every pipeline has every
+seed. Example (synthetic): `docs/MULTIVERSE_FIRST_REPORT_EXAMPLE.md`.
 
 ### Design choices worth checking
 
@@ -91,6 +153,23 @@ seed 0, 23 folds). The fold means of F1, AUROC and log loss match
 match `results_v2/chbmit/phase0_loso_grouped/chbmit_f1_macro.csv` to three decimals
 (0.049 to 0.079). Ranking of the single run: attention, score, early, gated, late.
 
+With the additions of October 2026, both `--first-report` and the full analysis run on
+this single run without errors:
+
+- **P4.** Skipped with a note: there is no P4 run yet, and the CHB-MIT corpus is not
+  on this machine.
+- **Effects.** Marked "not estimable yet", since there is one pipeline and one seed.
+- **P6.** The section comes from the collected logs in the repository (2680 logs):
+
+| Variant | Power kept, median (IQR) | Recordings with < 0.5 kept | Median s per recording | Total compute h |
+|---|---|---|---|---|
+| Infomax (P6a) | 0.784 (0.531-0.899) | 22.2 % | 32.7 | 8.4 |
+| GEDAI auto- (P6b, used) | 0.999 (0.717-0.999) | 20.6 % | 18.1 | 4.7 |
+| GEDAI default (not used) | 0.658 (0.317-0.999) | 43.3 % | 21.9 | 5.6 |
+| AMICA (P6c) | 0.784 (0.535-0.885) | 22.8 % | 212.6 | 73.1 |
+
+![P6 on CHB-MIT](figures/multiverse_chbmit_p6_signal_retention.png)
+
 ### Synthetic runs
 
 `python -m src.multiverse --synthetic` writes runs with the structure of `loso_grouped`
@@ -105,8 +184,29 @@ folder, twice, and runs every analysis on them unchanged:
   changes
 
 Fold SD 0.12 (as between CHB-MIT subjects), pipeline SD 0.02, fold x model SD 0.015,
-seed noise SD 0.02 per fold, pipeline, model and seed. The report goes to
-`results_v2/multiverse/synthetic/validation.md`. Result: **30/30 checks passed.**
+seed noise SD 0.02 per fold, pipeline, model and seed.
+
+The generator also writes the inputs of the new sections:
+
+- **P4.** A small unfiltered corpus with technical artefacts injected at known
+  windows: a flat channel (SD 0.1 uV) or a 1 s dropout. The P4 runs' `meta.json`
+  carries the matching totals.
+- **P6.** Synthetic per-recording logs in the `data/ica_logs` layout for the four
+  variants, with known power-kept distributions.
+
+These inputs use their own random generator, so the per-fold metrics are the same
+realisation as before.
+
+**Analysis configuration.** The analyses run with the real configuration: main
+margin 0.05, strict 0.02. The two checks on equivalence that were built for 0.02 use
+the strict result.
+
+**First-report test.** After the effect scenario, P6b's runs are deleted, P6c seed 2
+is removed and P5 seed 1 is truncated to 10 folds. The first report is then produced
+on what is left.
+
+The report goes to `results_v2/multiverse/synthetic/validation.md`. Result: **39/39
+checks passed**: the 30 earlier checks, unchanged in value, plus 9 new ones.
 
 | Check | Result |
 |---|---|
@@ -118,8 +218,16 @@ seed noise SD 0.02 per fold, pipeline, model and seed. The report goes to
 | null: no ICA-algorithm effect | D = -0.030, p_perm = 1.000 |
 | effect: predictions change more between pipelines than seeds | kappa 0.373 vs 0.773 |
 | null: pipeline and seed agreement alike | kappa 0.729 vs 0.729 |
-| effect: the identical pair is robustly equivalent | late-attention, the only robust pair |
-| effect: a pair with interaction is not robustly equivalent | early-late not robust |
+| effect: the identical pair is robustly equivalent (+-0.02) | late-attention, the only robust pair |
+| effect: a pair with interaction is not robustly equivalent (+-0.02) | early-late not robust |
+| effect: the identical pair is robustly equivalent at the main margin (+-0.05) | late-attention, the only robust pair at either margin |
+| rank distribution counts every run once per operator (both scenarios) | 135 ranks = 27 runs x 5 operators; shares of first place sum to 1 |
+| effect: rank distribution shows score's injected gain in P2-P4 | mean rank 2.33 places better in P2-P4 than in P0/P1/P5; ranks 1 to 5 |
+| null: score's rank does not depend on the pipeline | difference 0.00; rank 4 in every run |
+| all three effects reported with numbers | preprocessing, seed, interaction |
+| P4: per-person rejections recovered exactly | 27 injected windows over 23 persons |
+| P6: median power kept and record counts recovered | all four variants exact |
+| first report with partial runs | 22 complete runs included, `loso_P5_r1` (10/23 folds) excluded, rank table for 8 pipelines (P6b not run) |
 | variance components, injected vs estimated (12 effects, both scenarios) | e.g. fold 0.01544 vs 0.01554, fusion x pipeline 0.00051 vs 0.00052, residual 0.00043 vs 0.00043 |
 | seed terms that were not injected (8) | all within 1 % of the total variance of 0 |
 
@@ -136,13 +244,16 @@ give.
 ![robustness and performance](figures/multiverse_synthetic_robustness_performance.png)
 ![prediction stability](figures/multiverse_synthetic_prediction_stability.png)
 ![equivalence](figures/multiverse_synthetic_equivalence.png)
+(equivalence figure from the earlier validation at the 0.02 margin)
+![rank distribution](figures/multiverse_synthetic_rank_distribution.png)
 
 ## 4. Open points
 
-- **Equivalence margin.** 0.02 macro F1 is the wider ROPE of `src/chbmit_stats.py`. On
-  CHB-MIT the single-run bounds are 0.049 to 0.079, so no pair will be equivalent at
-  0.02 unless seed averaging narrows them a lot; every bound is reported, so another
-  margin can be applied without rerunning.
+- **Equivalence margin.** Fixed (see the last section). On CHB-MIT the single-run
+  bounds are 0.049 to 0.079, so at 0.02 no pair is likely to be equivalent unless seed
+  averaging narrows them a lot; every bound is reported.
+- **P4 per person** needs the CHB-MIT corpus (cache or EDF files), so it is produced on
+  the machine that holds the data; elsewhere only the `meta.json` totals appear.
 - **Statistical power of the ICA comparison.** P6a/P6b/P6c give 3 pipelines x 3 seeds.
   Permuting within seeds gives 6^3 = 216 relabellings, but renaming the three pipelines
   leaves D unchanged, so there are only 36 distinct ones and the smallest attainable p
@@ -159,5 +270,5 @@ give.
 The main analysis uses an equivalence margin of +-0.05 macro F1 and reports +-0.02 as a
 strict sensitivity analysis (`EQUIV_MARGIN`, `STRICT_MARGIN` in `src/multiverse.py`).
 Both were fixed on 4 October 2026, before any multiverse run existed, on the advisor's
-decision, and are not to be changed after seeing results. The synthetic validation keeps
-its 0.02 margin, which its scenario was built around.
+decision, and are not to be changed after seeing results. The synthetic validation runs
+with both, and its two equivalence checks built around 0.02 use the strict result.
