@@ -113,7 +113,7 @@ def main() -> None:
         seed = fold_seed(20260727, args.repeat, CROSS_FOLD, m)
         out = train_fold(m, X1, X2, Y, tr, va, te, 2, X.shape[1], seed, epochs=args.epochs,
                          return_val_logits=want_score and m in ("raw1d", "spec2d"),
-                         device=args.device)
+                         device=args.device, save_path=outdir / "models" / f"{m}.pt")
         probs[m] = out[0]
         if len(out) == 3:
             val_logits[m] = out[2]

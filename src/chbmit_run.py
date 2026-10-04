@@ -95,12 +95,14 @@ def train_fold(model_name: str, X1: torch.Tensor, X2: torch.Tensor, Y: torch.Ten
                seed: int, epochs: int = 60, min_epochs: int = 20, patience: int = 12,
                batch: int = 32, lr: float = 1e-3, wd: float = 1e-4,
                return_val_logits: bool = False, device: str = "cpu",
-               verbose: bool = False) -> tuple[np.ndarray, dict] | tuple[np.ndarray, dict, np.ndarray]:
+               save_path: Path | None = None, verbose: bool = False) -> tuple[np.ndarray, dict] | tuple[np.ndarray, dict, np.ndarray]:
     """Train one model on one fold and return its test-set probabilities.
 
     With return_val_logits=True the raw validation logits (before softmax) are
     returned as a third value; score fusion needs them to choose its blend weight on
-    the validation set only.
+    the validation set only. With save_path, the weights of the selected (best validation)
+    epoch are saved there, so the model can later be run over whole recordings for the
+    event-based metrics (docs/EVENTS.md).
     """
     set_seed(seed)
     model = build(model_name, ncls, in_ch=in_ch).to(device)
@@ -155,6 +157,9 @@ def train_fold(model_name: str, X1: torch.Tensor, X2: torch.Tensor, Y: torch.Ten
 
     if best_state is not None:
         model.load_state_dict(best_state)
+    if save_path is not None:
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+        torch.save({k: v.detach().cpu() for k, v in model.state_dict().items()}, save_path)
     prob = predict(te)
     info = {"best_epoch": best_ep, "epochs_run": ep + 1, "val_f1": best_f1}
     if return_val_logits:
@@ -304,10 +309,12 @@ def main() -> None:
             if want_score and m in ("raw1d", "spec2d"):
                 prob, tinfo, val_logits[m] = train_fold(
                     m, X1, X2, Y, tr, va, te, ncls, in_ch, seed,
-                    epochs=args.epochs, return_val_logits=True, device=args.device)
+                    epochs=args.epochs, return_val_logits=True, device=args.device,
+                    save_path=outdir / "models" / f"fold{fi}_{m}.pt")
             else:
                 prob, tinfo = train_fold(m, X1, X2, Y, tr, va, te, ncls, in_ch, seed,
-                                         epochs=args.epochs, device=args.device)
+                                         epochs=args.epochs, device=args.device,
+                                         save_path=outdir / "models" / f"fold{fi}_{m}.pt")
             mm = metrics(y[te], prob, ncls)
             mm.update(clinical_metrics(y[te], prob, hrs))
             mm.update(model=m, fold=fi, test_subjects=",".join(te_subs),
