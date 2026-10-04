@@ -62,18 +62,13 @@
 % Section titles in manuscript.md already carry their numbers.
 \setcounter{secnumdepth}{0}
 
-% The text cites as Author (Year): reference list without numeric labels, with a
-% hanging indent.
-\makeatletter
-\renewenvironment{thebibliography}[1]{%
-  \section*{\refname}\small
-  \list{}{\setlength{\leftmargin}{1.5em}\setlength{\itemindent}{-1.5em}%
-    \setlength{\labelwidth}{0pt}\setlength{\labelsep}{0pt}%
-    \setlength{\itemsep}{3pt}\usecounter{enumiv}}%
-  \sloppy\clubpenalty4000\widowpenalty4000\sfcode`\.\@m}
-  {\endlist}
-\renewcommand\@biblabel[1]{}
-\makeatother
+% Option (b): natbib author-year citations, plainnat from references.bib.
+% \citealp prints "Author Year" without a comma, as the manuscript writes it.
+\usepackage[round]{natbib}
+\setcitestyle{aysep={}}
+\setlength{\bibsep}{3pt}
+\setlength{\bibhang}{1.5em}
+\renewcommand{\bibfont}{\small}
 
 \setlength{\emergencystretch}{3em}
 \setlength{\parindent}{0pt}
@@ -221,9 +216,9 @@ outstanding (Section 7).
 \begingroup\small
 
 \begin{longtable}[]{@{}
-  >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.1833}}
-  >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3667}}
-  >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.4500}}@{}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.2373}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3390}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.4237}}@{}}
 \caption{\textbf{Closest related work.}}\tabularnewline
 \toprule\noalign{}
 \begin{minipage}[b]{\linewidth}\raggedright
@@ -247,40 +242,38 @@ What it leaves open
 \endhead
 \bottomrule\noalign{}
 \endlastfoot
-Andrzejak et al.~(2001) & Introduces the Bonn EEG corpus & No per segment subject identifiers \\
-Acharya et al.~(2018) & Early deep CNN for Bonn seizure detection & Single architecture, no operator comparison \\
-Truong et al.~(2018) & CNN over spectrograms, scalp and intracranial & No raw signal branch to fuse against \\
-Wang et al.~(2020) & Compares 1D and 2D CNNs & Compared separately, not fused \\
-Chatzichristos et al.~(2020) & Attention gated multi view fusion & One operator, no alternatives compared \\
-Das et al.~(2024) & 1D+2D fusion of decomposed EEG & Fixed design, no operator ablation \\
-Huang et al.~(2024) & Multi head attention fusion & Reports gains without matching parameter count \\
-Golrizkhatami and Acan (2018) & Three level fusion for ECG & Different signal domain, related fusion methodology \\
-Narotamo et al.~(2024) & Compares 1D and 2D representations plus early, late, and joint fusion, the same design question as ours & ECG, not EEG; no parameter matching or corrected/equivalence statistics \\
-Roy (2019), Shoeibi (2021), Xu (2024) & Reviews of deep learning for EEG & Document inconsistent evaluation protocols, do not resolve them \\
-Ali et al.~(2024) & Shows CHB-MIT results depend heavily on evaluation choices & Concerns evaluation of CHB-MIT generally, not fusion operators \\
-Dan et al.~(2024), SzCORE & Standard datasets, event based scoring and metrics for EEG seizure detection & An evaluation framework, not a fusion operator comparison \\
-Rheude et al.~(2025) & Multimodal complexity often does not pay off & General multimodal setting, not EEG \\
-\textbf{Daşdemir (2025)} & \textbf{Self described fair, protocol controlled comparison of two fusion strategies for EEG} & Seizure \emph{prediction}, not detection; two operators; reports a 0.20 point accuracy difference (97.50 vs 97.70) without a stated statistical test or parameter matching \\
-\textbf{An et al.~(2026), fastSeizureNet} & \textbf{Compares five fusion strategies for EEG seizure detection}, within and across patients, with several backbones (semi-supervised) & Fuses hand-crafted feature knowledge with deep features rather than a raw waveform with its spectrogram; the strategies are not parameter matched and are not compared with each other by a statistical test (a Wilcoxon test with Holm correction is used only against prior methods) \\
-Einizade et al.~(2023), fAttNet & Compares four fusion operators (majority vote, averaging, concatenation, attention) over raw EEG, wavelet packet and hand-engineered views, leave one subject out on TUH & No parameter matching and no statistical test; the operators lie within one standard deviation of each other \\
-Basheer and Mishra (2026) & Compares concatenation, element-wise addition and KAN gating for seizure detection, with paired t-tests over six seeds & Both streams come from the same raw EEG rather than two representations; uncorrected tests against concatenation only; no parameter matching \\
-Wang et al.~(2026), \emph{Neurocomputing} & Cross-attention fusion of time domain and S-transform views, CHB-MIT and Siena & One ablation against concatenation, patient specific evaluation, no statistical test \\
-Camastra et al.~(2026), \emph{Brain Sciences} & Controlled fusion benchmark, concludes strategy matters more than architecture & Tabular neuroimaging features, not EEG time series; no paired or equivalence testing \\
-Mohamady et al.~(2026) & Seven fusion techniques compared on one benchmark & Human activity recognition, not EEG; states this kind of head to head comparison did not previously exist in that field either \\
-Kontras et al.~(2026), NeuroAtlas & Reports Bonn is saturated (11 models at AUROC \(\geq 0.99\)) and carries no subject identifiers & Foundation model benchmark, not a fusion operator comparison \\
+\citet{Andrzejak_2001} & Introduces the Bonn EEG corpus & No per segment subject identifiers \\
+\citet{Acharya_2018} & Early deep CNN for Bonn seizure detection & Single architecture, no operator comparison \\
+\citet{Truong_2018} & CNN over spectrograms, scalp and intracranial & No raw signal branch to fuse against \\
+\citet{Wang_2020} & Compares 1D and 2D CNNs & Compared separately, not fused \\
+\citet{Chatzichristos_2020} & Attention gated multi view fusion & One operator, no alternatives compared \\
+\citet{Das_2024} & 1D+2D fusion of decomposed EEG & Fixed design, no operator ablation \\
+\citet{Huang_2024} & Multi head attention fusion & Reports gains without matching parameter count \\
+\citet{Golrizkhatami_2018} & Three level fusion for ECG & Different signal domain, related fusion methodology \\
+\citet{Narotamo_2024} & Compares 1D and 2D representations plus early, late, and joint fusion, the same design question as ours & ECG, not EEG; no parameter matching or corrected/equivalence statistics \\
+\citet{Roy_2019}, \citet{Shoeibi_2021}, \citet{Xu_2024} & Reviews of deep learning for EEG & Document inconsistent evaluation protocols, do not resolve them \\
+\citet{Ali_2024} & Shows CHB-MIT results depend heavily on evaluation choices & Concerns evaluation of CHB-MIT generally, not fusion operators \\
+\citet{Dan_2024}, SzCORE & Standard datasets, event based scoring and metrics for EEG seizure detection & An evaluation framework, not a fusion operator comparison \\
+\citet{Rheude_2025} & Multimodal complexity often does not pay off & General multimodal setting, not EEG \\
+\textbf{\citet{Dasdemir_2025}} & \textbf{Self described fair, protocol controlled comparison of two fusion strategies for EEG} & Seizure \emph{prediction}, not detection; two operators; reports a 0.20 point accuracy difference (97.50 vs 97.70) without a stated statistical test or parameter matching \\
+\textbf{\citet{An_2026}, fastSeizureNet} & \textbf{Compares five fusion strategies for EEG seizure detection}, within and across patients, with several backbones (semi-supervised) & Fuses hand-crafted feature knowledge with deep features rather than a raw waveform with its spectrogram; the strategies are not parameter matched and are not compared with each other by a statistical test (a Wilcoxon test with Holm correction is used only against prior methods) \\
+\citet{Einizade_2023}, fAttNet & Compares four fusion operators (majority vote, averaging, concatenation, attention) over raw EEG, wavelet packet and hand-engineered views, leave one subject out on TUH & No parameter matching and no statistical test; the operators lie within one standard deviation of each other \\
+\citet{Basheer_2026} & Compares concatenation, element-wise addition and KAN gating for seizure detection, with paired t-tests over six seeds & Both streams come from the same raw EEG rather than two representations; uncorrected tests against concatenation only; no parameter matching \\
+\citet{Wang_2026a}, \emph{Neurocomputing} & Cross-attention fusion of time domain and S-transform views, CHB-MIT and Siena & One ablation against concatenation, patient specific evaluation, no statistical test \\
+\citet{Camastra_2026}, \emph{Brain Sciences} & Controlled fusion benchmark, concludes strategy matters more than architecture & Tabular neuroimaging features, not EEG time series; no paired or equivalence testing \\
+\citet{Mohamady_2026} & Seven fusion techniques compared on one benchmark & Human activity recognition, not EEG; states this kind of head to head comparison did not previously exist in that field either \\
+\citet{Kontras_2026}, NeuroAtlas & Reports Bonn is saturated (11 models at AUROC \(\geq 0.99\)) and carries no subject identifiers & Foundation model benchmark, not a fusion operator comparison \\
 \end{longtable}
 
 \endgroup
 
 Reading this table, fusion operators for EEG seizure detection are proposed
 frequently, often one at a time against baselines that differ in capacity from the
-proposed model, and several studies now compare two to five operators (Einizade et
-al.~2023; An et al.~2026; Basheer and Mishra 2026), but none we read in full matches
+proposed model, and several studies now compare two to five operators (\citealp{Einizade_2023}; \citealp{An_2026}; \citealp{Basheer_2026}), but none we read in full matches
 parameter counts or tests the operators against each other with corrected or
-equivalence tests. Two studies come closest. Daşdemir
-(2025) holds two branches fixed and compares two fusion points, but on a prediction
+equivalence tests. Two studies come closest. \citet{Dasdemir_2025} holds two branches fixed and compares two fusion points, but on a prediction
 rather than detection task, without a stated parameter matching procedure or
-significance test on the 0.20 point difference it reports. An et al.~(2026) compare
+significance test on the 0.20 point difference it reports. \citet{An_2026} compare
 five fusion strategies for seizure detection, the closest design to ours in breadth,
 but between hand-crafted and deep features rather than between a raw waveform and its
 spectrogram, without matching the strategies' parameter counts and without a
@@ -291,7 +284,7 @@ is the gap this paper addresses, stated at this narrower scope rather than as a
 categorical absence, and subject to revision once the remaining full texts of the
 systematic search (\nolinkurl{docs/15}) have been read. An independent review across the wider EEG-based multimodal
 human-computer interface literature is consistent with this being a real gap rather
-than a search artifact: Lee et al.~(2025), surveying over 120 hybrid EEG studies,
+than a search artifact: \citet{Lee_2025}, surveying over 120 hybrid EEG studies,
 report that only two explored more than one fusion strategy and only one directly
 investigated which fusion approach was best, and name fusion strategy optimisation
 as a direction the field has largely left open.
@@ -370,8 +363,7 @@ trained fusion operators (late 102,768; gated 102,921; attention 102,767; early
 
 \subsection{3.3 Preprocessing}\label{preprocessing}
 
-Bonn's segments are band limited at acquisition to 0.53 to 40 Hz (Andrzejak et al.
-2001); the spectrogram is computed with a 256 point STFT (window 256, hop 128) and
+Bonn's segments are band limited at acquisition to 0.53 to 40 Hz (\citealp{Andrzejak_2001}); the spectrogram is computed with a 256 point STFT (window 256, hop 128) and
 capped at the same 40 Hz. CHB-MIT is not band limited, and we measured (Section 5.1)
 the largest ictal to interictal power ratio in the gamma band (30 to 70 Hz); the
 frequency ceiling is therefore raised to 64 Hz for CHB-MIT rather than reused at 40 Hz
@@ -389,7 +381,7 @@ scores both branches from the same normalised signal.
 
 \subsection{3.4 Training and evaluation protocol}\label{training-and-evaluation-protocol}
 
-AdamW optimiser (decoupled weight decay; Loshchilov and Hutter 2019), learning rate
+AdamW optimiser (decoupled weight decay; \citealp{Loshchilov_2019}), learning rate
 1e-3, weight decay 1e-4, batch size 32, class weighted cross entropy loss, on both
 corpora. An earlier CHB-MIT run, which we compare against in Section 5.4, used Adam
 with coupled (L2) weight decay instead. A minimum epoch budget of 20 is enforced before early stopping on
@@ -419,11 +411,10 @@ regression classifiers, differing only in which of two equally informative featu
 sets they see, evaluated by 5x5 repeated cross validation over 1000 simulated
 datasets. Naive Wilcoxon rejected the (true) null of no difference in 37.6 percent
 of simulations, and a naive paired t test in 38.6 percent, against a nominal 5
-percent. A resampling corrected t test (following Nadeau and Bengio 2003 and
-Bouckaert and Frank 2004, which inflate the standard error by the fraction of data
+percent. A resampling corrected t test (following \citealp{Nadeau_2003} and
+\citealp{Bouckaert_2004}, which inflate the standard error by the fraction of data
 shared between the resampled training sets) rejected in 2.3 percent of simulations,
-close to nominal. This matches an independent, external result: Jafrasteh et al.
-(2025), studying neuroimaging classifiers rather than EEG fusion specifically, show
+close to nominal. This matches an independent, external result: \citet{Jafrasteh_2025}, studying neuroimaging classifiers rather than EEG fusion specifically, show
 by a different route that whether a cross validated comparison comes out
 significant depends on the number of folds and repeats chosen, which is exactly the
 dependence structure that makes p-hacking possible under the naive test.
@@ -434,7 +425,7 @@ comparisons within a task and metric. Where a null result is claimed, we support
 with a two one sided equivalence test computed with the same corrected variance
 (\nolinkurl{corrected_equivalence_bound}, reporting the minimum margin \(\delta_{\min}\) at which
 equivalence would be established at \(\alpha = 0.05\)), a correlated Bayesian t test
-(following Corani and Benavoli 2015; Corani, Benavoli, Demšar, and Mangili 2017)
+(following \citealp{Corani_2015}; \citealp{Corani_2017})
 reporting the posterior probability of practical equivalence within a stated region
 of practical equivalence (ROPE), and a sign test as a distribution free check. We
 report primary results on macro F1 and Brier score; log loss is reported but treated
@@ -448,7 +439,7 @@ The re-run of Section 5.4 showed that settings unrelated to the fusion operator 
 reorder the operators while leaving the null result intact. We therefore ask a
 broader question than ``which operator is best'': how robust are conclusions about
 fusion operators to preprocessing decisions and to stochastic training? The design
-follows the multiverse approach (Steegen et al.~2016): a fixed set of defensible
+follows the multiverse approach (\citealp{Steegen_2016}): a fixed set of defensible
 analysis choices is crossed and every combination is run, instead of reporting one.
 
 \textbf{Pipelines.} Each pipeline changes one hypothesis driven aspect of preprocessing;
@@ -521,8 +512,8 @@ recordings that also contain seizures. Rejected windows are removed from trainin
 validation only, so the test set is identical across pipelines.
 
 \textbf{P6: three artefact removal algorithms.} To separate the effect of the algorithm
-from the rest of the pipeline, P6 is run with Extended Infomax ICA (Lee et al.~1999,
-as implemented in MNE-Python, Gramfort et al.~2013), GEDAI (Ros et al.~2025), and
+from the rest of the pipeline, P6 is run with Extended Infomax ICA (\citealp{Lee_1999},
+as implemented in MNE-Python, \citealp{Gramfort_2013}), GEDAI (\citealp{Ros_2025}), and
 AMICA (Palmer et al., reference to be verified in the literature search; Python
 implementation \nolinkurl{jamica}), all on the same 0.5 to 40 Hz signal and per recording.
 Infomax and AMICA share every setting and the same automatic component rule: 16
@@ -539,12 +530,21 @@ cannot apply to it. Its bundled reference covariance C, defined for a referentia
 10-05 layout, is mapped onto the bipolar montage as \(D\,C\,D^{\top}\), with D the electrode
 difference matrix (a bipolar difference cancels the common reference), and the
 channel mean is removed before and restored after cleaning, because GEDAI would
-otherwise average reference the bipolar channels. All three were bit for bit
-reproducible with a fixed seed in a trial on one subject. Their behaviour differs
-markedly: across the corpus GEDAI keeps a median 66 percent of a recording's power
-(range 4 to 100 percent), whereas Infomax and AMICA remove about 1.6 components per
-recording and keep about 82 to 84 percent of the power in that trial. What every
-method removed, the power kept and the time taken are logged per recording.
+otherwise average reference the bipolar channels. GEDAI's threshold preset was chosen
+before any classification run and on signal preservation only, as the advisor
+required: on six subjects its default removed more than half of the power of 39
+percent of recordings and of 33 percent of ictal windows, its conservative preset
+(``auto-'') of 17 and 13 percent, and neither removed more from ictal than from
+non-ictal windows within a recording (\nolinkurl{src/gedai_qc.py}). P6b uses the conservative
+preset; the default is kept for a robustness report. All three methods were bit for
+bit reproducible with a fixed seed. Across all 670 recordings with selected windows,
+the median recording keeps 78 percent of its power under Infomax and AMICA (about 1.5
+components removed per recording) and 99.9 percent under GEDAI, but a minority is
+cleaned heavily by every method: 22, 23 and 21 percent of recordings lose more than
+half of their power under Infomax, AMICA and GEDAI (43 percent under GEDAI's
+default). Compute per one hour recording differs by an order of magnitude (median
+18 s for GEDAI, 33 s for Infomax, 213 s for AMICA; 4.7, 8.5 and 73 CPU hours in
+total); per recording logs are in \nolinkurl{results_v2/qc/p6_recording_logs.csv}.
 
 \textbf{Seeds and device.} Every pipeline is trained with three seed sets (\nolinkurl{--repeat}),
 seed set 0 being the one used throughout Section 5. If the ranking of the fusion
@@ -572,7 +572,7 @@ level predictions between pipelines compared with the agreement between seeds.
 
 \subsection{4.1 Task formulations}\label{task-formulations}
 
-The Bonn corpus (Andrzejak et al.~2001) comprises five sets of 100 single channel
+The Bonn corpus (\citealp{Andrzejak_2001}) comprises five sets of 100 single channel
 segments each (23.6 s, 4097 samples, 173.61 Hz): A and B are surface (scalp)
 recordings from healthy volunteers, C, D, and E are intracranial depth electrode
 recordings from epilepsy patients, with E capturing ictal activity. We evaluate three
@@ -715,7 +715,7 @@ mechanistic explanation for why early fusion is the one operator that separates.
 
 Bonn publishes no per segment subject identifier, so no claim in Section 4 bears on
 whether a model generalises across patients rather than across segments drawn from a
-small, possibly overlapping pool. CHB-MIT (Shoeb 2009; Goldberger et al.~2000),
+small, possibly overlapping pool. CHB-MIT (\citealp{Shoeb_2009}; \citealp{Goldberger_2000}),
 publicly available via PhysioNet, provides 24 pediatric recording cases with subject
 identifiers, making leave one subject out (LOSO) evaluation possible for the first
 time in this comparison. Two of the 24 cases are documented as the same person, so
@@ -762,8 +762,7 @@ entirely from the affected part of subject 12's data.
 Ten second, non overlapping windows. Non overlapping windows are an explicit choice:
 overlapping, sub window strided windowing (which we considered to increase the
 positive count) risks placing near identical copies of the same seizure on both
-sides of a train or test split, an error documented in this literature (Ali et al.
-2024). A window is labelled ictal if it overlaps an annotated seizure interval at
+sides of a train or test split, an error documented in this literature (\citealp{Ali_2024}). A window is labelled ictal if it overlaps an annotated seizure interval at
 all, so a window that only partly covers a seizure's onset or offset is labelled
 ictal. Of the 1,276 ictal windows, 948 lie entirely within a seizure and 328 (25.7
 percent) are such boundary windows, containing a median of 5.0 seconds of annotated
@@ -902,7 +901,7 @@ and joint lowest Brier in the earlier run). We flag it as an interesting but nar
 finding: classification accuracy and probabilistic calibration are different
 properties, and an operator that wins on one need not win on the other. This has a
 plausible theoretical explanation rather than being an accident of this dataset:
-Mattei and Garreau (2025) show that averaging predictions from an ensemble of
+\citet{Mattei_2025} show that averaging predictions from an ensemble of
 models is guaranteed to help a convex loss, by Jensen's inequality, but carries no
 such guarantee for a non convex one. Log loss and Brier score are convex, macro F1
 is not, which is consistent with score fusion (the one operator here that is a
@@ -954,9 +953,14 @@ any ranking of the operators, and neither run's ordering should be cited as one.
 
 \subsection{5.5 Third corpus: Siena Scalp EEG (in progress)}\label{third-corpus-siena-scalp-eeg-in-progress}
 
-The Siena Scalp EEG Database (Detti et al.~2020; PhysioNet) holds 41 recordings of 14
+The Siena Scalp EEG Database (\citealp{Detti_2020}; PhysioNet) holds 41 recordings of 14
 adult patients (47 seizures, 512 Hz, referential 10-20 montage; 141.0 hours by the EDF
-headers, where the database description gives about 128). After windowing and the same
+headers). The database description gives about 128 hours, the total of its
+\nolinkurl{subject_info.csv}, which differs from the recordings for four patients: for PN14 it
+inherits a three-hour error in the seizure list, and for PN03, PN10 and PN12 it is
+11.7, 2.0 and 2.0 hours shorter than the files, without an explanation in the data
+(the files are complete and contain no filler; \nolinkurl{docs/SIENA.md}, Section 8). After
+windowing and the same
 1:4 subsampling as CHB-MIT, the corpus has 1,640 windows (328 ictal) and 14 leave one
 subject out folds, confirmed free of leakage by the same checker. It is
 converted to exactly the CHB-MIT form, so every driver is shared: the 18 channels of
@@ -971,8 +975,11 @@ differ.
 
 The published seizure lists required checks before use (\nolinkurl{docs/SIENA.md}). All 41
 headers are internally consistent; the listed recording start agrees with the header
-in 39 recordings (in PN14-3 the list is three hours off and the header is right; in
-PN05-3 they differ by 10 s, and the header is used). One seizure end in PN00 lies 32
+in 39 recordings. In PN14-3 the list is three hours off and the header is verifiably
+right (its start plus the recording's duration gives the listed end exactly). In PN05-3
+they differ by 10 s and neither source can be confirmed; using the header there is a
+decision rule (the header's start is used for every recording), not a verified
+correction, and moves the labels of two windows. One seizure end in PN00 lies 32
 minutes after its recording ends; we accepted the evident correction (one hour
 earlier, a 60 s seizure) only after the signal confirmed it: measured with the same
 rule as the patient's other four seizures, the ictal rhythm ends 14 s after the
@@ -999,8 +1006,8 @@ error rate large enough that a substantial fraction of ``significant'' findings
 reported under this common practice, in this literature and adjacent ones, should be
 presumed spurious until shown otherwise by a corrected re-analysis. We are not aware
 of prior work in the EEG seizure detection literature specifically that quantifies
-this by simulation, though the underlying statistical point (Nadeau and Bengio 2003;
-Bouckaert and Frank 2004) predates this application by two decades.
+this by simulation, though the underlying statistical point (\citealp{Nadeau_2003};
+\citealp{Bouckaert_2004}) predates this application by two decades.
 
 \subsection{6.2 Thread count as an unreported confound}\label{thread-count-as-an-unreported-confound}
 
@@ -1033,7 +1040,7 @@ than they are usually given.
 
 We deliberately avoid summarising Bonn and CHB-MIT with the same sentence. Bonn's
 task, particularly its conventional binary split, is saturated (Section 4.1;
-independently confirmed by Kontras et al.~2026), and within that regime the five
+independently confirmed by \citealp{Kontras_2026}), and within that regime the five
 fusion operators are shown, positively, to be statistically equivalent to each other
 at a fairly tight margin. CHB-MIT is not saturated in the same way (macro F1 in the
 0.62 to 0.67 range, well below ceiling) but its between subject variability is large
@@ -1098,7 +1105,7 @@ CHB-MIT trained with Adam, Bonn with AdamW & Documentation of the training proto
   EOG channel, from frontal proxies, which may also capture frontal ictal activity.
 \item
   \textbf{The corrected resampled t test assumes a fixed test to train ratio, which an
-  inner validation split complicates.} Del Pup et al.~(2025) argue this assumption
+  inner validation split complicates.} \citet{Del_Pup_2025} argue this assumption
   is frequently violated in deep learning pipelines that hold out an internal
   validation set, as ours does for early stopping (Section 3.4). Our primary analysis
   uses the standard ratio 1/(k-1) (0.25 for Bonn, 1/22 for CHB-MIT LOSO). As a
@@ -1162,92 +1169,12 @@ github.com/Atytmr07/eeg-fusion-benchmark. \nolinkurl{docs/PIPELINE.md} in that r
 documents the full pipeline and the command that reproduces each table and figure;
 the statistics and figures regenerate identically from the stored results with the
 pinned package versions. Raw EEG data (Bonn, CHB-MIT, Siena) is not redistributed;
-all three corpora are publicly available from their original sources (Andrzejak et al.
-2001; PhysioNet), and the repository documents how to obtain and verify them
+all three corpora are publicly available from their original sources (\citealp{Andrzejak_2001}; PhysioNet), and the repository documents how to obtain and verify them
 (\nolinkurl{src/chbmit.py}, \nolinkurl{src/verify_chbmit.py}, \nolinkurl{docs/11_CHBMIT_PLANI.md},
 \nolinkurl{src/siena_download.py}, \nolinkurl{src/verify_siena.py}, \nolinkurl{docs/SIENA.md}). The packages used
 only to build the P6 caches are listed in \nolinkurl{requirements-ica.txt}.
 
-\begin{thebibliography}{}
-
-\bibitem{Acharya2018} Acharya, U. R. et al.~(2018) Deep convolutional neural network for the automated detection and diagnosis of seizure using EEG signals. \emph{Computers in Biology and Medicine} 100:270-278. \href{https://doi.org/10.1016/j.compbiomed.2017.09.017}{doi:10.1016/j.compbiomed.2017.09.017}
-
-\bibitem{Ali2024} Ali, E. et al.~(2024) Epileptic seizure detection using CHB-MIT dataset: The overlooked perspectives. \emph{Royal Society Open Science} 11(5):230601. \href{https://doi.org/10.1098/rsos.230601}{doi:10.1098/rsos.230601}
-
-\bibitem{An2026} An, J., Peng, R., Yang, X., Wu, D. (2026) fastSeizureNet: Accurate and efficient knowledge-data fusion for semi-supervised seizure detection. \emph{Neural Networks} 202:109078. \href{https://doi.org/10.1016/j.neunet.2026.109078}{doi:10.1016/j.neunet.2026.109078}
-
-\bibitem{Andrzejak2001} Andrzejak, R. G. et al.~(2001) Indications of nonlinear deterministic and finite-dimensional structures in time series of brain electrical activity. \emph{Physical Review E} 64(6):061907. \href{https://doi.org/10.1103/PhysRevE.64.061907}{doi:10.1103/PhysRevE.64.061907}
-
-\bibitem{Basheer2026} Basheer, R., Mishra, D. (2026) Learning feature-wise temporal-spatial gating with Kolmogorov-Arnold networks for EEG seizure detection. \emph{Pattern Recognition Letters} 208:1-6. \href{https://doi.org/10.1016/j.patrec.2026.07.016}{doi:10.1016/j.patrec.2026.07.016}
-
-\bibitem{Bouckaert2004} Bouckaert, R. R., Frank, E. (2004) Evaluating the Replicability of Significance Tests for Comparing Learning Algorithms. \emph{Lecture Notes in Computer Science} (PAKDD 2004). \href{https://doi.org/10.1007/978-3-540-24775-3_3}{doi:10.1007/978-3-540-24775-3\_3}
-
-\bibitem{Camastra2026} Camastra, C., Pelagi, A., Quattrone, A., Sarica, A. (2026) Benchmarking Multimodal Deep Fusion Strategies for Heterogeneous Neuroimaging and Cognitive Data Using a Controlled Sex Classification Task. \emph{Brain Sciences} 16(4):405. \href{https://doi.org/10.3390/brainsci16040405}{doi:10.3390/brainsci16040405}
-
-\bibitem{Chatzichristos2020} Chatzichristos, C. et al.~(2020) Epileptic Seizure Detection in EEG via Fusion of Multi-View Attention-Gated U-Net Deep Neural Networks. \emph{IEEE SPMB}. \href{https://doi.org/10.1109/spmb50085.2020.9353630}{doi:10.1109/spmb50085.2020.9353630}
-
-\bibitem{Corani2015} Corani, G., Benavoli, A. (2015) A Bayesian approach for comparing cross-validated algorithms on multiple data sets. \emph{Machine Learning} 100:285-304. \href{https://doi.org/10.1007/s10994-015-5486-z}{doi:10.1007/s10994-015-5486-z}
-
-\bibitem{Corani2017} Corani, G., Benavoli, A., Demšar, J., Mangili, F. (2017) Statistical comparison of classifiers through Bayesian hierarchical modelling. \emph{Machine Learning} 106:1817-1837. \href{https://doi.org/10.1007/s10994-017-5641-9}{doi:10.1007/s10994-017-5641-9}
-
-\bibitem{Dan2024} Dan, J. et al.~(2024) SzCORE: Seizure Community Open-Source Research Evaluation framework for the validation of electroencephalography-based automated seizure detection algorithms. \emph{Epilepsia} 66(S3). \href{https://doi.org/10.1111/epi.18113}{doi:10.1111/epi.18113}
-
-\bibitem{Das2024} Das, S. et al.~(2024) Epileptic Seizure Detection from Decomposed EEG Signal through 1D and 2D Feature Representation and Convolutional Neural Network. \emph{Information} 15(5):256. \href{https://doi.org/10.3390/info15050256}{doi:10.3390/info15050256}
-
-\bibitem{Dasdemir2025} Daşdemir, A. (2025) Epileptic seizure prediction with deep learning-based fusion methods. \emph{Engineering Science and Technology, an International Journal} 72:102212. \href{https://doi.org/10.1016/j.jestch.2025.102212}{doi:10.1016/j.jestch.2025.102212}
-
-\bibitem{DelPup2025} Del Pup, F., Zanola, A., Tshimanga, L. F., Bertoldo, A., Atzori, M. (2025) The More, the Better? Evaluating the Role of EEG Preprocessing for Deep Learning Applications. \emph{IEEE Transactions on Neural Systems and Rehabilitation Engineering} 33:1061-1070. \href{https://doi.org/10.1109/TNSRE.2025.3547616}{doi:10.1109/TNSRE.2025.3547616}
-
-\bibitem{Detti2020} Detti, P., Vatti, G., Zabalo Manrique de Lara, G. (2020) EEG Synchronization Analysis for Seizure Prediction: A Study on Data of Noninvasive Recordings. \emph{Processes} 8(7):846. \href{https://doi.org/10.3390/pr8070846}{doi:10.3390/pr8070846}
-
-\bibitem{Einizade2023} Einizade, A., Nasiri, S., Mozafari, M., Sardouie, S. H., Clifford, G. D. (2023) Explainable automated seizure detection using attentive deep multi-view networks. \emph{Biomedical Signal Processing and Control} 79:104076. \href{https://doi.org/10.1016/j.bspc.2022.104076}{doi:10.1016/j.bspc.2022.104076}
-
-\bibitem{Goldberger2000} Goldberger, A. L. et al.~(2000) PhysioBank, PhysioToolkit, and PhysioNet: Components of a New Research Resource for Complex Physiologic Signals. \emph{Circulation} 101(23):e215-e220. \href{https://doi.org/10.1161/01.cir.101.23.e215}{doi:10.1161/01.cir.101.23.e215}
-
-\bibitem{Golrizkhatami2018} Golrizkhatami, Z., Acan, A. (2018) ECG classification using three-level fusion of different feature descriptors. \emph{Expert Systems with Applications} 114:54-64.
-
-\bibitem{Gramfort2013} Gramfort, A. et al.~(2013) MEG and EEG data analysis with MNE-Python. \emph{Frontiers in Neuroscience} 7:267. \href{https://doi.org/10.3389/fnins.2013.00267}{doi:10.3389/fnins.2013.00267}
-
-\bibitem{Huang2024} Huang, J. et al.~(2024) Multi-modal feature fusion with multi-head self-attention for epileptic EEG signals. \emph{Mathematical Biosciences and Engineering} 21(2). \href{https://doi.org/10.3934/mbe.2024304}{doi:10.3934/mbe.2024304}
-
-\bibitem{Jafrasteh2025} Jafrasteh, B., Adeli, E., Pohl, K. M., Kuceyeski, A., Sabuncu, M. R., Zhao, Q. (2025) Statistical variability in comparing accuracy of neuroimaging based classification models via cross validation. \emph{Scientific Reports} 15:28745. \href{https://doi.org/10.1038/s41598-025-12026-2}{doi:10.1038/s41598-025-12026-2}
-
-\bibitem{Kontras2026} Kontras, K. et al.~(2026) NeuroAtlas: Benchmarking Foundation Models for Clinical EEG and Brain-Computer Interfaces. \href{https://arxiv.org/abs/2605.14698}{arXiv:2605.14698}.
-
-\bibitem{Lee1999} Lee, T.-W., Girolami, M., Sejnowski, T. J. (1999) Independent component analysis using an extended infomax algorithm for mixed subgaussian and supergaussian sources. \emph{Neural Computation} 11(2):417-441. \href{https://doi.org/10.1162/089976699300016719}{doi:10.1162/089976699300016719}
-
-\bibitem{Lee2025} Lee, H.-T., Shim, M., Liu, X., Cheon, H.-R., Kim, S.-G., Han, C.-H., Hwang, H.-J. (2025) A review of hybrid EEG-based multimodal human-computer interfaces using deep learning: applications, advances, and challenges. \emph{Biomedical Engineering Letters} 15:587-618. \href{https://doi.org/10.1007/s13534-025-00469-5}{doi:10.1007/s13534-025-00469-5}
-
-\bibitem{Loshchilov2019} Loshchilov, I., Hutter, F. (2019) Decoupled Weight Decay Regularization. \emph{International Conference on Learning Representations (ICLR)}. \href{https://arxiv.org/abs/1711.05101}{arXiv:1711.05101}.
-
-\bibitem{Mattei2025} Mattei, P.-A., Garreau, D. (2025) Are Ensembles Getting Better all the Time? \emph{Journal of Machine Learning Research} 26(201):1-46. \href{https://arxiv.org/abs/2311.17885}{arXiv:2311.17885}.
-
-\bibitem{Mohamady2026} Mohamady, A., Burchard, R., Van Laerhoven, K. (2026) A Comparison of Fusion Techniques for Multi-Modal Human Activity Recognition on the HARMES Dataset. \href{https://arxiv.org/abs/2606.27886}{arXiv:2606.27886}.
-
-\bibitem{Nadeau2003} Nadeau, C., Bengio, Y. (2003) Inference for the Generalization Error. \emph{Machine Learning} 52:239-281. \href{https://doi.org/10.1023/a:1024068626366}{doi:10.1023/a:1024068626366}
-
-\bibitem{Narotamo2024} Narotamo, H., Dias, M., Santos, R., Carreiro, A. V., Gamboa, H., Silveira, M. (2024) Deep learning for ECG classification: A comparative study of 1D and 2D representations and multimodal fusion approaches. \emph{Biomedical Signal Processing and Control} 93:106141. \href{https://doi.org/10.1016/j.bspc.2024.106141}{doi:10.1016/j.bspc.2024.106141}
-
-\bibitem{Rheude2025} Rheude, T., Eils, R., Wild, B. (2025) Fusion or Confusion? Multimodal Complexity Is Not All You Need. \href{https://arxiv.org/abs/2512.22991}{arXiv:2512.22991}.
-
-\bibitem{Ros2025} Ros, T., Férat, V., Huang, Y., Colangelo, C., Kia, S. M., Wolfers, T., Vulliemoz, S., Michela, A. (2025) Return of the GEDAI: Unsupervised EEG Denoising based on Leadfield Filtering. \emph{bioRxiv}. \href{https://doi.org/10.1101/2025.10.04.680449}{doi:10.1101/2025.10.04.680449}
-
-\bibitem{Roy2019} Roy, Y. et al.~(2019) Deep learning-based electroencephalography analysis: a systematic review. \emph{Journal of Neural Engineering} 16:051001. \href{https://doi.org/10.1088/1741-2552/ab260c}{doi:10.1088/1741-2552/ab260c}
-
-\bibitem{Shoeb2009} Shoeb, A. H. (2009) Application of machine learning to epileptic seizure onset detection and treatment. PhD thesis, Massachusetts Institute of Technology.
-
-\bibitem{Shoeibi2021} Shoeibi, A. et al.~(2021) Epileptic Seizures Detection Using Deep Learning Techniques: A Review. \emph{International Journal of Environmental Research and Public Health} 18(11):5780. \href{https://doi.org/10.3390/ijerph18115780}{doi:10.3390/ijerph18115780}
-
-\bibitem{Steegen2016} Steegen, S., Tuerlinckx, F., Gelman, A., Vanpaemel, W. (2016) Increasing Transparency Through a Multiverse Analysis. \emph{Perspectives on Psychological Science} 11(5):702-712. \href{https://doi.org/10.1177/1745691616658637}{doi:10.1177/1745691616658637}
-
-\bibitem{Truong2018} Truong, N. D. et al.~(2018) Convolutional neural networks for seizure prediction using intracranial and scalp electroencephalogram. \emph{Neural Networks} 105:104-111. \href{https://doi.org/10.1016/j.neunet.2018.04.018}{doi:10.1016/j.neunet.2018.04.018}
-
-\bibitem{Wang2020} Wang, X. et al.~(2020) One and Two Dimensional Convolutional Neural Networks for Seizure Detection Using EEG Signals. \emph{EUSIPCO 2020}. \href{https://doi.org/10.23919/eusipco47968.2020.9287640}{doi:10.23919/eusipco47968.2020.9287640}
-
-\bibitem{Wang2026} Wang, J., Wei, L., Qian, Z., Shi, C., Liu, Y., Xu, Y. (2026) An explainable multi-view representation fusion learning framework with hybrid MetaFormer for EEG-based epileptic seizure detection. \emph{Neurocomputing} 675:132929. \href{https://doi.org/10.1016/j.neucom.2026.132929}{doi:10.1016/j.neucom.2026.132929}
-
-\bibitem{Xu2024} Xu, J. et al.~(2024) EEG-based epileptic seizure detection using deep learning techniques: A survey. \emph{Neurocomputing} 610:128644. \href{https://doi.org/10.1016/j.neucom.2024.128644}{doi:10.1016/j.neucom.2024.128644}
-
-\end{thebibliography}
+\bibliographystyle{plainnat}
+\bibliography{main}
 
 \end{document}

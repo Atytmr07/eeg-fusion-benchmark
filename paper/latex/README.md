@@ -4,6 +4,7 @@
 python paper/latex/build.py            # main.tex, main.pdf, arxiv/ and arxiv.zip
 python paper/latex/build.py --draft    # keeps the DRAFT note as a box on page 1
 python paper/latex/build.py --no-pdf   # main.tex only (no LaTeX needed)
+python paper/latex/build.py --bib plain   # reference list as written (option a)
 ```
 
 `manuscript.md` is the source and is only read. After every change to it, rerun
@@ -49,14 +50,28 @@ with plain `pdflatex`, which is what arXiv uses.
   covered by neither.
 - **Inline code** (paths, identifiers) is set with `\nolinkurl` (`filters.lua`),
   so long paths break instead of running into the margin.
-- **References.** These use option (a): the plain list under `## References`
-  becomes `thebibliography`, sorted by first author, with no numeric labels,
-  because the text cites as Author (Year).
-  - The build compares the "Author (Year)" citations in the text with that list,
-    in both directions.
-  - `citation_report.md` shows, for option (b), which reference entries map to
-    a key in `paper/literature/references.bib`. Entries that do not map are
-    listed, never added.
+- **References.** By default the build uses option (b): natbib with plainnat, from
+  `paper/literature/references.bib`. All 39 entries of the reference list are in
+  that file, verified against Crossref, arXiv, Europe PMC or MIT DSpace; the
+  comment above each entry says how.
+  - Each entry of the list under `## References` is matched to a key, by DOI and
+    otherwise by first author surname and year.
+  - In the text, "Author (Year)" becomes `\citet{key}`. "Author Year", written
+    inside the manuscript's own parentheses, becomes `\citealp{key}` without a
+    comma, so the punctuation stays as written.
+  - The cited entries are written to `main.bib` for plainnat. Titles are
+    brace-protected; URL, ISSN, ISBN and month are dropped; Crossref chapters
+    become `incollection`. Then bibtex runs between the pdflatex runs.
+  - natbib prints the author names from `references.bib`: one surname, two, or
+    the first plus "et al.". Where that differs from the manuscript text (for
+    example "Roy (2019)" for a paper with six authors), `citation_report.md`
+    lists it, together with entries in the manuscript's list whose author list
+    or year differs from `references.bib`.
+  - If any entry has no key, the build falls back to option (a) and says so.
+    Option (a) typesets the list as written, as `thebibliography`, without
+    numbers. `--bib plain` forces it.
+  - In both modes the build compares the citations in the text with the list,
+    in both directions. Nothing is ever added to `references.bib` by the build.
 
 ## Report printed at the end
 
@@ -65,7 +80,8 @@ with plain `pdflatex`, which is what arXiv uses.
 - Missing figures and undefined references.
 - Table and figure numbering.
 - Citations in the text without a reference entry, and the reverse.
-- How many references are missing from `references.bib`.
+- Which bibliography mode was used, bibtex warnings, and how many author names
+  natbib prints differently from the text.
 - Whether `arxiv/` compiles on its own.
 
 ## arXiv bundle
@@ -74,8 +90,9 @@ with plain `pdflatex`, which is what arXiv uses.
 folder zipped. The build compiles `arxiv/` on its own, then removes the
 auxiliary files.
 
-No `.bbl` file is needed, because the bibliography is inline (`thebibliography`
-in `main.tex`). Upload `arxiv.zip` as is.
+With natbib, `arxiv/` also holds `main.bbl`, because arXiv does not run bibtex.
+In option (a) no `.bbl` is needed, because the bibliography is inline. Upload
+`arxiv.zip` as is.
 
 ## Open points
 
@@ -83,7 +100,7 @@ in `main.tex`). Upload `arxiv.zip` as is.
   Sevgi Şengül Ayan", Antalya Bilim University. It is provisional: the order and
   final form will be settled with the advisor. Change them in `template.tex`
   (`\author{...}` and `pdfauthor`).
-- **Option (b), natbib with `references.bib`.** This is not used yet: 31 of the 39
-  reference entries are not in `references.bib`, which so far holds only what the
-  systematic search found (see `citation_report.md`). Those entries would have to
-  be added from Crossref first.
+- **Manuscript text vs natbib.** Five author-name differences and two reference
+  list entries with incomplete author lists are listed in `citation_report.md`.
+  They can be fixed in `manuscript.md`; the PDF already prints the names from
+  `references.bib`.
