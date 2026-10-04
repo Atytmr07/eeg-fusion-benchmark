@@ -65,7 +65,11 @@ PIPELINE_ORDER = ("P0", "P1", "P2", "P3", "P4", "P5", "P6a", "P6b", "P6c")
 P6_FAMILY = ("P6a", "P6b", "P6c")
 OTHER_MODELS = ("raw1d", "spec2d", "raw1d_wide", "spec2d_wide", "logvar", "shallow")
 METRICS = ("f1_macro", "auc", "auprc", "sensitivity", "specificity", "brier", "log_loss")
-EQUIV_MARGIN = 0.02         # macro F1; the wider ROPE of src/chbmit_stats.py
+# Equivalence margins in macro F1, fixed before any multiverse result existed (advisor's
+# decision, 4 October 2026; see the git history): +-0.05 for the main analysis, +-0.02
+# as a strict sensitivity analysis showing how much the conclusion depends on the margin.
+EQUIV_MARGIN = 0.05
+STRICT_MARGIN = 0.02
 N_PERM = 10000
 SEED = 20260727
 
@@ -666,7 +670,7 @@ def fig_equivalence(eq: pd.DataFrame, margin: float, out: Path, title: str) -> N
 
 def analyze(root: Path, out: Path, label: str, pipelines=None, seeds=None,
             margin: float = EQUIV_MARGIN, n_perm: int = N_PERM, verbose: bool = True,
-            device: str = "cpu") -> dict:
+            device: str = "cpu", strict_margin: float | None = STRICT_MARGIN) -> dict:
     """Run every analysis on the runs under `root`; write CSV, PNG and summary.md to
     `out`. Returns the key numbers (used by the synthetic validation)."""
     def say(msg=""):
@@ -787,7 +791,7 @@ def analyze(root: Path, out: Path, label: str, pipelines=None, seeds=None,
     else:
         lines += ["Only one pipeline: no decomposition.", ""]
 
-    # 5. equivalence
+    # 5. equivalence, at the main margin and at the strict one
     eq = equivalence(y3, pipes, models, margin)
     eq.to_csv(out / "equivalence.csv", index=False)
     req = robust_equivalence(eq)
@@ -799,7 +803,16 @@ def analyze(root: Path, out: Path, label: str, pipelines=None, seeds=None,
               f"Equivalent = corrected equivalence bound delta_min <= {margin} macro F1 "
               f"(test/train ratio 1/{len(folds) - 1}). Robust equivalence = equivalent in "
               f"every pipeline.", "", md_table(req), ""]
-    say(f"5. robust equivalent pairs: {res['robust_equivalent'] or 'none'}")
+    say(f"5. robust equivalent pairs (margin {margin}): {res['robust_equivalent'] or 'none'}")
+    if strict_margin is not None and strict_margin != margin:
+        eqs = equivalence(y3, pipes, models, strict_margin)
+        eqs.to_csv(out / "equivalence_strict.csv", index=False)
+        reqs = robust_equivalence(eqs)
+        reqs.to_csv(out / "equivalence_robust_strict.csv", index=False)
+        res["robust_equivalent_strict"] = reqs.loc[reqs.robust_equivalent, "pair"].tolist()
+        lines += [f"Strict sensitivity analysis, margin {strict_margin}:", "", md_table(reqs), ""]
+        say(f"   strict (margin {strict_margin}): "
+            f"{res['robust_equivalent_strict'] or 'none'}")
 
     # 6. robustness-performance
     pm = y3.mean(axis=0)                                     # (pipeline, model)
@@ -978,7 +991,7 @@ def synthetic_validation(out: Path, n_perm: int = 2000) -> bool:
         try:
             true = make_synthetic(tmp, effect=scenario == "effect")
             res = analyze(tmp, out / scenario, f"synthetic ({scenario})", n_perm=n_perm,
-                          verbose=False)
+                          verbose=False, margin=STRICT_MARGIN, strict_margin=None)
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
         results[scenario] = (true, res)
@@ -1050,7 +1063,7 @@ def main() -> None:
     ap.add_argument("--pipelines", nargs="*", default=None)
     ap.add_argument("--seeds", nargs="*", type=int, default=None)
     ap.add_argument("--margin", type=float, default=EQUIV_MARGIN,
-                    help="equivalence margin in macro F1")
+                    help="main equivalence margin in macro F1 (fixed: 0.05)")
     ap.add_argument("--perms", type=int, default=N_PERM)
     ap.add_argument("--device", default="cpu", choices=["cpu", "cuda"],
                     help="analyse the CPU runs or the GPU (_cuda) runs")

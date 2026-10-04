@@ -153,3 +153,11 @@ give.
   average ranks and tau-b handles them.
 - **Siena.** `--dataset siena` works once Siena runs exist under `results_v2/siena/`
   with the same names.
+
+## Equivalence margins (fixed before any result)
+
+The main analysis uses an equivalence margin of +-0.05 macro F1 and reports +-0.02 as a
+strict sensitivity analysis (`EQUIV_MARGIN`, `STRICT_MARGIN` in `src/multiverse.py`).
+Both were fixed on 4 October 2026, before any multiverse run existed, on the advisor's
+decision, and are not to be changed after seeing results. The synthetic validation keeps
+its 0.02 margin, which its scenario was built around.
