@@ -1,4 +1,4 @@
-\begin{thebibliography}{39}
+\begin{thebibliography}{40}
 \providecommand{\natexlab}[1]{#1}
 \providecommand{\url}[1]{\texttt{#1}}
 \expandafter\ifx\csname urlstyle\endcsname\relax
@@ -177,6 +177,12 @@ Hemaxi Narotamo, Mariana Dias, Ricardo Santos, André~V. Carreiro, Hugo Gamboa, 
 \newblock {Deep learning for ECG classification: A comparative study of 1D and 2D representations and multimodal fusion approaches}.
 \newblock \emph{Biomedical Signal Processing and Control}, 93:\penalty0 106141, 2024.
 \newblock \doi{10.1016/j.bspc.2024.106141}.
+
+\bibitem[Palmer et~al.(2008)Palmer, Makeig, Kreutz-Delgado, and Rao]{Palmer_2008}
+J.~A. Palmer, S.~Makeig, K.~Kreutz-Delgado, and B.~D. Rao.
+\newblock {Newton method for the ICA mixture model}.
+\newblock In \emph{2008 IEEE International Conference on Acoustics, Speech and Signal Processing}, pages 1805--1808. IEEE, 2008.
+\newblock \doi{10.1109/icassp.2008.4517982}.
 
 \bibitem[Rheude et~al.(2025)Rheude, Eils, and Wild]{Rheude_2025}
 Tillmann Rheude, Roland Eils, and Benjamin Wild.
