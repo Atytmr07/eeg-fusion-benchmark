@@ -303,20 +303,146 @@ def text_citations(body: str):
     return found
 
 
-def bib_keys():
-    if not BIBFILE.exists():
-        return {}
-    text = BIBFILE.read_text(encoding="utf-8")
-    out = {}
-    for m in re.finditer(r"@\w+\{([^,]+),(.*?)(?=\n@|\Z)", text, re.S):
-        key, rest = m.group(1).strip(), m.group(2)
-        a = re.search(r"author\s*=\s*\{(.+?)\}\s*,\s*\w+\s*=", rest, re.S)
-        y = re.search(r"year\s*=\s*\{?(\d{4})", rest)
-        doi = re.search(r"DOI\s*=\s*\{([^}]+)\}", rest, re.I)
-        surname = a.group(1).split(" and ")[0].split(",")[0].strip() if a else ""
-        out[key] = {"surname": surname, "year": y.group(1) if y else "",
-                    "doi": doi.group(1).lower() if doi else ""}
+def _braced(text: str, i: int) -> int:
+    """Index just past the brace group opening at text[i] == '{'."""
+    depth = 0
+    for j in range(i, len(text)):
+        if text[j] == "{":
+            depth += 1
+        elif text[j] == "}":
+            depth -= 1
+            if depth == 0:
+                return j + 1
+    raise ValueError("unbalanced braces in references.bib")
+
+
+def parse_bib(text: str) -> dict:
+    """Entries of a BibTeX file: key -> {type, fields (raw values), authors, surname,
+    year, doi}. Handles both Crossref's one-line and the multi-line layout."""
+    entries = {}
+    for m in re.finditer(r"@(\w+)\s*\{\s*([^,\s]+)\s*,", text):
+        end = _braced(text, text.index("{", m.start())) - 1
+        body, fields, pos = text[m.end():end], {}, 0
+        for f in re.finditer(r"(\w+)\s*=\s*", body):
+            if f.start() < pos:
+                continue
+            k, v0 = f.group(1).lower(), f.end()
+            if body[v0] == "{":
+                v1 = _braced(body, v0)
+                fields[k] = body[v0 + 1:v1 - 1].strip()
+            else:
+                v1 = v0 + re.match(r"[^,}]*", body[v0:]).end()
+                fields[k] = body[v0:v1].strip()
+            pos = v1
+        authors = [a.strip() for a in re.split(r"\s+and\s+", fields.get("author", "")) if a.strip()]
+        entries[m.group(2)] = {"type": m.group(1).lower(), "fields": fields, "authors": authors,
+                               "surname": surname_of(authors[0]) if authors else "",
+                               "year": fields.get("year", "")[:4],
+                               "doi": fields.get("doi", "").lower()}
+    return entries
+
+
+PARTICLES = {"van", "von", "de", "del", "der", "den", "da", "di", "le", "la"}
+
+
+def surname_of(name: str) -> str:
+    """Last name of a BibTeX author ("Last, First" or "First [von] Last")."""
+    if "," in name:
+        return name.split(",")[0].strip()
+    toks = name.split()
+    i = len(toks) - 1
+    while i > 0 and toks[i - 1].lower() in PARTICLES:
+        i -= 1
+    return " ".join(toks[i:])
+
+
+def _norm(s: str) -> str:
+    return strip_accents(s).lower().strip()
+
+
+def map_references(refs, bib: dict):
+    """Attach the references.bib key to each manuscript reference: by DOI, else by
+    first author surname and year."""
+    for d in refs:
+        doi = re.search(r"doi:(10\.\S+?)(?=[.,;]?(\s|$))", d["entry"])
+        doi = doi.group(1).lower() if doi else ""
+        key = next((k for k, b in bib.items() if doi and b["doi"] == doi), None)
+        if key is None:
+            key = next((k for k, b in bib.items() if _norm(b["surname"]) == _norm(d["surname"])
+                        and b["year"] == d["year"]), None)
+        d["bibkey"] = key
+    return [f"{d['surname']} ({d['year']})" for d in refs if d["bibkey"] is None]
+
+
+def natbib_authors(entry: dict) -> str:
+    """Author part as natbib's author-year styles print it."""
+    s = [surname_of(a) for a in entry["authors"]]
+    if len(s) == 1:
+        return s[0]
+    if len(s) == 2:
+        return f"{s[0]} and {s[1]}"
+    return f"{s[0]} et al."
+
+
+def natbib_body(body: str, refs, bib: dict, report: dict) -> str:
+    r"""Replace "Author (Year)" by \citet and "Author Year" (inside the manuscript's own
+    parentheses) by \citealp, so the surrounding punctuation stays as written."""
+    index = {(_norm(d["surname"]), d["year"]): d["bibkey"] for d in refs if d["bibkey"]}
+    changed = {}
+
+    def repl(m):
+        first = m.group("first")
+        lead, year = m.group("lead"), m.group("year")
+        if first.split()[-1] in NOT_NAMES:
+            return m.group(0)
+        if not (m.group("rest") or m.group("close") or lead == "(" or lead.startswith(";")):
+            return m.group(0)
+        key = index.get((_norm(first), year))
+        if key is None:
+            return m.group(0)
+        written = " ".join((first + (m.group("rest") or "")).split())
+        printed = natbib_authors(bib[key])
+        if _norm(written.replace(",", "")) != _norm(printed.replace(",", "")):
+            changed[f"{written} {year}"] = f"{printed} {year}"
+        if m.group("open") and m.group("close"):
+            return f"{lead}`\\citet{{{key}}}`{{=latex}}"
+        if m.group("open"):
+            return m.group(0)
+        return f"{lead}`\\citealp{{{key}}}`{{=latex}}" + (m.group("close") or "")
+
+    out = outside_code(body, lambda chunk: CITE.sub(repl, chunk))
+    report["natbib_changed"] = changed
     return out
+
+
+def write_main_bib(refs, bib: dict, path: Path):
+    """The cited entries, prepared for plainnat: titles brace-protected so the style
+    keeps their capitals, url dropped when a DOI is printed, ISSN/publisher/month of
+    journal articles dropped, arXiv identifiers moved to note."""
+    out = ["% Generated by build.py from paper/literature/references.bib; do not edit."]
+    for d in refs:
+        e = bib[d["bibkey"]]
+        f = dict(e["fields"])
+        for k in ("issn", "month", "collection", "series", "abstract"):
+            f.pop(k, None)
+        etype = e["type"]
+        if etype == "inbook" and f.get("booktitle"):
+            etype = "incollection"  # Crossref's chapters; plainnat's inbook drops booktitle
+        f.pop("isbn", None)
+        if etype == "article":
+            f.pop("publisher", None)
+        f = {k: v.replace("\u2010", "-").replace("\u00a0", " ") for k, v in f.items()}
+        if "pages" in f:  # plainnat recognises a range only by "-"
+            f["pages"] = f["pages"].replace("\u2013", "--")
+        if f.get("doi"):
+            f.pop("url", None)
+        if f.pop("archiveprefix", "").lower() == "arxiv" and f.get("eprint"):
+            f["note"] = f"arXiv:{f.pop('eprint')}"
+        if "title" in f:
+            f["title"] = "{" + f["title"] + "}"
+        body = ",\n".join(f"  {k} = {{{v}}}" for k, v in f.items())
+        out.append(f"@{etype}{{{d['bibkey']},\n{body}\n}}\n")
+    path.write_text("\n".join(out), encoding="utf-8")
 
 
 def citation_report(body: str, refs, report: dict):
@@ -327,35 +453,54 @@ def citation_report(body: str, refs, report: dict):
     report["refs_not_cited"] = sorted(
         f"{d['surname']} ({d['year']})" for k, d in ref_index.items() if k not in cited_keys)
 
-    bib = bib_keys()
+    bib = parse_bib(BIBFILE.read_text(encoding="utf-8")) if BIBFILE.exists() else {}
+    report["bib"] = bib
+    report["bib_unmapped"] = map_references(refs, bib)
     lines = ["# Citation report (generated by build.py)", "",
-             "Option (a) is used for the PDF: the reference list in manuscript.md is",
-             "typeset as `thebibliography`. This report shows how far option (b), natbib",
-             "with `paper/literature/references.bib`, would get: each reference entry is",
-             "matched to a BibTeX key by DOI, then by first author surname and year.",
-             "Nothing is added to references.bib here; missing entries are listed only.", "",
+             "Each entry of the reference list in manuscript.md is matched to a key in",
+             "`paper/literature/references.bib`, by DOI and otherwise by first author",
+             "surname and year. When every entry matches, the PDF uses natbib with those",
+             "entries (option b); otherwise build.py falls back to typesetting the list",
+             "as written (option a). Nothing is added to references.bib by the build.", "",
              "| Reference | Cited in text | references.bib key |", "|---|---|---|"]
-    unmapped = []
     for d in refs:
-        doi = re.search(r"doi:(10\.\S+?)(?=[.,;]?(\s|$))", d["entry"])
-        doi = doi.group(1).lower() if doi else ""
-        key = next((k for k, b in bib.items() if doi and b["doi"] == doi), None)
-        if key is None:
-            key = next((k for k, b in bib.items()
-                        if strip_accents(b["surname"]).lower() == strip_accents(d["surname"]).lower()
-                        and b["year"] == d["year"]), None)
         incited = (strip_accents(d["surname"]).lower(), d["year"]) in cited_keys
         lines.append(f"| {d['surname']} ({d['year']}) | {'yes' if incited else '**no**'} | "
-                     f"{key or '**not in references.bib**'} |")
-        if key is None:
-            unmapped.append(f"{d['surname']} ({d['year']})")
-    lines += ["", f"Mapped: {len(refs) - len(unmapped)} of {len(refs)}; "
-              f"not in references.bib: {len(unmapped)}.", ""]
+                     f"{d['bibkey'] or '**not in references.bib**'} |")
+    lines += ["", f"Mapped: {len(refs) - len(report['bib_unmapped'])} of {len(refs)}.", ""]
     if report["cited_not_in_refs"]:
         lines += ["Cited in the text but missing from the reference list:", ""] + \
                  [f"- {c}" for c in report["cited_not_in_refs"]] + [""]
+    report["_report_lines"] = lines
+
+
+def finish_citation_report(refs, report: dict):
+    """Append what natbib changes relative to the manuscript and write the file."""
+    lines = report.pop("_report_lines")
+    changed = report.get("natbib_changed") or {}
+    if changed:
+        lines += ["## Author names natbib prints differently from the manuscript text", "",
+                  "natbib prints one surname, two surnames, or the first surname plus",
+                  "\"et al.\", from the author list in references.bib.", "",
+                  "| Manuscript text | natbib prints |", "|---|---|"]
+        lines += [f"| {k} | {v} |" for k, v in sorted(changed.items())] + [""]
+    diffs = []
+    bib = report["bib"]
+    for d in refs:
+        if not d["bibkey"]:
+            continue
+        e = bib[d["bibkey"]]
+        if e["year"] != d["year"]:
+            diffs.append(f"| {d['surname']} ({d['year']}) | year in references.bib: {e['year']} |")
+        n = len(e["authors"])
+        listed = d["entry"].split("(")[0]
+        if n > 1 and "et al" not in listed and listed.count(",") < 2 * n - 2:
+            diffs.append(f"| {d['surname']} ({d['year']}) | {n} authors in references.bib, "
+                         f"reference list gives: {listed.strip()} |")
+    if diffs:
+        lines += ["## Reference list entries that differ from references.bib", "",
+                  "| Reference | Difference |", "|---|---|"] + diffs + [""]
     (HERE / "citation_report.md").write_text("\n".join(lines), encoding="utf-8")
-    report["bib_unmapped"] = unmapped
 
 
 # ------------------------------------------------------------------- checks
@@ -404,15 +549,42 @@ def pdflatex(tex: Path, runs: int = 2):
     return int(pages.group(1)) if pages else 0, log
 
 
+def compile_tex(tex: Path, use_bibtex: bool, report: dict):
+    """pdflatex twice, or pdflatex, bibtex, pdflatex twice."""
+    if not use_bibtex:
+        return pdflatex(tex)
+    pdflatex(tex, runs=1)
+    p = run([find_tool("bibtex"), tex.stem], cwd=tex.parent, check=False)
+    blg = tex.with_suffix(".blg")
+    text = blg.read_text(encoding="latin-1") if blg.exists() else p.stdout
+    report["bibtex_warnings"] = re.findall(r"^Warning--(.+)$", text, re.M)
+    if p.returncode > 1:  # 1 means warnings only
+        sys.stderr.write(p.stdout[-3000:])
+        raise SystemExit("bibtex failed")
+    return pdflatex(tex)
+
+
 # --------------------------------------------------------------------- main
 
-def build(draft: bool, make_pdf: bool):
+def build(draft: bool, make_pdf: bool, bibmode: str = "natbib"):
     text = MANUSCRIPT.read_text(encoding="utf-8")
     draftnote, title, abstract, body, refs_md = split_manuscript(text)
     report = {"missing_figures": []}
 
     refs = parse_references(refs_md)
     citation_report(body, refs, report)
+    if bibmode == "natbib" and report["bib_unmapped"]:
+        print("natbib needs every reference in references.bib; missing: "
+              + ", ".join(report["bib_unmapped"]) + ". Falling back to option (a).")
+        bibmode = "plain"
+    report["bibmode"] = bibmode
+    if bibmode == "natbib":
+        body = natbib_body(body, refs, report["bib"], report)
+        write_main_bib(refs, report["bib"], HERE / "main.bib")
+        bibliography = "```{=latex}\n\\bibliographystyle{plainnat}\n\\bibliography{main}\n```\n"
+    else:
+        bibliography = bibliography_markdown(refs)
+    finish_citation_report(refs, report)
     body = restructure(body, report)
     check_numbering(report, body)
     body = rewrite_math(body)
@@ -424,8 +596,10 @@ def build(draft: bool, make_pdf: bool):
             f"abstract: {yaml_block(rewrite_math(abstract))}"]
     if draft and draftnote:
         meta.append(f"draftnote: {yaml_block(rewrite_math(draftnote))}")
+    if bibmode == "natbib":
+        meta.append("natbib: true")
     meta.append("---")
-    md = "\n".join(meta) + "\n\n" + body + "\n\n" + bibliography_markdown(refs)
+    md = "\n".join(meta) + "\n\n" + body + "\n\n" + bibliography
 
     src = HERE / "main.md"
     src.write_text(md, encoding="utf-8")
@@ -434,10 +608,13 @@ def build(draft: bool, make_pdf: bool):
          "--lua-filter", str(HERE / "filters.lua"), "--shift-heading-level-by=-1",
          "--wrap=preserve", "-o", str(HERE / "main.tex")])
     src.unlink()
+    if bibmode != "natbib":
+        for stale in ("main.bib", "main.bbl", "main.blg"):
+            (HERE / stale).unlink(missing_ok=True)
 
     pages, warnings = 0, None
     if make_pdf:
-        pages, log = pdflatex(HERE / "main.tex")
+        pages, log = compile_tex(HERE / "main.tex", bibmode == "natbib", report)
         warnings = latex_warnings(log)
         bundle_arxiv(report)
 
@@ -450,13 +627,15 @@ def bundle_arxiv(report: dict):
     (ARXIV / "figures").mkdir(parents=True)
     tex = (HERE / "main.tex").read_text(encoding="utf-8")
     shutil.copy(HERE / "main.tex", ARXIV / "main.tex")
+    if report.get("bibmode") == "natbib":
+        shutil.copy(HERE / "main.bbl", ARXIV / "main.bbl")  # arXiv does not run bibtex
     for name in re.findall(r"\\includegraphics(?:\[[^\]]*\])?\{([^}]+)\}", tex):
         shutil.copy(FIGDIR / name, ARXIV / "figures" / name)
     pages, log = pdflatex(ARXIV / "main.tex")
     report["arxiv_pages"] = pages
     report["arxiv_missing"] = re.findall(r"File `([^']+)' not found", log)
     for f in ARXIV.iterdir():
-        if f.suffix in (".aux", ".log", ".out", ".pdf"):
+        if f.suffix in (".aux", ".log", ".out", ".pdf", ".blg"):
             f.unlink()
     zip_base = HERE / "arxiv"
     shutil.make_archive(str(zip_base), "zip", ARXIV)
@@ -485,8 +664,17 @@ def print_report(r: dict, pages: int, w, nrefs: int):
     print(f"references: {nrefs}")
     print("cited in text, not in reference list: " + (", ".join(r["cited_not_in_refs"]) or "none"))
     print("in reference list, not found cited in text: " + (", ".join(r["refs_not_cited"]) or "none"))
-    print(f"option (b): references not in references.bib: {len(r['bib_unmapped'])} "
-          f"(see citation_report.md)")
+    if r["bibmode"] == "natbib":
+        print("bibliography: natbib + plainnat from references.bib (option b); "
+              f"bibtex warnings: {len(r.get('bibtex_warnings', []))}")
+        for w_ in r.get("bibtex_warnings", []):
+            print(f"  bibtex: {w_}")
+        if r.get("natbib_changed"):
+            print(f"author names printed differently from the text: {len(r['natbib_changed'])} "
+                  "(see citation_report.md)")
+    else:
+        print(f"bibliography: reference list as written (option a); not in references.bib: "
+              f"{len(r['bib_unmapped'])} (see citation_report.md)")
     if "arxiv_pages" in r:
         print(f"arxiv/: compiles on its own, {r['arxiv_pages']} pages; missing files: "
               + (", ".join(r["arxiv_missing"]) or "none") + "; zipped to arxiv.zip")
@@ -496,8 +684,11 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--draft", action="store_true", help="include the DRAFT note")
     ap.add_argument("--no-pdf", action="store_true", help="write main.tex only")
+    ap.add_argument("--bib", choices=["natbib", "plain"], default="natbib",
+                    help="natbib from references.bib (option b, default) or the "
+                         "manuscript's list as written (option a)")
     a = ap.parse_args()
-    build(a.draft, not a.no_pdf)
+    build(a.draft, not a.no_pdf, a.bib)
 
 
 if __name__ == "__main__":

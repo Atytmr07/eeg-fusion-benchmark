@@ -62,6 +62,15 @@
 % Section titles in manuscript.md already carry their numbers.
 \setcounter{secnumdepth}{0}
 
+$if(natbib)$
+% Option (b): natbib author-year citations, plainnat from references.bib.
+% \citealp prints "Author Year" without a comma, as the manuscript writes it.
+\usepackage[round]{natbib}
+\setcitestyle{aysep={}}
+\setlength{\bibsep}{3pt}
+\setlength{\bibhang}{1.5em}
+\renewcommand{\bibfont}{\small}
+$else$
 % The text cites as Author (Year): reference list without numeric labels, with a
 % hanging indent.
 \makeatletter
@@ -74,6 +83,7 @@
   {\endlist}
 \renewcommand\@biblabel[1]{}
 \makeatother
+$endif$
 
 \setlength{\emergencystretch}{3em}
 \setlength{\parindent}{0pt}

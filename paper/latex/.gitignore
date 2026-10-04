@@ -5,3 +5,7 @@
 *.toc
 main.md
 arxiv.zip
+/main.bib
+/main.bbl
+/main.blg
+*.blg
