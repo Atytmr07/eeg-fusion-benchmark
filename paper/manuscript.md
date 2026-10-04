@@ -385,12 +385,21 @@ cannot apply to it. Its bundled reference covariance C, defined for a referentia
 10-05 layout, is mapped onto the bipolar montage as D C D^T, with D the electrode
 difference matrix (a bipolar difference cancels the common reference), and the
 channel mean is removed before and restored after cleaning, because GEDAI would
-otherwise average reference the bipolar channels. All three were bit for bit
-reproducible with a fixed seed in a trial on one subject. Their behaviour differs
-markedly: across the corpus GEDAI keeps a median 66 percent of a recording's power
-(range 4 to 100 percent), whereas Infomax and AMICA remove about 1.6 components per
-recording and keep about 82 to 84 percent of the power in that trial. What every
-method removed, the power kept and the time taken are logged per recording.
+otherwise average reference the bipolar channels. GEDAI's threshold preset was chosen
+before any classification run and on signal preservation only, as the advisor
+required: on six subjects its default removed more than half of the power of 39
+percent of recordings and of 33 percent of ictal windows, its conservative preset
+("auto-") of 17 and 13 percent, and neither removed more from ictal than from
+non-ictal windows within a recording (`src/gedai_qc.py`). P6b uses the conservative
+preset; the default is kept for a robustness report. All three methods were bit for
+bit reproducible with a fixed seed. Across all 670 recordings with selected windows,
+the median recording keeps 78 percent of its power under Infomax and AMICA (about 1.5
+components removed per recording) and 99.9 percent under GEDAI, but a minority is
+cleaned heavily by every method: 22, 23 and 21 percent of recordings lose more than
+half of their power under Infomax, AMICA and GEDAI (43 percent under GEDAI's
+default). Compute per one hour recording differs by an order of magnitude (median
+18 s for GEDAI, 33 s for Infomax, 213 s for AMICA; 4.7, 8.5 and 73 CPU hours in
+total); per recording logs are in `results_v2/qc/p6_recording_logs.csv`.
 
 **Seeds and device.** Every pipeline is trained with three seed sets (`--repeat`),
 seed set 0 being the one used throughout Section 5. If the ranking of the fusion
