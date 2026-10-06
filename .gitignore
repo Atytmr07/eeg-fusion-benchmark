@@ -27,3 +27,4 @@ Thumbs.db
 *.tmp
 *.log.gz
 .venv-ica/
+.venv-gpu/
