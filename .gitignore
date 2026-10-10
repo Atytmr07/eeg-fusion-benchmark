@@ -28,3 +28,4 @@ Thumbs.db
 *.log.gz
 .venv-ica/
 .venv-gpu/
+results_v2/ica_repro/*/*.npz

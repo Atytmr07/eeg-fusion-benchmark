@@ -176,18 +176,55 @@ def compare(a: str, b: str) -> None:
     print(f"written: {OUT / name}.md")
 
 
+def compare_logs(a: str, b: str, name: str) -> None:
+    """Per recording, the ICA logs of two runs over the whole corpus (data/ica_logs as
+    written when a cache was built or when events.py recomputed the cleaning): whether the
+    same components were removed and how much the retained power differs."""
+    from pathlib import Path
+    rows = []
+    for tag, method in (("bp0.5-40_infomax", "infomax"), ("bp0.5-40_gedai-conservative", "gedai"),
+                        ("bp0.5-40_amica", "amica")):
+        da, db = Path(a) / tag, Path(b) / tag
+        common = sorted({f.name for f in da.glob("*.json")} & {f.name for f in db.glob("*.json")})
+        for f in common:
+            x = json.loads((da / f).read_text(encoding="utf-8"))
+            y = json.loads((db / f).read_text(encoding="utf-8"))
+            rows.append({"method": method, "record": f[:-5],
+                         "removed_a": x.get("removed"), "removed_b": y.get("removed"),
+                         "same_removed": x.get("removed") == y.get("removed"),
+                         "power_kept_a": x["power_kept"], "power_kept_b": y["power_kept"],
+                         "abs_dpower": abs(x["power_kept"] - y["power_kept"]),
+                         "threshold_a": x.get("threshold"), "threshold_b": y.get("threshold")})
+    df = pd.DataFrame(rows)
+    OUT.mkdir(parents=True, exist_ok=True)
+    df.to_csv(OUT / f"logs_{name}.csv", index=False)
+    summ = df.groupby("method").agg(
+        recordings=("record", "size"),
+        removed_differs=("same_removed", lambda v: int((~v).sum())),
+        dpower_gt_1e6=("abs_dpower", lambda v: int((v > 1e-6).sum())),
+        dpower_gt_1e3=("abs_dpower", lambda v: int((v > 1e-3).sum())),
+        dpower_gt_0p1=("abs_dpower", lambda v: int((v > 0.1).sum())),
+        dpower_max=("abs_dpower", "max"))
+    summ.to_csv(OUT / f"logs_{name}_summary.csv")
+    print(summ.to_string())
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--dump", action="store_true")
     ap.add_argument("--tag", default=platform.node())
     ap.add_argument("--threads", type=int, default=None)
     ap.add_argument("--compare", nargs=2, metavar=("A", "B"))
+    ap.add_argument("--compare-logs", nargs=3, metavar=("DIR_A", "DIR_B", "NAME"),
+                    help="two ica_logs folders, per recording over the whole corpus")
     ap.add_argument("--records", nargs="*", default=None,
                     help="these recordings instead of the fixed sample")
     ap.add_argument("--n", type=int, default=N_RECORDINGS, help="first n recordings (tests)")
     ap.add_argument("--methods", nargs="+", default=list(METHODS), choices=list(METHODS))
     args = ap.parse_args()
-    if args.compare:
+    if args.compare_logs:
+        compare_logs(*args.compare_logs)
+    elif args.compare:
         compare(*args.compare)
     elif args.dump:
         dump(args.tag, args.threads, args.n, tuple(args.methods), args.records)

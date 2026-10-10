@@ -1,0 +1,4 @@
+method,recordings,removed_differs,dpower_gt_1e6,dpower_gt_1e3,dpower_gt_0p1,dpower_max
+amica,711,0,101,0,0,0.0007226861058529099
+gedai,711,0,0,0,0,0.0
+infomax,711,8,28,9,0,0.0990577294045365

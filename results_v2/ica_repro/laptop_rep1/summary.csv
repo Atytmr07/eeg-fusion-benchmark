@@ -1,0 +1,4 @@
+record,method,removed,n_removed,share_removed,power_kept,seconds,wall_s
+chb07_05.edf,infomax,[],0,0.0,1.0,139.4,146.1
+chb02_16+.edf,infomax,[0],1,0.0625,0.6463535762988488,50.5,52.7
+chb03_02.edf,infomax,[0],1,0.0625,0.5318734141471094,37.5,39.3

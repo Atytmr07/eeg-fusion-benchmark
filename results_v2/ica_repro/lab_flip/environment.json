@@ -1,0 +1,41 @@
+{
+  "machine": "DESKTOP-A0GHGPB",
+  "cpu": "Intel64 Family 6 Model 85 Stepping 4, GenuineIntel",
+  "platform": "Windows-10-10.0.19045-SP0",
+  "python": "3.12.10",
+  "packages": {
+    "numpy": "2.5.3",
+    "scipy": "1.16.1",
+    "mne": "1.13.2",
+    "gedai": "0.60",
+    "jamica": "0.3.0",
+    "scikit-learn": "1.7.2",
+    "torch": "2.8.0"
+  },
+  "thread_limit": null,
+  "thread_pools": [
+    {
+      "internal_api": "openblas",
+      "num_threads": 24,
+      "version": "0.3.34.106.0",
+      "threading_layer": "pthreads",
+      "architecture": "SkylakeX"
+    },
+    {
+      "internal_api": "openblas",
+      "num_threads": 24,
+      "version": "0.3.28",
+      "threading_layer": "pthreads",
+      "architecture": "SkylakeX"
+    }
+  ],
+  "recordings": [
+    "chb01_09.edf",
+    "chb01_25.edf",
+    "chb02_08.edf",
+    "chb07_05.edf",
+    "chb02_16+.edf",
+    "chb03_02.edf"
+  ],
+  "segment_s": 600
+}

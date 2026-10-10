@@ -1,0 +1,38 @@
+{
+  "machine": "Lenovo-aty",
+  "cpu": "Intel64 Family 6 Model 170 Stepping 4, GenuineIntel",
+  "platform": "Windows-11-10.0.26300-SP0",
+  "python": "3.12.7",
+  "packages": {
+    "numpy": "2.5.3",
+    "scipy": "1.16.1",
+    "mne": "1.13.2",
+    "gedai": "0.60",
+    "jamica": "0.3.0",
+    "scikit-learn": "1.7.2",
+    "torch": "2.8.0+cpu"
+  },
+  "thread_limit": null,
+  "thread_pools": [
+    {
+      "internal_api": "openblas",
+      "num_threads": 14,
+      "version": "0.3.34.106.0",
+      "threading_layer": "pthreads",
+      "architecture": "Haswell"
+    },
+    {
+      "internal_api": "openblas",
+      "num_threads": 14,
+      "version": "0.3.28",
+      "threading_layer": "pthreads",
+      "architecture": "Haswell"
+    }
+  ],
+  "recordings": [
+    "chb07_05.edf",
+    "chb02_16+.edf",
+    "chb03_02.edf"
+  ],
+  "segment_s": 600
+}
