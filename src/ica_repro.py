@@ -97,7 +97,8 @@ def dump(tag: str, threads: int | None, n: int = N_RECORDINGS,
     limit = threadpool_limits(limits=threads) if threads else nullcontext()
     with limit:
         for r in recs:
-            x, _, fs = read_edf(CHB_ROOT / r.split("_")[0] / r, list(TARGET_CHANNELS))
+            path = next(CHB_ROOT.glob(f"*/{r}"))    # chb17a/b/c files live in chb17/
+            x, _, fs = read_edf(path, list(TARGET_CHANNELS))
             x = bandpass(x, fs, 0.5, 40.0)                    # P1, as in P6
             seg = int(SEGMENT_S * fs)
             for m in methods:
