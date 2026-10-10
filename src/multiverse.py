@@ -5,9 +5,10 @@ operators to preprocessing and to stochastic training decisions? The main output
 therefore the stability of the fusion RANKING, next to mean performance. This module
 reads every pipeline x seed run of one dataset and produces all analyses and figures:
 
-  1. performance     pipeline x seed x model means of macro F1, AUROC, AUPRC,
-                     sensitivity, specificity, Brier, log loss (AUPRC from the stored
-                     test probabilities, per fold, then averaged)
+  1. performance     pipeline x seed x model means of macro F1, AUROC, AUPRC, balanced
+                     accuracy (the macro-averaged recall: the mean of sensitivity and
+                     specificity), sensitivity, specificity, Brier, log loss (AUPRC from
+                     the stored test probabilities, per fold, then averaged)
   2. rank stability  (main analysis) ranking of the five fusion operators per run;
                      Kendall's W and pairwise tau between seeds of one pipeline; tau
                      between the seed-averaged rankings of the pipelines (heatmap);
@@ -16,7 +17,8 @@ reads every pipeline x seed run of one dataset and produces all analyses and fig
   3. interaction     Fusion x Preprocessing: interaction plot and repeated-measures
                      ANOVA (folds as subjects, Greenhouse-Geisser corrected)
   4. variance        variance components of the fully crossed fold x pipeline x fusion
-                     x seed design (method of moments)
+                     x seed design (method of moments), every component unrounded, for
+                     macro F1, AUPRC and balanced accuracy
   5. equivalence     corrected test and equivalence bound for every fusion pair in
                      every pipeline; "robust equivalence" = equivalent in all
   6. robustness      mean F1 against the SD (and CV) of the pipeline means
@@ -75,7 +77,10 @@ from .stats import corrected_equivalence_bound, corrected_ttest, holm
 PIPELINE_ORDER = ("P0", "P1", "P2", "P3", "P4", "P5", "P6a", "P6b", "P6c")
 P6_FAMILY = ("P6a", "P6b", "P6c")
 OTHER_MODELS = ("raw1d", "spec2d", "raw1d_wide", "spec2d_wide", "logvar", "shallow")
-METRICS = ("f1_macro", "auc", "auprc", "sensitivity", "specificity", "brier", "log_loss")
+METRICS = ("f1_macro", "auc", "auprc", "balanced_accuracy", "sensitivity", "specificity",
+           "brier", "log_loss")
+# Variance components are reported for the three primary window-level metrics.
+VC_METRICS = ("f1_macro", "auprc", "balanced_accuracy")
 # Equivalence margins in macro F1, fixed before any multiverse result existed (advisor's
 # decision, 4 October 2026; see the git history): +-0.05 for the main analysis, +-0.02
 # as a strict sensitivity analysis showing how much the conclusion depends on the margin.
@@ -153,6 +158,8 @@ def load_long(runs: list[Run]) -> pd.DataFrame:
                     continue
                 ap[(m, fold)] = average_precision_score(d["y_te"], d[m][:, 1])
         df["auprc"] = [ap.get((m, f), np.nan) for m, f in zip(df.model, df.fold)]
+        # binary task: balanced accuracy = mean of the two class recalls = macro recall
+        df["balanced_accuracy"] = df["recall_macro"] if "recall_macro" in df else np.nan
         df["pipeline"], df["seed"], df["run"] = r.pipeline, r.seed, r.name
         frames.append(df[["pipeline", "seed", "run", "model", "fold", *METRICS]])
     return pd.concat(frames, ignore_index=True)
@@ -312,6 +319,8 @@ def variance_components(y: np.ndarray, names: tuple[str, ...]) -> pd.DataFrame:
     df.loc[df.component == full, "component"] = "residual (" + full + ")"
     df["sigma2"] = df.sigma2_raw.clip(lower=0.0)
     df["share"] = df.sigma2 / df.sigma2.sum()
+    # the component as a standard deviation, in the metric's own units: a practical size
+    df["sd"] = np.sqrt(df.sigma2)
     return df
 
 
@@ -334,6 +343,7 @@ def group_components(vc: pd.DataFrame) -> pd.DataFrame:
         return "fold x (pipeline, fusion)"
     g = vc.assign(group=vc.component.map(label)).groupby("group", sort=False)[
         ["sigma2", "share"]].sum()
+    g["sd"] = np.sqrt(g.sigma2)
     order = ["fold (subject)", "pipeline", "fusion", "fusion x pipeline",
              "seed (all seed terms)", "fold x (pipeline, fusion)", "residual"]
     return g.reindex([o for o in order if o in g.index]).reset_index()
@@ -1221,18 +1231,52 @@ def analyze(root: Path, out: Path, label: str, pipelines=None, seeds=None,
     lines += ["## 4. Variance components", ""]
     if len(pipes) >= 2:
         names = ("fold", "pipeline", "model") + (("seed",) if len(seeds_used) > 1 else ())
-        yv = a4 if len(seeds_used) > 1 else y3
-        vc = variance_components(yv, names)
-        vc.to_csv(out / "variance_components.csv", index=False)
-        gv = group_components(vc)
-        gv.to_csv(out / "variance_components_grouped.csv", index=False)
-        fig_variance(gv, out / "variance_components.png", f"{label}: variance of macro F1")
-        res["variance"] = dict(zip(gv.group, gv.share))
-        res["variance_raw"] = dict(zip(vc.component, vc.sigma2_raw))
-        lines += [md_table(gv.assign(share_pct=100 * gv.share).drop(columns="share"), digits=6), "",
-                  "Negative raw estimates (set to 0): " +
-                  (", ".join(vc.component[vc.sigma2_raw < 0]) or "none"), ""]
-        say("4. variance: " + ", ".join(f"{g} {100 * s:.1f}%" for g, s in zip(gv.group, gv.share)))
+        lines += [
+            "Model: every fold (held-out person) x pipeline x fusion operator x seed cell holds "
+            "one value of the metric, y_fpms = mu + a_f + b_p + c_m + d_s + every two-, three- "
+            "and four-way interaction of these terms. All terms are treated as random effects "
+            "(generalizability theory) and estimated by the method of moments from the "
+            "expected mean squares of the fully crossed, balanced design. With one "
+            "observation per cell the four-way interaction is confounded with the residual. "
+            "A fixed factor's component (pipeline, operator) is then the variance of its "
+            "effects. Negative estimates are set to 0 for the shares and listed. `sd` is the "
+            "square root of the component, in the metric's own units, as a practical size; "
+            "`share` is its part of the summed components. Grouped: 'fold x (pipeline, "
+            "fusion)' sums the interactions of fold with pipeline, operator and both; "
+            "'seed (all seed terms)' sums every term containing seed.", ""]
+        for metric in VC_METRICS:
+            try:
+                am = (a4 if metric == "f1_macro"
+                      else to_array(long, metric, models, pipes, seeds_used, folds))
+            except RuntimeError:                  # e.g. runs without recall_macro
+                am = None
+            if am is None or not np.isfinite(am).all():
+                lines += [f"{metric}: missing values, no decomposition.", ""]
+                continue
+            yv = am if len(seeds_used) > 1 else am.mean(axis=3)
+            vc = variance_components(yv, names)
+            gvm = group_components(vc)
+            suffix = "" if metric == "f1_macro" else f"_{metric}"
+            vc.to_csv(out / f"variance_components{suffix}.csv", index=False)
+            gvm.to_csv(out / f"variance_components_grouped{suffix}.csv", index=False)
+            if metric == "f1_macro":
+                gv = gvm
+                fig_variance(gv, out / "variance_components.png", f"{label}: variance of macro F1")
+                res["variance"] = dict(zip(gv.group, gv.share))
+                res["variance_raw"] = dict(zip(vc.component, vc.sigma2_raw))
+            res.setdefault("variance_by_metric", {})[metric] = dict(zip(gvm.group, gvm.share))
+            lines += [f"### {metric}", "", "Grouped:", "",
+                      md_table(gvm.assign(share_pct=100 * gvm.share).drop(columns="share"),
+                               digits=6), "",
+                      "Every component, unrounded estimate first:", "",
+                      "| component | sigma2_raw | sigma2 | sd | share_pct |",
+                      "|---|---|---|---|---|"]
+            lines += [f"| {r.component} | {r.sigma2_raw:.6e} | {r.sigma2:.6e} | {r.sd:.6f} | "
+                      f"{100 * r.share:.6f} |" for r in vc.itertuples()]
+            lines += ["", "Negative raw estimates (set to 0): " +
+                      (", ".join(vc.component[vc.sigma2_raw < 0]) or "none"), ""]
+            say(f"4. variance ({metric}): " + ", ".join(
+                f"{g} {100 * s:.3f}%" for g, s in zip(gvm.group, gvm.share)))
     else:
         lines += ["Only one pipeline: no decomposition.", ""]
 

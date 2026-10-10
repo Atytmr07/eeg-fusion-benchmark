@@ -103,7 +103,8 @@ def complete_runs(root: Path, dataset: str, device: str):
 def run_means(long: pd.DataFrame) -> pd.DataFrame:
     """Fold means per (pipeline, seed, model) of macro F1 and AUPRC, fusion operators."""
     sub = long[long.model.isin(FUSION)]
-    return (sub.groupby(["pipeline", "seed", "model"], sort=False)[["f1_macro", "auprc"]]
+    return (sub.groupby(["pipeline", "seed", "model"], sort=False)[
+            ["f1_macro", "auprc", "balanced_accuracy"]]
             .mean().reset_index())
 
 
@@ -211,7 +212,8 @@ def build_results(results_root: Path, out: Path, fig_dir: Path, datasets=("chbmi
                      if exc else ""), ""]
 
         # main table
-        for metric, label in (("f1_macro", "window-level macro F1"), ("auprc", "AUPRC")):
+        for metric, label in (("f1_macro", "window-level macro F1"), ("auprc", "AUPRC"),
+                              ("balanced_accuracy", "balanced accuracy")):
             st = order_pipelines(seed_stats(rm, ["pipeline", "model"], metric))
             st.to_csv(out / f"main_{ds}_{metric}.csv", index=False)
             w = wide_pm(st, "pipeline", models)
