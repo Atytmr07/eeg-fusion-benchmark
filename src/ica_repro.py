@@ -80,7 +80,7 @@ def environment(threads: int | None) -> dict:
 
 
 def dump(tag: str, threads: int | None, n: int = N_RECORDINGS,
-         methods: tuple[str, ...] = METHODS) -> None:
+         methods: tuple[str, ...] = METHODS, records: list[str] | None = None) -> None:
     from scipy.signal import welch
     from threadpoolctl import threadpool_limits
 
@@ -89,7 +89,7 @@ def dump(tag: str, threads: int | None, n: int = N_RECORDINGS,
 
     out = OUT / tag
     out.mkdir(parents=True, exist_ok=True)
-    recs = sample_recordings(n)
+    recs = records or sample_recordings(n)
     env = environment(threads) | {"recordings": recs, "segment_s": SEGMENT_S}
     (out / "environment.json").write_text(json.dumps(env, indent=2), encoding="utf-8")
     print(f"{tag}: {len(recs)} recordings, threads {threads or 'unlimited'}", flush=True)
@@ -182,13 +182,15 @@ def main() -> None:
     ap.add_argument("--tag", default=platform.node())
     ap.add_argument("--threads", type=int, default=None)
     ap.add_argument("--compare", nargs=2, metavar=("A", "B"))
+    ap.add_argument("--records", nargs="*", default=None,
+                    help="these recordings instead of the fixed sample")
     ap.add_argument("--n", type=int, default=N_RECORDINGS, help="first n recordings (tests)")
     ap.add_argument("--methods", nargs="+", default=list(METHODS), choices=list(METHODS))
     args = ap.parse_args()
     if args.compare:
         compare(*args.compare)
     elif args.dump:
-        dump(args.tag, args.threads, args.n, tuple(args.methods))
+        dump(args.tag, args.threads, args.n, tuple(args.methods), args.records)
     else:
         ap.error("--dump or --compare")
 
