@@ -391,8 +391,11 @@ required: on six subjects its default removed more than half of the power of 39
 percent of recordings and of 33 percent of ictal windows, its conservative preset
 ("auto-") of 17 and 13 percent, and neither removed more from ictal than from
 non-ictal windows within a recording (`src/gedai_qc.py`). P6b uses the conservative
-preset; the default is kept for a robustness report. All three methods were bit for
-bit reproducible with a fixed seed. Across all 670 recordings with selected windows,
+preset; the default is kept for a robustness report. With fixed seeds and package
+versions the three methods are not equally reproducible across machines and execution
+contexts: AMICA reproduces up to rounding, Infomax changes its component decision in
+1 to 3 percent of recordings, and GEDAI differs between machines in 27 percent
+(`docs/ICA_REPRO.md`). Across all 670 recordings with selected windows,
 the median recording keeps 78 percent of its power under Infomax and AMICA (about 1.5
 components removed per recording) and 99.9 percent under GEDAI, but a minority is
 cleaned heavily by every method: 22, 23 and 21 percent of recordings lose more than
@@ -401,9 +404,10 @@ default). Compute per one hour recording differs by an order of magnitude (media
 18 s for GEDAI, 33 s for Infomax, 213 s for AMICA; 4.7, 8.5 and 73 CPU hours in
 total); per recording logs are in `results_v2/qc/p6_recording_logs.csv`.
 
-**Seeds and device.** Every pipeline is trained with three seed sets (`--repeat`),
-seed set 0 being the one used throughout Section 5. If the ranking of the fusion
-operators proves unstable across seeds, the affected pipelines are extended to five.
+**Seeds and device.** Every pipeline is trained with five seed sets (`--repeat`),
+seed set 0 being the one used throughout Section 5: the ranking of the fusion
+operators proved unstable across three (Kendall's W below 0.5 in seven of nine CHB-MIT
+pipelines), the condition fixed beforehand for extending to five.
 All runs of one analysis use one machine, one thread count and one device. Before GPU
 training is used, its agreement with the CPU is tested on one fold: two GPU runs must
 repeat, and the CPU to GPU difference at identical seeds must not exceed the
