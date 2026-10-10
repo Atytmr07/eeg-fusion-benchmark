@@ -325,16 +325,92 @@ yumuşatılabilir. Ayrıca "subject to revision once the registered search (`doc
 ifadesi, arama artık çalıştırıldığı için bu belgeye (`docs/15`) atıf yapacak şekilde
 güncellenebilir. Makale metnini Atay günceller.
 
-## 9. Açık işler
+## 9. Açık işler (durum: 10 Ekim 2026)
 
-1. **Tam metin taraması:** 122 aday (`extraction.csv`, `stage2 = pending`). En yüksek
-   öncelik özet düzeyinde operatör karşılaştırması görünenler: A0448, A0509, A0405,
-   A0252, A0144, A0443.
-2. **B4 Scopus dışa aktarımı** (533 kayıt) tamamlanamadı; seçim arXiv havuzundan.
-3. **GEDAI** kaynağı (büyük olasılıkla bir preprint) bulunup doğrulanarak eklenmeli.
-4. **İnsan ikinci göz:** AI ikinci geçişi insan değerlendiricinin yerini tutmaz; bir
-   insan (danışman ya da akran) için aynı 111 kayıt `second_pass_A.csv` dosyasında
-   hazır (yerel; özet içerdiği için repoda değil).
-5. **Arama duyarlılığı:** Das 2024 ve Huang 2024 aramalarda çıkmadı; sorguya
-   "feature fusion", "1D and 2D" gibi terimler eklenerek bir duyarlılık kontrolü
-   yapılabilir.
+1. **Tam metin taraması.** 122 aday var (`extraction.csv`, `stage2 = pending`).
+   Bölüm 9'daki öncelikli altı kayıttan açık erişimli ikisi tam metinden okundu ve
+   bilgileri çıkarıldı:
+   - **A0405, Kumbam ve Viji Amutha Mary 2023.** Çapraz-modal dikkat ile toplama
+     tabanlı öznitelik füzyonunu karşılaştırıyor (Tablo 5). Bonn kullanıyor; bölme
+     tanımı, test ve parametre bilgisi yok.
+   - **A0443, Pan ve ark. 2022.** Tek operatör (dört dalın birleştirilmesi), yalnızca
+     tek girdili modellere karşı; Bonn, 5/10/20 kat.
+
+   Kalan dördü kapalı erişimli: A0448, A0509, A0252 (IEEE Xplore) ve A0144
+   (Elsevier). Üniversite erişimi gerekiyor.
+
+   `extraction.csv`'ye `extracted_by` sütunu eklendi. Tam metni okunan 8 satır
+   "AI-assisted, pending human verification" olarak işaretli; insan kontrolünden
+   sonra "AI-assisted, human-verified" yapılacak.
+2. **Başlık/özet elemesi.** 111 kayıtlık örneklem için bağımsız bir üçüncü karar
+   seti çıkarıldı: önceki AI kararlarına bakılmadan, yalnızca başlık ve özetten.
+   - Sonuç: dahil 22, hariç 79, belirsiz 10.
+   - Birincil AI elemesiyle uyuşma %90.1, Cohen kappa 0.765 (tam metne gider mi:
+     %92.8, kappa 0.818). AI ikinci geçişiyle uyuşma %92.8, kappa 0.838.
+   - Bu kararlar insan kararı değil, Hasan'ın gözden geçirmesini bekliyor. Danışmanın
+     istediği kör insan elemesi henüz yapılmadı.
+3. **B4 Scopus dışa aktarımı** (533 kayıt) yapılmadı; Scopus'a üniversite girişi
+   gerekiyor.
+4. **GEDAI kaynağı bulundu ve doğrulandı:** Ros ve ark. (2025), "Return of the
+   GEDAI: Unsupervised EEG Denoising based on Leadfield Filtering", bioRxiv,
+   doi:10.1101/2025.10.04.680449. Crossref ile doğrulandı (`references.bib`:
+   `Ros_2025`) ve makalenin kaynakçasında var.
+5. **Arama duyarlılığı.** Das 2024 ve Huang 2024 aramalarda çıkmamıştı. "Feature
+   fusion" ve "1D and 2D" terimleriyle tekrar arama yapılmadı; Scopus erişimi
+   gerekiyor.
+
+## 10. Giriş için kaynaklar (danışmanın istediği dört konu)
+
+Yalnızca daha önce dışa aktarımlardan gelen ve Crossref ya da arXiv ile doğrulanan
+kaynaklar listelendi (`references.bib` anahtarları). Her satırdaki not, kaynağın
+özetine ya da tam metnine dayanıyor.
+
+**1. Ön işlemenin performansa etkisi**
+- `Del_Pup_2025`: EEG derin öğrenmede ön işleme düzeylerinin etkisinin sistematik
+  incelemesi.
+- `Huang_2025`: 43 ön işleme hattı (filtre, ICA, referans), üç veri seti; tek bir en
+  iyi hat yok.
+- `Soskic_2024`: 14 N400 işlem hattı; istatistiksel sonuç hatta göre değişiyor.
+- `Clayson_2021`, `Clayson_2024`, `Steegen_2016`: ERP'de ve genel olarak multiverse
+  analizi.
+- `Kolodziej_2021`: multiverse ile bir bulgunun dayanıksız çıkması.
+- `Gao_2025`: MI-BCI'da ön işleme yöntemleri ve sırası.
+- `Truong_2025`: EEG derin öğrenmede normalizasyon düzeyi.
+- `Kang_2024`: ICA tabanlı temizlik (Infomax/AMICA, ICLabel/MARA) derin ağ
+  performansını artırmıyor.
+
+**2. Füzyon karşılaştırmaları ve sınırlılıkları**
+- `An_2026` (5 operatör), `Einizade_2023` (4 operatör), `Basheer_2026` (3 operatör,
+  aynı girdiden iki akış), `Dasdemir_2025` (2 strateji, tahmin), `Wang_2026a`
+  (çapraz-dikkat ve birleştirme ablasyonu).
+- Yeni okunan A0405 (2 operatör, zayıf kanıt) ve `Pan_2022` (A0443, tek operatör).
+- Başka alanlarda: `Narotamo_2024` (EKG'de 1D/2D ve erken/geç/ortak füzyon),
+  `Camastra_2026` (tablo verisi), `Mohamady_2026` (aktivite tanıma), `Rheude_2025`
+  (çok modaliteli karmaşıklık).
+- Derleme: `Lee_2025`, hibrit EEG arayüzlerinde füzyon stratejisi optimizasyonunu
+  açık bir konu olarak gösteriyor.
+- Ortak sınırlılık: parametre eşleme yok; operatörler arası düzeltilmiş ya da
+  denklik testi yok.
+
+**3. Tek seed ya da tek pipeline'a dayalı karşılaştırmaların güvenilirliği**
+- `Summers2021arxiv`: bütün belirsizlik kaynakları benzer çeşitlilik üretiyor.
+- `Picard2021arxiv`: uç seed'ler kolay bulunuyor.
+- `Pham_2020`, `Xiao_2021`, `Shanmugavelu_2024`, `Chen_2022`: uygulama düzeyinde
+  varyans, CPU çoklu iş parçacığı, kayan nokta.
+- `van_den_Berg_2017`: eğitim varyansı.
+- `Banerjee_2025`: seed değişkenliği için test.
+- `Bouckaert_2004`, `Nadeau_2003`, `Jafrasteh_2025`: tekrarlı çapraz doğrulamada
+  düzeltilmiş test ve değişkenlik.
+- `Huang_2025`: pipeline seçimiyle değişen sonuçlar.
+
+**4. Veri setleri arası genelleme**
+- `Dan2025arxiv`: SzCORE yarışması, 28 mimaride görülmemiş hastalara genelleme
+  açığı.
+- `Dan_2024`: SzCORE değerlendirme çerçevesi.
+- `Yang2021arxiv`: kıtalar arası genelleme.
+- `Lee2022arxiv`: gerçekçi ortamda karşılaştırma.
+- `Moutonnet2024arxiv`: klinik çeviri koşulları.
+- Makalede de geçenler: `Ali_2024` (CHB-MIT sonuçlarının değerlendirme seçimlerine
+  bağlılığı), `Kontras_2026` (NeuroAtlas).
+- Eksik: hakemli, doğrudan EEG nöbet tespitinde veri setleri arası genelleme çalışması
+  az; bunun için hedefli bir Scopus araması gerekiyor (erişim gerekiyor).
