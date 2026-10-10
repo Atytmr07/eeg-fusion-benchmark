@@ -126,7 +126,7 @@ CORRECTIONS = {
 # Hoca), applied after the signal check of `python -m src.siena_qc` (docs/SIENA.md,
 # Section 5).
 DECISIONS = {
-    # PN00 seizure 3 (PN00-3.edf): end "19.29.29", but the recording ends at 18.57.13,
+    # PN00 seizure 3 (PN00-3.edf): end "19.29.29", but the recording ends at 18.57.33,
     # which would make a 61-minute seizure running past the end of the file.
     #   "typo"     read it as 18.29.29, a 60 s seizure (in line with this patient's
     #              other four seizures, 54 to 74 s)

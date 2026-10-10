@@ -65,3 +65,24 @@ for ictal and non-ictal windows separately. chb01 includes chb21, the same perso
 | chb23 | 245 | 49 | 0 | 196 | 0 | 0.0 | 0.0 |
 | chb24 | 325 | 65 | 0 | 260 | 0 | 0.0 | 0.0 |
 | all | 6380 | 1276 | 42 | 5104 | 39 | 3.3 | 0.8 |
+
+## Table S4. Siena: metadata problems and the decisions taken
+
+Every departure from the published seizure lists, with the decision used in the main
+analysis, its kind (a correction verified against the recording, or a decision rule
+applied without such a check), how it was checked, and how much the alternative would
+change the windows. Other, purely textual fixes (a space inside a time in PN10's list,
+misspelt file names, PN12's missing registration times taken from the same file's
+first block, recordings past midnight read modulo 24 h) are listed in `docs/SIENA.md`,
+Section 4. Recording time is taken from the EDF headers, 141.0 h; the dataset's
+description gives 128.4 h, a difference explained for PN14 (the start time above) but
+not for PN03, PN10 and PN12, whose files contain no padding (`docs/SIENA.md`, Section 8).
+
+| patient | recording / seizure | problem in the metadata | used | type | how it was checked | remaining uncertainty | effect on the windows |
+|---|---|---|---|---|---|---|---|
+| PN00 | PN00-3, seizure 3 | listed end 19.29.29 lies 1916 s after the recording ends (18.57.33) | end read as 18.29.29 (a 60 s seizure) | verified correction | signal: the right frontotemporal 3-20 Hz ictal rhythm (FP2-F8, F8-T8) falls below a quarter of its peak 14 s after 18.29.29; the patient's other four seizures end 0 to 13 s after their listed ends by the same rule | offset from an automatic rule on one channel pair | alternative (exclude the seizure and the rest of the recording): 30 instead of 37 ictal windows for PN00 |
+| PN05 | PN05-3, seizure 3 | registration start: list 06.01.23, EDF header 06.01.13 | EDF header start time, as for every recording | decision rule (not a verified correction) | none possible: the header defines the first sample and 39 of 41 recordings agree with their list; the list's value fits the 20 s end offset of 18 other recordings, the header's does not | 10 s in the seizure's position | 4 ictal windows either way, shifted by one: 2 window labels differ |
+| PN10 | PN10-3, seizure 3 | two onsets: 15.43.53 (clinical), 15.43.59 (electrical) | electrical onset (advisor) | decision | CHB-MIT annotates electrographic onsets; the electrical onset keeps the two corpora consistent | none (both listed) | clinical onset instead: 48 instead of 47 ictal windows for PN10 (1 label) |
+| PN10 | PN10-4.5.6, seizure 6 | only a clinical onset (15.18.26) | used as listed, flagged in the corpus's seizure notes | decision | - | electrical onset unknown; in seizure 3 it followed the clinical one by 6 s | at most about one window, by analogy with seizure 3 |
+| PN10 | PN10-2, seizure 2 | end "11.41.04 opure 11.40.43" (Italian "or") | first value, 11.41.04 | decision rule | - | 21 s in the seizure's end | second value instead: 45 instead of 47 ictal windows for PN10 |
+| PN14 | PN14-3 | registration start: list 16.17.45, EDF header 19.17.45 | EDF header start time | verified correction | header start + duration (41,995 s) gives the listed end time 06.57.40 exactly; the list's start would make the recording three hours longer than the file | none | seizure at 1 h 52 min into the recording, not 4 h 52 min |
