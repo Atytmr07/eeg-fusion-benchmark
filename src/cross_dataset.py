@@ -51,6 +51,7 @@ CROSS_FOLD = 10_000        # seed index of the single cross-dataset training run
 
 
 def load(pipe, dataset: str, subjects=None) -> dict:
+    pipe = pipe.for_dataset(dataset)          # P2: each dataset's own mains frequency
     return corpus_builder(dataset)(subjects=subjects, verbose=pipe.has_signal_steps,
                                    signal_fn=pipe.apply_signal if pipe.has_signal_steps else None,
                                    signal_tag=pipe.signal_tag)

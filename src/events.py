@@ -87,7 +87,7 @@ def read_signal(path: Path, pipeline: str, dataset: str = "chbmit") -> tuple[np.
     """A recording after the pipeline's signal-level steps, as the corpus builds it:
     CHB-MIT's 18 channels at their own rate, or Siena converted to the CHB-MIT form
     (src/siena.py: read_bipolar, 18 bipolar channels at 256 Hz)."""
-    pipe = PIPELINES[pipeline]
+    pipe = PIPELINES[pipeline].for_dataset(dataset)
     if dataset == "siena":
         from .siena import read_bipolar
         x = read_bipolar(path, signal_fn=pipe.apply_signal if pipe.has_signal_steps else None)
@@ -404,9 +404,10 @@ def run_cross(args, t_start: float) -> None:
     if args.skip_baselines:
         base_note = "skipped (--skip-baselines)"
     else:
+        sp = pipe.for_dataset("chbmit")
         src = corpus_builder("chbmit")(verbose=False,
-                                       signal_fn=pipe.apply_signal if pipe.has_signal_steps
-                                       else None, signal_tag=pipe.signal_tag)
+                                       signal_fn=sp.apply_signal if sp.has_signal_steps
+                                       else None, signal_tag=sp.signal_tag)
         tr, va = inner_split(src["group"], np.arange(len(src["y"])), src["y"])
         if pipe.reject:
             rej = artifact_mask(corpus_builder("chbmit")(verbose=False)["X"])
@@ -504,7 +505,7 @@ def main() -> None:
     if args.cross:
         run_cross(args, t_start)
         return
-    run_loso(args, PIPELINES[args.pipeline], t_start)
+    run_loso(args, PIPELINES[args.pipeline].for_dataset(args.dataset), t_start)
 
 
 if __name__ == "__main__":

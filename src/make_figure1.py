@@ -63,7 +63,7 @@ def panel_a(ax):
          "10 s windows;", "4 non-ictal per", "ictal window,", "per person;",
          "same windows in", "every pipeline"])
     box(ax, 0.17, y, 0.225, h, C["prep"], "Preprocessing multiverse",
-        ["P0   none (original)", "P1   0.5-40 Hz", "P2   0.5-70 Hz + 60 Hz notch",
+        ["P0   none (original)", "P1   0.5-40 Hz", "P2   0.5-70 Hz + mains notch",
          "P3   1-40 Hz", "P4   P1 + technical artefact", "        rejection (training only)",
          "P5   P1 + median/IQR scaling", "P6a P1 + Extended Infomax",
          "P6b P1 + GEDAI", "P6c P1 + AMICA", "x 3 seed sets per pipeline"])

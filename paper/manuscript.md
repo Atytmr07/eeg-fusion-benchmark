@@ -336,7 +336,7 @@ and parameter counts do not change), models, training and evaluation stay fixed
 |---|---|---|---|---|---|
 | P0 | none | none | none | z-score | original benchmark (Section 5.3) |
 | P1 | 0.5 to 40 Hz | none | none | z-score | standard EEG band |
-| P2 | 0.5 to 70 Hz | 60 Hz | none | z-score | information above 40 Hz |
+| P2 | 0.5 to 70 Hz | mains (CHB-MIT 60 Hz, Siena 50 Hz) | none | z-score | information above 40 Hz |
 | P3 | 1 to 40 Hz | none | none | z-score | low frequency content and drift |
 | P4 | 0.5 to 40 Hz | none | technical artefact rejection | z-score | artefact rejection |
 | P5 | 0.5 to 40 Hz | none | none | median and IQR | normalisation |

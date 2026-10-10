@@ -61,7 +61,7 @@ from __future__ import annotations
 import json
 import time
 import zlib
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 
 import numpy as np
 from scipy.signal import butter, sosfiltfilt
@@ -107,6 +107,10 @@ EOG_Z = 3.0                 # find_bads_eog threshold (MNE default)
 GEDAI_NOISE = "auto-"
 GEDAI_TAG = {"auto": "gedai", "auto-": "gedai-conservative"}
 ICA_LOG_ROOT = DATA_ROOT / "ica_logs"
+# Mains frequency of each dataset's recording site: P2's notch removes the local line
+# noise (CHB-MIT, Boston: 60 Hz; Siena, Italy: 50 Hz). Fixed on 10 October 2026, after
+# the first Siena runs had used 60 Hz; those runs were discarded and repeated.
+MAINS_HZ = {"chbmit": 60.0, "siena": 50.0}
 ALIAS_1020 = {"T3": "T7", "T4": "T8", "T5": "P7", "T6": "P8"}
 
 
@@ -114,7 +118,7 @@ ALIAS_1020 = {"T3": "T7", "T4": "T8", "T5": "P7", "T6": "P8"}
 class Pipeline:
     name: str
     band: tuple[float, float] | None = None
-    notch_hz: float | None = None
+    notch_hz: float | str | None = None    # Hz, or "mains": the dataset's line frequency
     ica: str | None = None          # P6: "infomax", "gedai" or "amica"
     reject: bool = False            # P4: technical artefact rejection (artifact_mask)
     norm: str = "window"            # "window" (z-score) or "robust" (median / IQR)
@@ -126,10 +130,18 @@ class Pipeline:
         if self.band:
             parts.append(f"bp{self.band[0]:g}-{self.band[1]:g}")
         if self.notch_hz:
-            parts.append(f"n{self.notch_hz:g}")
+            parts.append(f"n{self.notch_hz:g}" if not isinstance(self.notch_hz, str)
+                         else f"n{self.notch_hz}")
         if self.ica:
             parts.append(GEDAI_TAG[GEDAI_NOISE] if self.ica == "gedai" else self.ica)
         return "_".join(parts)
+
+    def for_dataset(self, dataset: str) -> "Pipeline":
+        """The pipeline as applied to one dataset: a "mains" notch becomes that dataset's
+        line frequency (MAINS_HZ). Every other pipeline is returned unchanged."""
+        if self.notch_hz == "mains":
+            return replace(self, notch_hz=MAINS_HZ[dataset])
+        return self
 
     @property
     def has_signal_steps(self) -> bool:
@@ -141,6 +153,9 @@ class Pipeline:
         `key` names the recording; it seeds ICA so the result does not depend on the
         order in which recordings are processed.
         """
+        if isinstance(self.notch_hz, str):
+            raise ValueError(f"{self.name}: notch '{self.notch_hz}' is not resolved; use "
+                             f"PIPELINES[...].for_dataset(dataset)")
         if self.band:
             x = bandpass(x, fs, *self.band)
         if self.notch_hz:
@@ -174,7 +189,7 @@ class Pipeline:
 PIPELINES = {p.name: p for p in (
     Pipeline("P0"),
     Pipeline("P1", band=(0.5, 40.0)),
-    Pipeline("P2", band=(0.5, 70.0), notch_hz=60.0),
+    Pipeline("P2", band=(0.5, 70.0), notch_hz="mains"),
     Pipeline("P3", band=(1.0, 40.0)),
     Pipeline("P4", band=(0.5, 40.0), reject=True),
     Pipeline("P5", band=(0.5, 40.0), norm="robust"),
@@ -319,12 +334,13 @@ def build_all(names: list[str], jobs: int = 1, dataset: str = "chbmit") -> None:
     ref = build_corpus(verbose=False)
     done: set[str] = set()
     for name in names:
-        p = PIPELINES[name]
+        p = PIPELINES[name].for_dataset(dataset)
         if not p.has_signal_steps or p.signal_tag in done:
             continue
         done.add(p.signal_tag)
         print(f"\n{name}: building corpus '{p.signal_tag}' (shared by "
-              f"{', '.join(q.name for q in PIPELINES.values() if q.signal_tag == p.signal_tag)})")
+              f"{', '.join(q.name for q in PIPELINES.values()
+                        if q.for_dataset(dataset).signal_tag == p.signal_tag)})")
         d = build_corpus(signal_fn=p.apply_signal, signal_tag=p.signal_tag, **extra)
         same = all(np.array_equal(d[k], ref[k]) for k in
                    ("y", "subject", "seizure_id", "record", "t0"))

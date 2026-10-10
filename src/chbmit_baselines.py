@@ -86,7 +86,7 @@ def main() -> None:
     if meta_path.exists():
         pipe_name = json.loads(meta_path.read_text(encoding="utf-8")).get(
             "pipeline", {}).get("name", "P0")
-    pipe = PIPELINES[pipe_name]
+    pipe = PIPELINES[pipe_name].for_dataset(args.dataset)
     d = build_corpus(verbose=False,
                      signal_fn=pipe.apply_signal if pipe.has_signal_steps else None,
                      signal_tag=pipe.signal_tag)

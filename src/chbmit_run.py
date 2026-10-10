@@ -213,7 +213,7 @@ def main() -> None:
     if want_score and not {"raw1d", "spec2d"} <= set(args.models):
         raise SystemExit("score is computed from raw1d and spec2d; add both to --models")
 
-    pipe = PIPELINES[args.pipeline]
+    pipe = PIPELINES[args.pipeline].for_dataset(args.dataset)
     if pipe.name != "P0" and (args.norm != "window" or args.notch):
         raise SystemExit("--pipeline sets normalisation and filtering itself; do not "
                          "combine it with --norm or --notch")
