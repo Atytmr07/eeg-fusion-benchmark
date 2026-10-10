@@ -28,6 +28,8 @@ Commands (run from the repository root):
     python paper/literature/screen.py verify --part A    # Crossref / arXiv check of every id
     python paper/literature/screen.py sample --part A    # random subset for the second pass
     python paper/literature/screen.py agreement --part A # agreement of the two passes
+    python paper/literature/screen.py human-sheet --part A       # blind human screening page
+    python paper/literature/screen.py human-agreement --part A   # human vs AI, kappa
     python paper/literature/screen.py prisma             # counts + prisma.png
 
 Deduplication: records with the same DOI are one record; records without a matching DOI
@@ -462,6 +464,179 @@ def agreement(part: str) -> dict:
     return res
 
 
+
+# --- Blind human screening -------------------------------------------------------------------------
+
+CRITERIA_HTML = """
+<p><b>Dahil</b> (hepsi): EEG kullanıyor; konu nöbet <b>tespiti veya tahmini</b> (nöbet tipi ve
+nöbet sınıfı içeren IIIC dahil); derin öğrenme <b>en az iki farklı temsili</b> (ham sinyal +
+spektrogram/wavelet görüntüsü, zaman + frekans dalları, el yapımı + derin öznitelikler, iki farklı
+görüntü kodlaması) ya da <b>iki modaliteyi</b> (EEG + EKG, EMG, video, MRI, fNIRS, klinik metin)
+birleştiriyor; İngilizce; makale, bildiri ya da arXiv ön baskısı.</p>
+<p><b>Hariç</b>, gerekçe numarasıyla: <b>1</b> konu dışı (EEG nöbet tespiti/tahmini değil; bildiri
+kitapçığı, editoryal, olgu sunumu; spike/IED/HFO tespiti, odak lokalizasyonu, fokal/fokal olmayan
+sınıflandırma, sendrom sınıflandırması); <b>2</b> iki temsil/modalitenin derin öğrenmeyle
+füzyonu yok (aynı temsilin çok ölçekli/çok bantlı sürümleri, aynı girdi üzerinde uzamsal ve
+zamansal dallar, aynı girdi üzerinde topluluk, derin ağ olmadan klasik ML); <b>3</b> yalnızca
+derleme.</p>
+<p><b>Belirsiz</b>: özetten karar verilemiyor; tam metne gider.</p>
+<p>Kaynak: docs/14 §4 ve docs/15 §4. Yalnızca başlık ve özete bak; AI kararları bu sayfada yok.</p>
+"""
+
+PAGE = """<!doctype html><html lang="tr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>__TITLE__</title>
+<style>
+:root{--bg:#fafaf8;--card:#fff;--ink:#1d1d1b;--mute:#6b6b66;--line:#e2e1dc;--acc:#2f5d8a}
+@media (prefers-color-scheme:dark){:root{--bg:#1b1b1a;--card:#242422;--ink:#ecebe6;--mute:#a3a29b;--line:#3a3a37;--acc:#8ab4dc}}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,system-ui,sans-serif;margin:0}
+header{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--line);padding:10px 16px;z-index:2;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+main{max-width:860px;margin:0 auto;padding:16px}
+.crit{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:4px 16px;font-size:14px}
+.rec{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px 16px;margin:14px 0}
+.rec.done{border-left:4px solid var(--acc)}
+.id{color:var(--mute);font-size:12px}.t{font-weight:600;margin:2px 0 4px}.meta{color:var(--mute);font-size:13px}
+.ab{margin:8px 0;white-space:pre-wrap}.ai{background:rgba(200,140,0,.12);border-radius:6px;padding:6px 10px;font-size:13px}
+.ctl{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+input[type=text]{flex:1;min-width:180px;padding:4px 6px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--ink)}
+button{padding:6px 12px;border-radius:6px;border:1px solid var(--acc);background:var(--acc);color:#fff;cursor:pointer}
+</style></head><body>
+<header><b>__TITLE__</b><span id="prog"></span><button onclick="dl()">CSV indir</button>
+<label style="font-size:13px">yükle: <input type="file" accept=".csv" onchange="ul(this)"></label></header>
+<main><div class="crit">__CRITERIA__</div><div id="list"></div></main>
+<script>
+const RECS = __RECS__; const KEY = "__KEY__"; const COLS = __COLS__;
+let st = {}; try { st = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) {}
+function save(){ try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {} prog(); }
+function prog(){ const n = RECS.filter(r => (st[r.record_id]||{}).decision).length;
+  document.getElementById("prog").textContent = n + " / " + RECS.length + " karar verildi"; }
+function esc(s){ const d = document.createElement("div"); d.textContent = s || ""; return d.innerHTML; }
+function render(){ const L = document.getElementById("list"); L.innerHTML = "";
+  RECS.forEach((r, i) => { const v = st[r.record_id] || {}; const el = document.createElement("div");
+    el.className = "rec" + (v.decision ? " done" : "");
+    el.innerHTML = `<div class="id">${i+1}. ${esc(r.record_id)}</div><div class="t">${esc(r.title)}</div>
+      <div class="meta">${esc(r.year)} · ${esc(r.venue)}</div><div class="ab">${esc(r.abstract)}</div>
+      ${r.ai ? `<div class="ai">${esc(r.ai)}</div>` : ""}
+      <div class="ctl">${["include","exclude","unclear"].map(d => `<label><input type="radio" name="d${i}" value="${d}" ${v.decision===d?"checked":""}> ${{include:"Dahil",exclude:"Hariç",unclear:"Belirsiz"}[d]}</label>`).join("")}
+      <label>gerekçe <select><option value=""></option>${["1","2","3"].map(x=>`<option ${v.reason===x?"selected":""}>${x}</option>`).join("")}</select></label>
+      <input type="text" placeholder="not" value="${esc(v.note||"")}"></div>`;
+    el.querySelectorAll("input[type=radio]").forEach(b => b.onchange = () => { st[r.record_id] = {...(st[r.record_id]||{}), decision: b.value}; el.classList.add("done"); save(); });
+    el.querySelector("select").onchange = e => { st[r.record_id] = {...(st[r.record_id]||{}), reason: e.target.value}; save(); };
+    el.querySelector("input[type=text]").oninput = e => { st[r.record_id] = {...(st[r.record_id]||{}), note: e.target.value}; save(); };
+    L.appendChild(el); }); prog(); }
+function q(s){ s = String(s ?? ""); return /[",\\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
+function dl(){ const miss = RECS.filter(r => !(st[r.record_id]||{}).decision).length;
+  if (miss && !confirm(miss + " kayıt kararsız; yine de indirilsin mi?")) return;
+  const rows = [COLS.join(",")].concat(RECS.map(r => { const v = st[r.record_id] || {};
+    return [r.record_id, v.decision||"", v.decision==="exclude" ? (v.reason||"") : "", v.note||""].map(q).join(","); }));
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([rows.join("\\n") + "\\n"], {type: "text/csv"}));
+  a.download = "__OUT__"; a.click(); }
+function ul(inp){ const f = inp.files[0]; if (!f) return; f.text().then(t => {
+  t.trim().split(/\\r?\\n/).slice(1).forEach(line => { const c = line.match(/("([^"]|"")*"|[^,]*)(,|$)/g).map(x => x.replace(/,$/, "").replace(/^"|"$/g, "").replace(/""/g, '"'));
+    if (c[0]) st[c[0]] = {decision: c[1], reason: c[2], note: c[3]}; }); save(); render(); }); }
+render();
+</script></body></html>
+"""
+
+
+def _page(path: Path, title: str, records: list[dict], key: str, out_name: str,
+          cols: list[str]) -> None:
+    js = json.dumps(records, ensure_ascii=False).replace("</", "<\\/")
+    html = (PAGE.replace("__TITLE__", title).replace("__CRITERIA__", CRITERIA_HTML)
+            .replace("__RECS__", js).replace("__KEY__", key).replace("__OUT__", out_name)
+            .replace("__COLS__", json.dumps(cols)))
+    path.write_text(html, encoding="utf-8")
+
+
+def human_sheet(part: str) -> Path:
+    """The blind human screening page for the second-pass sample: title, year, venue
+    and abstract only, no AI decision. It holds abstracts, so it stays local
+    (.gitignore); the decisions are downloaded as human_screen_<part>.csv (record_id,
+    decision, reason, note: no abstracts, committed)."""
+    sample_rows = read_csv(HERE / f"second_pass_{part}.csv")
+    recs = [{k: r[k] for k in ("record_id", "title", "year", "venue", "abstract")}
+            for r in sample_rows]
+    out = HERE / f"human_screen_{part}.html"
+    _page(out, f"Kör eleme, kısım {part} ({len(recs)} kayıt)", recs,
+          f"human_screen_{part}", f"human_screen_{part}.csv",
+          ["record_id", "human_decision", "human_reason", "human_note"])
+    print(f"{len(recs)} records -> {out}\nOpen it in a browser, decide every record, press "
+          f"'CSV indir' and save the file as paper/literature/human_screen_{part}.csv")
+    return out
+
+
+def _kappa(pairs: list[tuple[str, str]]) -> tuple[float, float]:
+    labels = sorted({a for p in pairs for a in p})
+    n = len(pairs)
+    po = sum(a == b for a, b in pairs) / n
+    pe = sum((sum(a == l for a, _ in pairs) / n) * (sum(b == l for _, b in pairs) / n)
+             for l in labels)
+    return po, ((po - pe) / (1 - pe) if pe < 1 else float("nan"))
+
+
+def human_agreement(part: str, threshold: float = 0.8) -> dict:
+    """Human (blind) against the AI's primary decisions on the second-pass sample:
+    agreement, Cohen's kappa, confusion matrix. With kappa >= threshold the AI screening
+    stands for the other records and the human adjudicates only the AI's 'unclear'
+    records and the disagreements: adjudication_<part>.csv (no abstracts, committed)
+    and adjudication_<part>.html (local)."""
+    first = {r["record_id"]: r for r in read_csv(records_path(part))}
+    human = {r["record_id"]: r for r in read_csv(HERE / f"human_screen_{part}.csv")}
+    second = {r["record_id"]: r for r in read_csv(HERE / f"second_pass_{part}.csv")}
+    missing = [k for k in second if not human.get(k, {}).get("human_decision")]
+    if missing:
+        raise SystemExit(f"{len(missing)} records without a human decision, e.g. {missing[:5]}")
+    ids = sorted(second)
+    pairs = [(first[k]["stage1"], human[k]["human_decision"]) for k in ids]
+    po, kappa = _kappa(pairs)
+    pob, kappab = _kappa([(a != "exclude", b != "exclude") for a, b in pairs])
+    po2, kappa2 = _kappa([(second[k]["stage1_second"], human[k]["human_decision"]) for k in ids
+                          if second[k]["stage1_second"]])
+    labels = ["include", "unclear", "exclude"]
+    confusion = {f"AI {a}": {f"human {b}": sum(p == (a, b) for p in pairs) for b in labels}
+                 for a in labels}
+    disagree = [k for k in ids if first[k]["stage1"] != human[k]["human_decision"]]
+    res = {"n": len(pairs), "agreement": po, "kappa": kappa, "threshold": threshold,
+           "ai_screening_accepted": kappa >= threshold,
+           "agreement_to_full_text": pob, "kappa_to_full_text": kappab,
+           "human_vs_ai_second_pass": {"agreement": po2, "kappa": kappa2},
+           "confusion": confusion, "disagreements": disagree}
+    (HERE / f"agreement_human_{part}.json").write_text(json.dumps(res, indent=2))
+    print(json.dumps({k: v for k, v in res.items() if k != "disagreements"}, indent=2))
+    print(f"disagreements ({len(disagree)}): {', '.join(disagree)}")
+    if kappa < threshold:
+        print(f"\nkappa {kappa:.3f} < {threshold}: STOP. The AI screening cannot stand for the "
+              f"other records; report to the team before continuing.")
+        return res
+    # adjudication: every AI 'unclear' record of the part and every disagreement
+    ab = load_abstracts(part)
+    adj = sorted({k for k, r in first.items() if r["stage1"] == "unclear"} | set(disagree))
+    rows = []
+    for k in adj:
+        r = first[k]
+        rows.append({"record_id": k, "title": r["title"], "year": r["year"], "doi": r["doi"],
+                     "why": ("AI unclear" if r["stage1"] == "unclear" else "")
+                     + (" + " if r["stage1"] == "unclear" and k in disagree else "")
+                     + ("human-AI disagreement" if k in disagree else ""),
+                     "ai_decision": r["stage1"], "ai_reason": r["stage1_reason"],
+                     "human_blind": human.get(k, {}).get("human_decision", ""),
+                     "final_decision": "", "final_reason": "", "final_note": ""})
+    write_csv(HERE / f"adjudication_{part}.csv", rows, list(rows[0]))
+    recs = [{"record_id": x["record_id"], "title": x["title"], "year": x["year"],
+             "venue": first[x["record_id"]]["venue"],
+             "abstract": ab.get(x["record_id"]) or first[x["record_id"]]["abstract"],
+             "ai": f"{x['why']}: AI {x['ai_decision']}"
+                   + (f" (gerekçe {x['ai_reason']})" if x["ai_reason"] else "")
+                   + (f"; kör insan kararı: {x['human_blind']}" if x["human_blind"] else "")}
+            for x in rows]
+    _page(HERE / f"adjudication_{part}.html", f"Karara bağlama, kısım {part} ({len(rows)} kayıt)",
+          recs, f"adjudication_{part}", f"adjudication_{part}_decisions.csv",
+          ["record_id", "final_decision", "final_reason", "final_note"])
+    print(f"\nkappa {kappa:.3f} >= {threshold}: the AI screening stands for the other records.\n"
+          f"{len(rows)} records to adjudicate (AI unclear and disagreements): "
+          f"adjudication_{part}.csv / .html")
+    return res
+
+
 # --- PRISMA ---------------------------------------------------------------------------------------
 
 def prisma() -> dict:
@@ -586,7 +761,7 @@ def write_csv(path: Path, rows: list[dict], cols: list[str]) -> None:
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("command", choices=["strip", "merge", "verify", "sample", "agreement",
-                                        "prisma"])
+                                        "human-sheet", "human-agreement", "prisma"])
     ap.add_argument("--part", default="A", help="A, B1, B2, B3 or B4")
     ap.add_argument("--all", action="store_true", help="verify: recheck verified records")
     ap.add_argument("--frac", type=float, default=0.2, help="sample: share of records")
@@ -601,6 +776,10 @@ def main() -> None:
         sample(args.part, args.frac)
     elif args.command == "agreement":
         agreement(args.part)
+    elif args.command == "human-sheet":
+        human_sheet(args.part)
+    elif args.command == "human-agreement":
+        human_agreement(args.part)
     else:
         prisma()
 
