@@ -59,14 +59,14 @@ def panel_a(ax):
     ax.text(0.0, 1.0, "a", fontsize=10, fontweight="bold", va="top")
     y, h = 0.02, 0.88
     box(ax, 0.01, y, 0.14, h, C["data"], "EEG",
-        ["CHB-MIT: 23 persons", "Siena: 14 patients", "18 bipolar channels,", "256 Hz", "",
-         "10 s windows;", "4 non-ictal per", "ictal window,", "per person;",
-         "same windows in", "every pipeline"])
+        ["CHB-MIT: 23 persons", "Siena: 14 patients,", "resampled from", "512 Hz to 256 Hz",
+         "18 bipolar channels,", "256 Hz", "10 s windows;", "4 non-ictal per", "ictal window,",
+         "per person; same", "windows in every", "pipeline"])
     box(ax, 0.17, y, 0.225, h, C["prep"], "Preprocessing multiverse",
         ["P0   none (original)", "P1   0.5-40 Hz", "P2   0.5-70 Hz + mains notch",
-         "P3   1-40 Hz", "P4   P1 + technical artefact", "        rejection (training only)",
+         "        (CHB-MIT 60, Siena 50 Hz)", "P3   1-40 Hz", "P4   P1 + technical artefact", "        rejection (training only)",
          "P5   P1 + median/IQR scaling", "P6a P1 + Extended Infomax",
-         "P6b P1 + GEDAI", "P6c P1 + AMICA", "x 3 seed sets per pipeline"])
+         "P6b P1 + GEDAI", "P6c P1 + AMICA", "x 5 seed sets per pipeline"])
     hh = (h - 0.04) / 2
     box(ax, 0.415, y + hh + 0.04, 0.15, hh, C["rep"], "Raw waveform",
         ["1D CNN encoder", "(16, 32, 64 channels)", "-> 128 features"])
@@ -147,19 +147,22 @@ def panel_b(ax):
 
     # (3) P6
     x2 = 0.695
-    for k, (lab, yy) in enumerate((("recording 1", 0.62), ("recording 2", 0.50),
-                                   ("recording 3", 0.38))):
+    for k, (lab, yy) in enumerate((("recording 1", 0.66), ("recording 2", 0.555),
+                                   ("recording 3", 0.45))):
         ax.add_patch(Rectangle((x2, yy), 0.085, 0.07, fc=C["data"], ec=LINE, lw=0.5))
         ax.text(x2 + 0.0425, yy + 0.035, lab, fontsize=5.8, ha="center", va="center")
         arrow(ax, x2 + 0.088, yy + 0.035, x2 + 0.118, yy + 0.035, color=MUTE)
         ax.add_patch(Rectangle((x2 + 0.12, yy), 0.15, 0.07, fc=C["prep"], ec=LINE, lw=0.5))
         ax.text(x2 + 0.195, yy + 0.035, "own ICA / GEDAI fit", fontsize=5.8, ha="center",
                 va="center")
-    ax.text(x2, 0.23, "continuous signal of one recording, before\n"
-            "windowing; seizure labels never used; ocular\n"
-            "components by a fixed rule (frontal channels)", fontsize=6.0, color=INK,
-            va="center")
-    ax.text(x2, 0.10, "no statistics shared across recordings or persons", fontsize=6.0,
+    ax.text(x2, 0.265, "continuous signal of one recording, before\n"
+            "windowing; seizure labels never used.\n"
+            "Infomax, AMICA: ocular components by a fixed\n"
+            "rule (frontal channels as EOG proxies).\n"
+            "GEDAI: its own criterion, departure from a\n"
+            "leadfield reference covariance.", fontsize=5.7, color=INK, va="center",
+            linespacing=1.15)
+    ax.text(x2, 0.075, "no statistics shared across recordings or persons", fontsize=6.0,
             color=MUTE, va="center")
 
 
