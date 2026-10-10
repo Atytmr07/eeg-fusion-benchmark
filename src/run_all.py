@@ -21,6 +21,10 @@ Parallel CPU use: with --worker 2/2 a second window only takes its half of the C
 queue and stops; --worker 1/2 takes the other half, waits until every CHB-MIT run is
 complete, and then runs steps 2 to 6.
 
+P6's event metrics must be computed on the machine that built the P6 caches: the ICA and
+GEDAI decompositions differ between machines even with fixed seeds and package versions
+(events.py's window check fails), so on any other machine pass --skip-events P6a P6b P6c.
+
 Usage:
     python -m src.run_all --device cuda                         # one window
     python -m src.run_all --worker 1/2   and   --worker 2/2      # two CPU windows
@@ -90,6 +94,9 @@ def queue_complete(dataset: str, args) -> tuple[int, int]:
 def events_step(R: Runner, dataset: str, args) -> None:
     """Event metrics of every pipeline whose seed sets are all complete."""
     for p in args.pipelines:
+        if p in args.skip_events:
+            log(f"skip   {dataset} events {p}: --skip-events")
+            continue
         tags = [tag_for(p, r, args.device, dataset) for r in args.repeats]
         if not all(all(status(t, dataset)) for t in tags):
             log(f"skip   {dataset} events {p}: runs not complete")
@@ -105,7 +112,8 @@ def events_step(R: Runner, dataset: str, args) -> None:
 
 def check_ica_env(args) -> bool:
     """The P6 event steps need the ICA environment; check it before anything starts."""
-    if not any(PIPELINES[p].ica for p in args.pipelines + args.cross_pipelines):
+    if not any(PIPELINES[p].ica for p in args.pipelines + args.cross_pipelines
+               if p not in args.skip_events):
         return True
     exe = Path(args.python_ica)
     if not exe.exists():
@@ -133,6 +141,10 @@ def main() -> None:
                     help="worker processes of the event metrics (reading recordings)")
     ap.add_argument("--python-ica", default=str(PROJECT_ROOT / ".venv-ica" / "Scripts" /
                                                 "python.exe"))
+    ap.add_argument("--skip-events", nargs="*", default=[], choices=list(PIPELINES),
+                    help="pipelines whose event metrics are computed elsewhere (P6 on the "
+                         "machine that built its caches: ICA does not reproduce across "
+                         "machines)")
     ap.add_argument("--worker", default="1/1")
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
@@ -187,6 +199,9 @@ def main() -> None:
             tags.append(t)
         todo = [t for t in tags if not (RESULTS_ROOT / "cross" / t / "events" /
                                         "meta.json").exists()]
+        if p in args.skip_events:
+            log(f"skip   cross events {p}: --skip-events")
+            todo = []
         if todo:
             ica = bool(PIPELINES[p].ica)
             R.run(f"cross events {p}",
