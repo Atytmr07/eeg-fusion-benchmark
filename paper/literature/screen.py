@@ -28,8 +28,8 @@ Commands (run from the repository root):
     python paper/literature/screen.py verify --part A    # Crossref / arXiv check of every id
     python paper/literature/screen.py sample --part A    # random subset for the second pass
     python paper/literature/screen.py agreement --part A # agreement of the two passes
-    python paper/literature/screen.py human-sheet --part A       # blind human screening page
-    python paper/literature/screen.py human-agreement --part A   # human vs AI, kappa
+    python paper/literature/screen.py human-sheet --part A --rater berk   # blind page per rater
+    python paper/literature/screen.py human-agreement --part A   # raters vs AI and each other
     python paper/literature/screen.py prisma             # counts + prisma.png
 
 Deduplication: records with the same DOI are one record; records without a matching DOI
@@ -547,20 +547,24 @@ def _page(path: Path, title: str, records: list[dict], key: str, out_name: str,
     path.write_text(html, encoding="utf-8")
 
 
-def human_sheet(part: str) -> Path:
-    """The blind human screening page for the second-pass sample: title, year, venue
-    and abstract only, no AI decision. It holds abstracts, so it stays local
-    (.gitignore); the decisions are downloaded as human_screen_<part>.csv (record_id,
+def human_sheet(part: str, rater: str) -> Path:
+    """The blind screening page of one human rater for the second-pass sample: title,
+    year, venue and abstract only, no AI decision and nothing from any other rater.
+    It holds abstracts, so it stays local (.gitignore). Each rater gets an own page
+    (own browser storage key) and downloads human_screen_<part>_<rater>.csv (record_id,
     decision, reason, note: no abstracts, committed)."""
+    rater = re.sub(r"[^a-z0-9]+", "", rater.lower())
+    if not rater:
+        raise SystemExit("--rater NAME is required, e.g. --rater berk")
     sample_rows = read_csv(HERE / f"second_pass_{part}.csv")
     recs = [{k: r[k] for k in ("record_id", "title", "year", "venue", "abstract")}
             for r in sample_rows]
-    out = HERE / f"human_screen_{part}.html"
-    _page(out, f"Kör eleme, kısım {part} ({len(recs)} kayıt)", recs,
-          f"human_screen_{part}", f"human_screen_{part}.csv",
+    out = HERE / f"human_screen_{part}_{rater}.html"
+    _page(out, f"Kör eleme, kısım {part}, {rater} ({len(recs)} kayıt)", recs,
+          f"human_screen_{part}_{rater}", f"human_screen_{part}_{rater}.csv",
           ["record_id", "human_decision", "human_reason", "human_note"])
     print(f"{len(recs)} records -> {out}\nOpen it in a browser, decide every record, press "
-          f"'CSV indir' and save the file as paper/literature/human_screen_{part}.csv")
+          f"'CSV indir' and save the file as paper/literature/human_screen_{part}_{rater}.csv")
     return out
 
 
@@ -574,51 +578,80 @@ def _kappa(pairs: list[tuple[str, str]]) -> tuple[float, float]:
 
 
 def human_agreement(part: str, threshold: float = 0.8) -> dict:
-    """Human (blind) against the AI's primary decisions on the second-pass sample:
-    agreement, Cohen's kappa, confusion matrix. With kappa >= threshold the AI screening
-    stands for the other records and the human adjudicates only the AI's 'unclear'
-    records and the disagreements: adjudication_<part>.csv (no abstracts, committed)
-    and adjudication_<part>.html (local)."""
+    """Every human rater (human_screen_<part>_<rater>.csv, made blind) against the AI's
+    primary decisions on the second-pass sample, and the raters against each other:
+    agreement, Cohen's kappa, confusion matrix.
+
+    If every rater reaches kappa >= threshold with the AI, the AI screening stands for
+    the other records, and the humans adjudicate only the AI's 'unclear' records and the
+    sample records on which any rater disagrees with the AI or the raters disagree:
+    adjudication_<part>.csv (no abstracts, committed) and adjudication_<part>.html
+    (local). Otherwise the command stops and says so."""
     first = {r["record_id"]: r for r in read_csv(records_path(part))}
-    human = {r["record_id"]: r for r in read_csv(HERE / f"human_screen_{part}.csv")}
     second = {r["record_id"]: r for r in read_csv(HERE / f"second_pass_{part}.csv")}
-    missing = [k for k in second if not human.get(k, {}).get("human_decision")]
-    if missing:
-        raise SystemExit(f"{len(missing)} records without a human decision, e.g. {missing[:5]}")
     ids = sorted(second)
-    pairs = [(first[k]["stage1"], human[k]["human_decision"]) for k in ids]
-    po, kappa = _kappa(pairs)
-    pob, kappab = _kappa([(a != "exclude", b != "exclude") for a, b in pairs])
-    po2, kappa2 = _kappa([(second[k]["stage1_second"], human[k]["human_decision"]) for k in ids
-                          if second[k]["stage1_second"]])
+    raters = {}
+    for f in sorted(HERE.glob(f"human_screen_{part}_*.csv")):
+        name = f.stem.split(f"human_screen_{part}_", 1)[1]
+        rows = {r["record_id"]: r for r in read_csv(f)}
+        missing = [k for k in ids if not rows.get(k, {}).get("human_decision")]
+        if missing:
+            raise SystemExit(f"{f.name}: {len(missing)} records without a decision, "
+                             f"e.g. {missing[:5]}")
+        raters[name] = {k: rows[k]["human_decision"] for k in ids}
+    if not raters:
+        raise SystemExit(f"no human_screen_{part}_<rater>.csv found")
     labels = ["include", "unclear", "exclude"]
-    confusion = {f"AI {a}": {f"human {b}": sum(p == (a, b) for p in pairs) for b in labels}
-                 for a in labels}
-    disagree = [k for k in ids if first[k]["stage1"] != human[k]["human_decision"]]
-    res = {"n": len(pairs), "agreement": po, "kappa": kappa, "threshold": threshold,
-           "ai_screening_accepted": kappa >= threshold,
-           "agreement_to_full_text": pob, "kappa_to_full_text": kappab,
-           "human_vs_ai_second_pass": {"agreement": po2, "kappa": kappa2},
-           "confusion": confusion, "disagreements": disagree}
+
+    def compare(a: dict, b: dict) -> dict:
+        pairs = [(a[k], b[k]) for k in ids]
+        po, k = _kappa(pairs)
+        pob, kb = _kappa([(x != "exclude", y != "exclude") for x, y in pairs])
+        return {"agreement": po, "kappa": k, "agreement_to_full_text": pob,
+                "kappa_to_full_text": kb,
+                "disagreements": [i for i in ids if a[i] != b[i]]}
+
+    ai = {k: first[k]["stage1"] for k in ids}
+    res = {"n": len(ids), "threshold": threshold, "raters": list(raters),
+           "rater_vs_ai": {}, "rater_vs_rater": {}}
+    for name, dec in raters.items():
+        c = compare(ai, dec)
+        c["confusion"] = {f"AI {x}": {f"{name} {y}": sum(ai[i] == x and dec[i] == y
+                                                         for i in ids) for y in labels}
+                          for x in labels}
+        res["rater_vs_ai"][name] = c
+    names = list(raters)
+    for i in range(len(names)):
+        for j in range(i + 1, len(names)):
+            res["rater_vs_rater"][f"{names[i]} vs {names[j]}"] = compare(raters[names[i]],
+                                                                          raters[names[j]])
+    accepted = all(c["kappa"] >= threshold for c in res["rater_vs_ai"].values())
+    res["ai_screening_accepted"] = accepted
     (HERE / f"agreement_human_{part}.json").write_text(json.dumps(res, indent=2))
-    print(json.dumps({k: v for k, v in res.items() if k != "disagreements"}, indent=2))
-    print(f"disagreements ({len(disagree)}): {', '.join(disagree)}")
-    if kappa < threshold:
-        print(f"\nkappa {kappa:.3f} < {threshold}: STOP. The AI screening cannot stand for the "
-              f"other records; report to the team before continuing.")
+    for name, c in res["rater_vs_ai"].items():
+        print(f"{name} vs AI: agreement {c['agreement']:.3f}, kappa {c['kappa']:.3f} "
+              f"(to full text: {c['agreement_to_full_text']:.3f}, {c['kappa_to_full_text']:.3f}); "
+              f"{len(c['disagreements'])} disagreements")
+    for pair, c in res["rater_vs_rater"].items():
+        print(f"{pair}: agreement {c['agreement']:.3f}, kappa {c['kappa']:.3f}; "
+              f"{len(c['disagreements'])} disagreements")
+    if not accepted:
+        print(f"\nkappa below {threshold} for at least one rater: STOP. The AI screening cannot "
+              f"stand for the other records; report to the team before continuing.")
         return res
-    # adjudication: every AI 'unclear' record of the part and every disagreement
+    disagree = sorted({i for c in res["rater_vs_ai"].values() for i in c["disagreements"]}
+                      | {i for c in res["rater_vs_rater"].values() for i in c["disagreements"]})
     ab = load_abstracts(part)
     adj = sorted({k for k, r in first.items() if r["stage1"] == "unclear"} | set(disagree))
     rows = []
     for k in adj:
         r = first[k]
+        blind = "; ".join(f"{n}: {raters[n][k]}" for n in raters if k in raters[n])
         rows.append({"record_id": k, "title": r["title"], "year": r["year"], "doi": r["doi"],
-                     "why": ("AI unclear" if r["stage1"] == "unclear" else "")
-                     + (" + " if r["stage1"] == "unclear" and k in disagree else "")
-                     + ("human-AI disagreement" if k in disagree else ""),
+                     "why": " + ".join(w for w, cond in (("AI unclear", r["stage1"] == "unclear"),
+                                                          ("disagreement", k in disagree)) if cond),
                      "ai_decision": r["stage1"], "ai_reason": r["stage1_reason"],
-                     "human_blind": human.get(k, {}).get("human_decision", ""),
+                     "human_blind": blind,
                      "final_decision": "", "final_reason": "", "final_note": ""})
     write_csv(HERE / f"adjudication_{part}.csv", rows, list(rows[0]))
     recs = [{"record_id": x["record_id"], "title": x["title"], "year": x["year"],
@@ -626,12 +659,12 @@ def human_agreement(part: str, threshold: float = 0.8) -> dict:
              "abstract": ab.get(x["record_id"]) or first[x["record_id"]]["abstract"],
              "ai": f"{x['why']}: AI {x['ai_decision']}"
                    + (f" (gerekçe {x['ai_reason']})" if x["ai_reason"] else "")
-                   + (f"; kör insan kararı: {x['human_blind']}" if x["human_blind"] else "")}
+                   + (f"; kör insan kararları: {x['human_blind']}" if x["human_blind"] else "")}
             for x in rows]
     _page(HERE / f"adjudication_{part}.html", f"Karara bağlama, kısım {part} ({len(rows)} kayıt)",
           recs, f"adjudication_{part}", f"adjudication_{part}_decisions.csv",
           ["record_id", "final_decision", "final_reason", "final_note"])
-    print(f"\nkappa {kappa:.3f} >= {threshold}: the AI screening stands for the other records.\n"
+    print(f"\nall raters kappa >= {threshold}: the AI screening stands for the other records.\n"
           f"{len(rows)} records to adjudicate (AI unclear and disagreements): "
           f"adjudication_{part}.csv / .html")
     return res
@@ -765,6 +798,7 @@ def main() -> None:
     ap.add_argument("--part", default="A", help="A, B1, B2, B3 or B4")
     ap.add_argument("--all", action="store_true", help="verify: recheck verified records")
     ap.add_argument("--frac", type=float, default=0.2, help="sample: share of records")
+    ap.add_argument("--rater", default="", help="human-sheet: the rater's name")
     args = ap.parse_args()
     if args.command == "strip":
         strip()
@@ -777,7 +811,7 @@ def main() -> None:
     elif args.command == "agreement":
         agreement(args.part)
     elif args.command == "human-sheet":
-        human_sheet(args.part)
+        human_sheet(args.part, args.rater)
     elif args.command == "human-agreement":
         human_agreement(args.part)
     else:
