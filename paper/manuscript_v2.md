@@ -546,6 +546,4 @@ and reproducibility; 6, cross-dataset comparison)*
 
 An AI assistant (Claude, Anthropic) was used to help write code and to edit the text.
 The authors designed the study, made every methodological decision, checked the code,
-results and text, and take full responsibility for them. In the literature search, the
-title and abstract screening was done by the AI assistant against the protocol's
-criteria and is being checked by human screening (Section 4.x).
+results and text, and take full responsibility for them.
