@@ -1,8 +1,11 @@
 > **DRAFT v2, NOT FOR SUBMISSION.** Restructured around the three research questions the
-> advisor set on 10 October 2026. This file currently holds the research questions and
-> the full Methods (Section 2, in the advisor's subsections 2.1 to 2.7). The
-> Introduction will be built from `paper/intro_draft.md`; Results and Discussion follow
-> when the five-seed runs are complete. `paper/manuscript.md` is the previous draft
+> advisor set on 10 October 2026. This file holds the Introduction (Section 1) and the
+> full Methods (Section 2, in the advisor's subsections 2.1 to 2.7); Results and
+> Discussion follow when the five-seed runs are complete. The literature review is
+> provisional: the systematic search has run, but title and abstract screening was done
+> by an AI assistant, and the human screening and the full texts follow after 17
+> October; claims marked [abstract] rest on a source's abstract only and are to be
+> checked against its full text. `paper/manuscript.md` is the previous draft
 > (Bonn and CHB-MIT, single pipeline) and stays unchanged until this one replaces it;
 > where the Bonn benchmark goes (supplementary material or a separate note) is still
 > to be decided with the advisor. Every number below is traceable to a file in the
@@ -19,13 +22,132 @@ Antalya Bilim University
 
 ## 1. Introduction
 
-*(to be integrated from `paper/intro_draft.md`: preprocessing sensitivity, fusion
-benchmarking and its limits, reproducibility and ranking instability, cross-dataset
-generalisation)*
+Electroencephalography (EEG) records the brain's electrical activity, and during an
+epileptic seizure that activity changes characteristically: amplitude rises, the signal
+becomes rhythmic and its power concentrates in particular frequency bands. Automatic
+seizure detection is therefore a signal classification problem, and convolutional neural
+networks (CNNs) are the dominant approach to it. A recurring design represents each EEG
+segment twice, as the raw waveform for a 1D CNN and as its time-frequency image for a 2D
+CNN, and combines the two branches with a fusion operator: early fusion of inputs or
+early features, late fusion of the final feature vectors, a learned gate or attention
+weighting, or a combination of the two branches' predicted scores. Studies of such
+models typically report that one operator outperforms the others. Whether such a
+statement holds once the analytic decisions around the comparison change is the
+question of this paper.
+
+### 1.1 Preprocessing changes what deep models achieve
+
+Deep networks are often expected to learn from minimally processed EEG, yet the choice of
+preprocessing changes their results. In the first systematic study of EEG preprocessing
+for deep learning, 4,800 models trained on six tasks with four architectures differed
+significantly between preprocessing pipelines; models trained on raw data ranked last on
+average, and minimal pipelines without artefact handling tended to serve them best (Del
+Pup et al. 2025) [abstract]. Artefact removal by independent component analysis, with
+Infomax or AMICA and three component rejection strategies, did not consistently improve
+deep decoding on three brain-computer interface datasets (Kang et al. 2024) [abstract],
+and even the scope of normalisation changed which strategy worked best (Truong and
+Delorme 2025) [abstract]. Outside deep learning the same sensitivity is documented by
+multiverse analyses, which run and report every defensible combination of analysis
+choices instead of one (Steegen et al. 2016; Clayson 2024): across 43 preprocessing
+pipelines no single pipeline was best on every quality criterion (Huang et al. 2025)
+[abstract]; fourteen pipelines drawn from the N400 literature changed statistical
+outcomes, effect sizes and power (Šoškić et al. 2024) [abstract]; and only 13 of 270
+analyses of frontal alpha asymmetry in depression were significant (Kołodziej et al.
+2021) [abstract]. For event-related potentials, multiverse analyses have been used to
+choose pipelines by their effect on data quality and reliability (Clayson et al. 2021)
+[abstract]. A comparison of fusion operators made under one preprocessing pipeline
+therefore cannot tell whether its ranking belongs to the operators or to the pipeline.
+
+### 1.2 Fusion operators are compared, but not under controlled conditions
+
+Several recent studies compare fusion operators for EEG seizure detection or prediction
+directly (Table 1): five strategies within and across patients (An et al. 2026), four
+operators under leave-one-subject-out evaluation, where they lie within one standard
+deviation of each other (Einizade et al. 2023), three operators with paired tests over
+six seeds (Basheer and Mishra 2026), and feature-level against decision-level fusion for
+seizure prediction (Daşdemir and Örnek 2025). Among the studies we have read in full,
+none matches the parameter counts of the compared operators, tests the differences
+between them with a correction for repeated resampling, and tests them for equivalence;
+a larger fusion model that beats a smaller one may owe its advantage to capacity rather
+than to the way it fuses. Across more than 120 studies of hybrid EEG interfaces, only two
+explored more than one fusion strategy and one asked which was best (Lee et al. 2025).
+Controlled comparisons in other domains point the same way: in ECG classification 1D and
+2D representations were compared with early, late and joint fusion (Narotamo et al.
+2024), a controlled benchmark on tabular neuroimaging data found the fusion strategy to
+matter more than the architecture (Camastra et al. 2026), and added multimodal
+complexity often did not pay off (Rheude et al. 2025).
+
+**Table 1. Closest related work** (from the systematic search of 3 October 2026,
+`docs/15_LITERATUR_SONUCLARI.md`; studies in bold are the closest to this one; the full
+texts of the remaining candidates are still being read).
+
+| Work | Contribution | What it leaves open |
+|---|---|---|
+| **An et al. (2026), fastSeizureNet** | Compares five fusion strategies for EEG seizure detection, within and across patients, with several backbones | Fuses hand-crafted with deep features rather than a waveform with its spectrogram; strategies not parameter matched and not tested against each other (a Wilcoxon test with Holm correction is used only against prior methods) |
+| Einizade et al. (2023), fAttNet | Compares four fusion operators over raw EEG, wavelet packet and hand-engineered views, leave-one-subject-out on TUH | No parameter matching, no statistical test; the operators lie within one standard deviation of each other |
+| Basheer and Mishra (2026) | Compares concatenation, element-wise addition and KAN gating, paired t tests over six seeds | Both streams come from the same raw EEG; uncorrected tests against concatenation only; no parameter matching |
+| **Daşdemir and Örnek (2025)** | Protocol-controlled comparison of two fusion strategies for EEG | Seizure prediction, not detection; two operators; a 0.20 point accuracy difference without a stated test or parameter matching |
+| Wang et al. (2026), *Neurocomputing* | Cross-attention fusion of time-domain and S-transform views, CHB-MIT and Siena | One ablation against concatenation, patient-specific evaluation, no statistical test |
+| Chatzichristos et al. (2020) | Attention-gated multi-view fusion | One operator, no alternatives |
+| Das et al. (2024); Huang et al. (2024) | 1D+2D fusion; multi-head attention fusion | Fixed design, no operator ablation; gains without matched parameter counts |
+| Narotamo et al. (2024) | 1D and 2D representations with early, late and joint fusion | ECG; no parameter matching or corrected and equivalence statistics |
+| Camastra et al. (2026), *Brain Sciences* | Controlled fusion benchmark: strategy matters more than architecture | Tabular neuroimaging features; no paired or equivalence testing |
+| Ali et al. (2024) | CHB-MIT results depend heavily on evaluation choices | Not about fusion operators |
+| Dan et al. (2024), SzCORE | Standard datasets, event-based scoring and metrics for seizure detection | An evaluation framework |
+| Kontras et al. (2026), NeuroAtlas | Bonn is saturated (eleven models at AUROC >= 0.99) and has no subject identifiers | Not a fusion comparison |
+
+### 1.3 One seed or one pipeline is a weak basis for a ranking
+
+A comparison built on one training run can be decided by factors unrelated to the methods
+compared. Identical training runs of deep networks produce different models: even after
+weak models were excluded, accuracy differed by up to 10.8 percent between identical
+runs, implementation-level factors alone caused differences of up to 2.9 percent, and
+only about one fifth of the surveyed papers used repeated runs to quantify this (Pham et
+al. 2020) [abstract]. Every source of nondeterminism in network optimisation, down to a
+one-bit change in the initial parameters, produces similar run-to-run variability, which
+makes small improvements hard to separate from noise (Summers and Dinneen 2021)
+[abstract], and seeds that perform far better or worse than average are easy to find
+(Picard 2021) [abstract]. The computing environment adds its own variance: CPU
+multithreading makes training nondeterministic (Xiao et al. 2021) [abstract],
+floating-point non-associativity in parallel computation causes run-to-run differences
+(Shanmugavelu et al. 2024) [abstract], and reproducible training requires control of
+both software randomness and hardware nondeterminism (Chen et al. 2022) [abstract]. In
+speech recognition, training variance was large enough to call for a change in how
+results are reported (van den Berg et al. 2017) [abstract], and seed-induced variability
+can be tested for directly (Banerjee et al. 2025) [abstract]. The statistics add a further
+trap: under repeated cross-validation the training sets overlap, so standard paired
+tests are overconfident unless their variance is corrected (Nadeau and Bengio 2003;
+Bouckaert and Frank 2004), and whether a comparison comes out significant can depend on
+the number of folds and repeats (Jafrasteh et al. 2025).
+
+### 1.4 Results on one dataset rarely carry over to another
+
+High accuracies reported for automatic seizure detection often do not hold on new
+patients or recording sites. When 28 algorithms from the SzCORE challenge were evaluated
+on 4,360 hours of held-out continuous EEG from 65 subjects, the best F1 score was 32
+percent, far below self-reported results, and the algorithms with the highest aggregate
+score were not the most consistent across subjects (Dan et al. 2025, preprint)
+[abstract]; the same group proposed standard datasets, cross-validation strategies and
+event-based metrics to make such comparisons possible (Dan et al. 2024). Real-time
+detectors had been tested in distinct settings until they were compared under one (Lee
+et al. 2022, preprint) [abstract]; a prospective test on about 14,590 hours of adult EEG
+from another continent reported 76.68 percent with about 56 false alarms per 24 hours
+(Yang et al. 2021, preprint) [abstract]; and a systematic review names generalisability
+across training data and acquisition hardware among the main obstacles to clinical
+translation (Moutonnet et al. 2024, preprint) [abstract]. Within one public corpus, CHB-MIT
+results depend heavily on evaluation choices (Ali et al. 2024), and the Bonn corpus,
+long a standard benchmark, is saturated and carries no subject identifiers, so it cannot
+test generalisation across patients (Kontras et al. 2026).
+
+### 1.5 This study
 
 Our contribution is not another fusion operator, nor only a comparison of existing
 ones: it is a test of how far conclusions drawn from such a comparison hold when the
-analytic decisions around it change. We ask three questions.
+analytic decisions around it change. We hold the backbone, the training protocol and the
+parameter budget fixed (within 1.3 percent), vary only the fusion operator, and repeat
+the whole comparison under nine preprocessing pipelines, including three artefact
+removal algorithms, and five seed sets, on two independent corpora and from one to the
+other. We ask three questions.
 
 - **RQ1, performance robustness.** Do fusion operators maintain their predictive
   performance across different EEG preprocessing pipelines?
@@ -40,6 +162,24 @@ operators?), **practical equivalence** (does their difference lie within a margi
 fixed in advance?) and **ranking stability** (is their order preserved when
 preprocessing or seeds change?). In particular, the absence of a significant
 difference is not taken as evidence of equivalence.
+
+The study contributes:
+
+1. a parameter-matched comparison of five fusion operators, with single-branch and
+   classical controls, crossed with nine preprocessing pipelines and five seed sets on
+   CHB-MIT and Siena, and a transfer experiment from one to the other;
+2. an analysis that separates the effects of preprocessing, seed and their interaction
+   with the operator, and reports each operator's full rank distribution rather than a
+   single ranking;
+3. a test of the reproducibility of three artefact removal algorithms across machines
+   and execution contexts, and of how much their irreproducibility changes the
+   comparison itself;
+4. corrections to the source data and its documentation: a labelling error in CHB-MIT's
+   annotations, two of its cases that are one person and must be held out together, a
+   mains notch that has to follow each dataset's line frequency, and six problems in
+   Siena's seizure lists, each resolved and documented;
+5. the code, the per-fold results of every run, and every analysis, public and
+   regenerated by single commands.
 
 ## 2. Methods
 
@@ -359,4 +499,45 @@ and reproducibility; 6, cross-dataset comparison)*
 
 ## 4. Discussion
 
-*(pending)*
+*(pending the five-seed results)*
+
+### 4.x Limitations
+
+*(draft; to be completed with the results)*
+
+- **Sample size.** Twenty-three CHB-MIT and fourteen Siena subjects make the corrected
+  confidence intervals wide: differences between operators that are small can be neither
+  shown nor excluded at the equivalence margins, so many pairs are neither different nor
+  demonstrably equivalent.
+- **One design family.** All operators share one pair of representations (raw waveform
+  and log-magnitude STFT), one backbone family and one parameter budget; other
+  representations (wavelets, other time-frequency transforms) or larger models may
+  behave differently.
+- **Windows, not sessions.** Window-level metrics use non-ictal windows subsampled to
+  four per ictal window, so they do not reflect the true prevalence of seizures; the
+  seizure-level metrics on the full recordings address this but are secondary. A window
+  is labelled ictal if it overlaps a seizure at all; excluding partly ictal windows is
+  implemented but was not run.
+- **Siena.** Its recordings are cut around seizures, so false alarms per hour cannot be
+  interpreted and are not reported; the summed recording time (141.0 h by the EDF
+  headers) differs from the dataset description (128.4 h) for reasons that remain
+  unexplained for three patients. Six problems in its seizure lists were resolved by
+  decisions documented in Supplementary Table S4.
+- **CHB-MIT.** Thirteen of its 198 seizures lie in recordings without the standard
+  montage and are not used; chb24 is not listed in the subject information file and is
+  treated as a distinct person.
+- **Artefact removal.** The settings (16 components, frontopolar channels as EOG proxies,
+  no muscle rejection) and the projection of GEDAI's reference onto a bipolar montage are
+  our choices for montages without EOG; GEDAI was designed for referential, high-density
+  recordings. Infomax's and GEDAI's results do not reproduce across machines (Section
+  2.7); window-level results rest on one cleaning, but the seizure-level metrics of P6a
+  differ from the training-time cleaning in 8 of 670 recordings.
+- **Device.** All multiverse runs used one GPU; GPU and CPU results differ at the level
+  of a seed change, so absolute numbers are not interchangeable with the CPU results of
+  earlier drafts.
+- **Seeds.** Five seed sets bound the seed variance only roughly; the rank analyses
+  report it rather than average it away.
+- **Literature.** Title and abstract screening of the systematic search was done by an
+  AI assistant (agreement with an independent AI pass, kappa 0.81); a human screening
+  and the full texts of the remaining candidates are in progress, and claims marked
+  [abstract] in Section 1 rest on abstracts.
