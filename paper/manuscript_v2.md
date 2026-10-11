@@ -544,7 +544,8 @@ and reproducibility; 6, cross-dataset comparison)*
 
 ## Use of AI assistance
 
-*(to be carried over from the previous draft, Section 8, and updated: code, analyses
-and drafting were assisted by an AI coding assistant under the authors' direction and
-review; the title and abstract screening of the literature search was done by an AI
-assistant, with human screening in progress.)*
+An AI assistant (Claude, Anthropic) was used to help write code and to edit the text.
+The authors designed the study, made every methodological decision, checked the code,
+results and text, and take full responsibility for them. In the literature search, the
+title and abstract screening was done by the AI assistant against the protocol's
+criteria and is being checked by human screening (Section 4.x).
