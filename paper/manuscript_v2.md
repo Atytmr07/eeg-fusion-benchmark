@@ -541,3 +541,27 @@ and reproducibility; 6, cross-dataset comparison)*
   AI assistant (agreement with an independent AI pass, kappa 0.81); a human screening
   and the full texts of the remaining candidates are in progress, and claims marked
   [abstract] in Section 1 rest on abstracts.
+
+## Author contributions (CRediT)
+
+*(Draft, to be agreed by all authors; roles from the CRediT taxonomy.)*
+
+- **Emre Atay Tümer:** Conceptualization, Methodology, Software, Validation, Formal
+  analysis, Investigation, Data curation, Visualization, Writing - original draft,
+  Project administration.
+- **Hasan Berk Berber:** Software (multiverse analysis, results generator, seizure-level
+  evaluation of Siena and of the cross-dataset experiment, manuscript build),
+  Investigation (systematic literature search), Data curation (literature records),
+  Visualization (Figure 1), Writing - original draft (introduction), Writing - review
+  and editing.
+- **Sevgi Şengül Ayan:** Conceptualization (the robustness question), Methodology
+  (pre-specified analysis decisions: equivalence margins, artefact rejection criterion,
+  artefact removal variants, seizure-level evaluation, number of seed sets),
+  Resources (laboratory computing), Supervision, Writing - review and editing.
+
+## Use of AI assistance
+
+*(to be carried over from the previous draft, Section 8, and updated: code, analyses
+and drafting were assisted by an AI coding assistant under the authors' direction and
+review; the title and abstract screening of the literature search was done by an AI
+assistant, with human screening in progress.)*
