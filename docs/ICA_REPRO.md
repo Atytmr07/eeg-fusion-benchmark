@@ -86,7 +86,20 @@ parallel worker processes. Recomputing the whole corpus on the laptop, again in 
   GEDAI's cleaning is reproduced exactly; Infomax's differs from the training-time
   cleaning in 8 of 670 recordings; AMICA's by at most 1.4 % of the signal amplitude.
   `events.py` reports this per fold (`window_check` in `events/meta.json`).
-- **Effect on the results.** The lab PC's event metrics for P6 (computed on the
-  differently cleaned signals, kept as `events_lab_FAIL/`) will be compared with the
-  laptop's, as a measure of how much this irreproducibility changes seizure-level
-  sensitivity and the operators' ranking.
+- **Effect on the results** (`src/ica_repro_impact.py`, `results_v2/ica_repro/impact_events.md`).
+  The same trained models were scored on CHB-MIT's full recordings twice: cleaned on the
+  lab PC (`events_lab_FAIL/`) and on the laptop (the valid evaluation), three seed sets
+  per pipeline, five operators:
+
+  | Pipeline | Pooled sensitivity, mean / max absolute change | False alarms per hour, mean / max absolute change | Persons whose detected count changed (per operator, mean) | Kendall tau of the operator ranking by sensitivity |
+  |---|---|---|---|---|
+  | P6a Infomax | 0.003 / 0.005 | 0.012 / 0.037 | 0.6 | 0.95 in all three runs; the best operator changed in one run |
+  | P6b GEDAI | 0.018 / 0.054 | 0.027 / 0.061 | 2.5 | 0.80, 0.60, 1.00; the best operator unchanged |
+  | P6c AMICA | 0 / 0 | 0.001 / 0.003 | 0 | 1.00 |
+
+  The ranking by false alarms per hour did not change in any run. AMICA's
+  irreproducibility has no effect on the results; Infomax's flips the order of nearly
+  tied operators; GEDAI's changes seizure-level sensitivity by up to 0.054 and the order
+  of the operators by sensitivity, an effect of the order of the differences between
+  operators. A cleaning step that does not reproduce across machines can therefore
+  change a comparison of fusion operators by itself.
