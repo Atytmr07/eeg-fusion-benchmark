@@ -1,15 +1,9 @@
-\begin{thebibliography}{40}
+\begin{thebibliography}{46}
 \providecommand{\natexlab}[1]{#1}
 \providecommand{\url}[1]{\texttt{#1}}
 \expandafter\ifx\csname urlstyle\endcsname\relax
   \providecommand{\doi}[1]{doi: #1}\else
   \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
-
-\bibitem[Acharya et~al.(2018)Acharya, Oh, Hagiwara, Tan, and Adeli]{Acharya_2018}
-U.~Rajendra Acharya, Shu~Lih Oh, Yuki Hagiwara, Jen~Hong Tan, and Hojjat Adeli.
-\newblock {Deep convolutional neural network for the automated detection and diagnosis of seizure using EEG signals}.
-\newblock \emph{Computers in Biology and Medicine}, 100:\penalty0 270--278, 2018.
-\newblock \doi{10.1016/j.compbiomed.2017.09.017}.
 
 \bibitem[Ali et~al.(2024)Ali, Angelova, and Karmakar]{Ali_2024}
 Emran Ali, Maia Angelova, and Chandan Karmakar.
@@ -23,11 +17,11 @@ Jiayu An, Ruimin Peng, Xinyao Yang, and Dongrui Wu.
 \newblock \emph{Neural Networks}, 202:\penalty0 109078, 2026.
 \newblock \doi{10.1016/j.neunet.2026.109078}.
 
-\bibitem[Andrzejak et~al.(2001)Andrzejak, Lehnertz, Mormann, Rieke, David, and Elger]{Andrzejak_2001}
-Ralph~G. Andrzejak, Klaus Lehnertz, Florian Mormann, Christoph Rieke, Peter David, and Christian~E. Elger.
-\newblock {Indications of nonlinear deterministic and finite-dimensional structures in time series of brain electrical activity: Dependence on recording region and brain state}.
-\newblock \emph{Physical Review E}, 64\penalty0 (6), 2001.
-\newblock \doi{10.1103/physreve.64.061907}.
+\bibitem[Banerjee et~al.(2025)Banerjee, Marrinan, Cannon, Chiang, and Sarwate]{Banerjee_2025}
+Sinjini Banerjee, Tim Marrinan, Reilly Cannon, Tony Chiang, and Anand~D. Sarwate.
+\newblock {Measuring Training Variability From Stochastic Optimization Using Robust Nonparametric Testing}.
+\newblock \emph{IEEE Journal of Selected Topics in Signal Processing}, 19\penalty0 (7):\penalty0 1477--1492, 2025.
+\newblock \doi{10.1109/jstsp.2025.3583140}.
 
 \bibitem[Basheer and Mishra(2026)]{Basheer_2026}
 Ramzan Basheer and Deepak Mishra.
@@ -53,23 +47,34 @@ C.~Chatzichristos, J.~Dan, A.~Mundanad Narayanan, N.~Seeuws, K.~Vandecasteele, M
 \newblock In \emph{2020 IEEE Signal Processing in Medicine and Biology Symposium (SPMB)}, pages 1--7. IEEE, 2020.
 \newblock \doi{10.1109/spmb50085.2020.9353630}.
 
-\bibitem[Corani and Benavoli(2015)]{Corani_2015}
-Giorgio Corani and Alessio Benavoli.
-\newblock {A Bayesian approach for comparing cross-validated algorithms on multiple data sets}.
-\newblock \emph{Machine Learning}, 100\penalty0 (2-3):\penalty0 285--304, 2015.
-\newblock \doi{10.1007/s10994-015-5486-z}.
+\bibitem[Chen et~al.(2022)Chen, Wen, Shi, Lin, Rajbahadur, and Jiang]{Chen_2022}
+Boyuan Chen, Mingzhi Wen, Yong Shi, Dayi Lin, Gopi~Krishnan Rajbahadur, and Zhen Ming~(Jack) Jiang.
+\newblock {Towards training reproducible deep learning models}.
+\newblock In \emph{Proceedings of the 44th International Conference on Software Engineering}, pages 2202--2214. ACM, 2022.
+\newblock \doi{10.1145/3510003.3510163}.
 
-\bibitem[Corani et~al.(2017)Corani, Benavoli, Demšar, Mangili, and Zaffalon]{Corani_2017}
-Giorgio Corani, Alessio Benavoli, Janez Demšar, Francesca Mangili, and Marco Zaffalon.
-\newblock {Statistical comparison of classifiers through Bayesian hierarchical modelling}.
-\newblock \emph{Machine Learning}, 106\penalty0 (11):\penalty0 1817--1837, 2017.
-\newblock \doi{10.1007/s10994-017-5641-9}.
+\bibitem[Clayson(2024)]{Clayson_2024}
+Peter~E. Clayson.
+\newblock {Beyond single paradigms, pipelines, and outcomes: Embracing multiverse analyses in psychophysiology}.
+\newblock \emph{International Journal of Psychophysiology}, 197:\penalty0 112311, 2024.
+\newblock \doi{10.1016/j.ijpsycho.2024.112311}.
+
+\bibitem[Clayson et~al.(2021)Clayson, Baldwin, Rocha, and Larson]{Clayson_2021}
+Peter~E. Clayson, Scott~A. Baldwin, Harold~A. Rocha, and Michael~J. Larson.
+\newblock {The data-processing multiverse of event-related potentials (ERPs): A roadmap for the optimization and standardization of ERP processing and reduction pipelines}.
+\newblock \emph{NeuroImage}, 245:\penalty0 118712, 2021.
+\newblock \doi{10.1016/j.neuroimage.2021.118712}.
 
 \bibitem[Dan et~al.(2024)Dan, Pale, Amirshahi, Cappelletti, Ingolfsson, Wang, Cossettini, Bernini, Benini, Beniczky, Atienza, and Ryvlin]{Dan_2024}
-Jonathan Dan, Una Pale, Alireza Amirshahi, William Cappelletti, Thorir~Mar Ingolfsson, Xiaying Wang, Andrea Cossettini, Adriano Bernini, Luca Benini, Sándor Beniczky, David Atienza, and Philippe Ryvlin.
+Jonathan Dan, Una Pale, Alireza Amirshahi, William Cappelletti, Thorir~Mar Ingolfsson, Xiaying Wang, Andrea Cossettini, Adriano Bernini, Luca Benini, S{\'{a}}ndor Beniczky, David Atienza, and Philippe Ryvlin.
 \newblock {SzCORE: Seizure Community Open-Source Research Evaluation framework for the validation of electroencephalography-based automated seizure detection algorithms}.
 \newblock \emph{Epilepsia}, 66\penalty0 (S3):\penalty0 14--24, 2024.
 \newblock \doi{10.1111/epi.18113}.
+
+\bibitem[Dan et~al.(2025)Dan, Shahbazinia, Kechris, and Atienza]{Dan2025arxiv}
+Jonathan Dan, Amirhossein Shahbazinia, Christodoulos Kechris, and David Atienza.
+\newblock {Quantifying the Generalization Gap in Seizure Detection: A Large-Scale Empirical Benchmark via the SzCORE Challenge}, 2025.
+\newblock arXiv:2505.18191.
 
 \bibitem[Das et~al.(2024)Das, Mumu, Akhand, Salam, and Kamal]{Das_2024}
 Shupta Das, Suraiya~Akter Mumu, M.~A.~H. Akhand, Abdus Salam, and Md~Abdus~Samad Kamal.
@@ -77,17 +82,11 @@ Shupta Das, Suraiya~Akter Mumu, M.~A.~H. Akhand, Abdus Salam, and Md~Abdus~Samad
 \newblock \emph{Information}, 15\penalty0 (5):\penalty0 256, 2024.
 \newblock \doi{10.3390/info15050256}.
 
-\bibitem[Daşdemir and Örnek(2025)]{Dasdemir_2025}
-Atakan Daşdemir and Humar~Kahramanlı Örnek.
+\bibitem[Da{\c{s}}demir and {\"{O}}rnek(2025)]{Dasdemir_2025}
+Atakan Da{\c{s}}demir and Humar~Kahramanl{\i} {\"{O}}rnek.
 \newblock {Epileptic seizure prediction with deep learning-based fusion methods}.
 \newblock \emph{Engineering Science and Technology, an International Journal}, 72:\penalty0 102212, 2025.
 \newblock \doi{10.1016/j.jestch.2025.102212}.
-
-\bibitem[Del~Pup et~al.(2025)Del~Pup, Zanola, Fabrice~Tshimanga, Bertoldo, and Atzori]{Del_Pup_2025}
-Federico Del~Pup, Andrea Zanola, Louis Fabrice~Tshimanga, Alessandra Bertoldo, and Manfredo Atzori.
-\newblock {The More, the Better? Evaluating the Role of EEG Preprocessing for Deep Learning Applications}.
-\newblock \emph{IEEE Transactions on Neural Systems and Rehabilitation Engineering}, 33:\penalty0 1061--1070, 2025.
-\newblock \doi{10.1109/tnsre.2025.3547616}.
 
 \bibitem[Detti et~al.(2020)Detti, Vatti, and Zabalo Manrique~de Lara]{Detti_2020}
 Paolo Detti, Giampaolo Vatti, and Garazi Zabalo Manrique~de Lara.
@@ -107,17 +106,17 @@ Ary~L. Goldberger, Luis A.~N. Amaral, Leon Glass, Jeffrey~M. Hausdorff, Plamen~C
 \newblock \emph{Circulation}, 101\penalty0 (23), 2000.
 \newblock \doi{10.1161/01.cir.101.23.e215}.
 
-\bibitem[Golrizkhatami and Acan(2018)]{Golrizkhatami_2018}
-Zahra Golrizkhatami and Adnan Acan.
-\newblock {ECG classification using three-level fusion of different feature descriptors}.
-\newblock \emph{Expert Systems with Applications}, 114:\penalty0 54--64, 2018.
-\newblock \doi{10.1016/j.eswa.2018.07.030}.
-
-\bibitem[Gramfort et~al.(2013)Gramfort, Luessi, Larson, Engemann, Strohmeier, Brodbeck, Goj, Jas, Brooks, Parkkonen, and Hämäläinen]{Gramfort_2013}
-Alexandre Gramfort, Martin Luessi, Eric Larson, Denis~A. Engemann, Daniel Strohmeier, Christian Brodbeck, Roman Goj, Mainak Jas, Teon Brooks, Lauri Parkkonen, and Matti Hämäläinen.
+\bibitem[Gramfort et~al.(2013)Gramfort, Luessi, Larson, Engemann, Strohmeier, Brodbeck, Goj, Jas, Brooks, Parkkonen, and H{\"{a}}m{\"{a}}l{\"{a}}inen]{Gramfort_2013}
+Alexandre Gramfort, Martin Luessi, Eric Larson, Denis~A. Engemann, Daniel Strohmeier, Christian Brodbeck, Roman Goj, Mainak Jas, Teon Brooks, Lauri Parkkonen, and Matti H{\"{a}}m{\"{a}}l{\"{a}}inen.
 \newblock {MEG and EEG data analysis with MNE-Python}.
 \newblock \emph{Frontiers in Neuroscience}, 7:\penalty0 267, 2013.
 \newblock \doi{10.3389/fnins.2013.00267}.
+
+\bibitem[Huang et~al.(2025)Huang, Moffa, Loo, and Nikolin]{Huang_2025}
+Haijing Huang, Adriano~H. Moffa, Colleen Loo, and Stevan Nikolin.
+\newblock {No Single Best Pipeline: Multiverse Analysis of EEG Preprocessing for N-Back Working Memory Tasks}.
+\newblock \emph{Psychophysiology}, 62\penalty0 (12), 2025.
+\newblock \doi{10.1111/psyp.70197}.
 
 \bibitem[Huang et~al.(2024)Huang, Xi, Jiao, Zhang, Jiao, and Li]{Huang_2024}
 Ning Huang, Zhengtao Xi, Yingying Jiao, Yudong Zhang, Zhuqing Jiao, and Xiaona Li.
@@ -131,6 +130,18 @@ Bahram Jafrasteh, Ehsan Adeli, Kilian~M. Pohl, Amy Kuceyeski, Mert~R. Sabuncu, a
 \newblock \emph{Scientific Reports}, 15\penalty0 (1), 2025.
 \newblock \doi{10.1038/s41598-025-12026-2}.
 
+\bibitem[Kang et~al.(2024)Kang, Chen, and Wallraven]{Kang_2024}
+Taeho Kang, Yiyu Chen, and Christian Wallraven.
+\newblock {I see artifacts: ICA-based EEG artifact removal does not improve deep network decoding across three BCI tasks}.
+\newblock \emph{Journal of Neural Engineering}, 21\penalty0 (6):\penalty0 066036, 2024.
+\newblock \doi{10.1088/1741-2552/ad788e}.
+
+\bibitem[Ko{\l}odziej et~al.(2021)Ko{\l}odziej, Magnuski, Ruban, and Brzezicka]{Kolodziej_2021}
+Aleksandra Ko{\l}odziej, Miko{\l}aj Magnuski, Anastasia Ruban, and Aneta Brzezicka.
+\newblock {No relationship between frontal alpha asymmetry and depressive disorders in a multiverse analysis of five studies}.
+\newblock \emph{eLife}, 10, 2021.
+\newblock \doi{10.7554/elife.60595}.
+
 \bibitem[Kontras et~al.(2026)Kontras, Osselaer, Mouslech, Karaiskou, Gagliardi, Strypsteen, Badiei, Rani, Vanmarcke, Bhagubai, Ekbote, Hwang, Chatzichristos, Liang, and Vos]{Kontras_2026}
 Konstantinos Kontras, Trui Osselaer, Stylianos~G. Mouslech, Angeliki-Ilektra Karaiskou, Guido Gagliardi, Thomas Strypsteen, Mohammad~Hossein Badiei, Anku Rani, Maarten Vanmarcke, Miguel Bhagubai, Chanakya Ekbote, Jaedong Hwang, Christos Chatzichristos, Paul~Pu Liang, and Maarten~De Vos.
 \newblock {NeuroAtlas: Benchmarking Foundation Models for Clinical EEG and Brain-Computer Interfaces}, 2026.
@@ -141,6 +152,11 @@ Hyung-Tak Lee, Miseon Shim, Xianghong Liu, Hye-Ran Cheon, Sang-Gyu Kim, Chang-He
 \newblock {A review of hybrid EEG-based multimodal human–computer interfaces using deep learning: applications, advances, and challenges}.
 \newblock \emph{Biomedical Engineering Letters}, 15\penalty0 (4):\penalty0 587--618, 2025.
 \newblock \doi{10.1007/s13534-025-00469-5}.
+
+\bibitem[Lee et~al.(2022)Lee, Jeong, Kim, Yang, Kang, and Choi]{Lee2022arxiv}
+Kwanhyung Lee, Hyewon Jeong, Seyun Kim, Donghwa Yang, Hoon-Chul Kang, and Edward Choi.
+\newblock {Real-Time Seizure Detection using EEG: A Comprehensive Comparison of Recent Approaches under a Realistic Setting}, 2022.
+\newblock arXiv:2201.08780.
 
 \bibitem[Lee et~al.(1999)Lee, Girolami, and Sejnowski]{Lee_1999}
 Te-Won Lee, Mark Girolami, and Terrence~J. Sejnowski.
@@ -154,17 +170,10 @@ Ilya Loshchilov and Frank Hutter.
 \newblock In \emph{International Conference on Learning Representations (ICLR)}, 2019.
 \newblock arXiv:1711.05101.
 
-\bibitem[Mattei and Garreau(2025)]{Mattei_2025}
-Pierre-Alexandre Mattei and Damien Garreau.
-\newblock {Are Ensembles Getting Better all the Time?}
-\newblock \emph{Journal of Machine Learning Research}, 26\penalty0 (201):\penalty0 1--46, 2025.
-\newblock URL \url{http://jmlr.org/papers/v26/24-0408.html}.
-\newblock arXiv:2311.17885.
-
-\bibitem[Mohamady et~al.(2026)Mohamady, Burchard, and Laerhoven]{Mohamady_2026}
-Ahmed Mohamady, Robin Burchard, and Kristof~Van Laerhoven.
-\newblock {A Comparison of Fusion Techniques for Multi-Modal Human Activity Recognition on the HARMES Dataset}, 2026.
-\newblock arXiv:2606.27886.
+\bibitem[Moutonnet et~al.(2024)Moutonnet, White, Campbell, Sanei, Tanaka, Ji, Mandic, and Scott]{Moutonnet2024arxiv}
+Nina Moutonnet, Steven White, Benjamin~P Campbell, Saeid Sanei, Toshihisa Tanaka, Hong Ji, Danilo Mandic, and Gregory Scott.
+\newblock {Clinical translation of machine learning algorithms for seizure detection in scalp electroencephalography: systematic review}, 2024.
+\newblock arXiv:2404.15332.
 
 \bibitem[Nadeau and Bengio(2003)]{Nadeau_2003}
 Claude Nadeau and Yoshua Bengio.
@@ -173,7 +182,7 @@ Claude Nadeau and Yoshua Bengio.
 \newblock \doi{10.1023/a:1024068626366}.
 
 \bibitem[Narotamo et~al.(2024)Narotamo, Dias, Santos, Carreiro, Gamboa, and Silveira]{Narotamo_2024}
-Hemaxi Narotamo, Mariana Dias, Ricardo Santos, André~V. Carreiro, Hugo Gamboa, and Margarida Silveira.
+Hemaxi Narotamo, Mariana Dias, Ricardo Santos, Andr{\'{e}}~V. Carreiro, Hugo Gamboa, and Margarida Silveira.
 \newblock {Deep learning for ECG classification: A comparative study of 1D and 2D representations and multimodal fusion approaches}.
 \newblock \emph{Biomedical Signal Processing and Control}, 93:\penalty0 106141, 2024.
 \newblock \doi{10.1016/j.bspc.2024.106141}.
@@ -184,33 +193,45 @@ J.~A. Palmer, S.~Makeig, K.~Kreutz-Delgado, and B.~D. Rao.
 \newblock In \emph{2008 IEEE International Conference on Acoustics, Speech and Signal Processing}, pages 1805--1808. IEEE, 2008.
 \newblock \doi{10.1109/icassp.2008.4517982}.
 
+\bibitem[Pham et~al.(2020)Pham, Qian, Wang, Lutellier, Rosenthal, Tan, Yu, and Nagappan]{Pham_2020}
+Hung~Viet Pham, Shangshu Qian, Jiannan Wang, Thibaud Lutellier, Jonathan Rosenthal, Lin Tan, Yaoliang Yu, and Nachiappan Nagappan.
+\newblock {Problems and opportunities in training deep learning software systems: an analysis of variance}.
+\newblock In \emph{Proceedings of the 35th IEEE/ACM International Conference on Automated Software Engineering}, pages 771--783. ACM, 2020.
+\newblock \doi{10.1145/3324884.3416545}.
+
+\bibitem[Picard(2021)]{Picard2021arxiv}
+David Picard.
+\newblock {Torch.manual\_seed(3407) is all you need: On the influence of random seeds in deep learning architectures for computer vision}, 2021.
+\newblock arXiv:2109.08203.
+
 \bibitem[Rheude et~al.(2025)Rheude, Eils, and Wild]{Rheude_2025}
 Tillmann Rheude, Roland Eils, and Benjamin Wild.
 \newblock {Fusion or Confusion? Multimodal Complexity Is Not All You Need}, 2025.
 \newblock arXiv:2512.22991.
 
-\bibitem[Ros et~al.(2025)Ros, Férat, Huang, Colangelo, Kia, Wolfers, Vulliemoz, and Michela]{Ros_2025}
-Tomas Ros, Victor Férat, Yingqi Huang, Cristina Colangelo, Seyed~Mostafa Kia, Thomas Wolfers, Serge Vulliemoz, and Abele Michela.
+\bibitem[Ros et~al.(2025)Ros, F{\'{e}}rat, Huang, Colangelo, Kia, Wolfers, Vulliemoz, and Michela]{Ros_2025}
+Tomas Ros, Victor F{\'{e}}rat, Yingqi Huang, Cristina Colangelo, Seyed~Mostafa Kia, Thomas Wolfers, Serge Vulliemoz, and Abele Michela.
 \newblock {Return of the GEDAI: Unsupervised EEG Denoising based on Leadfield Filtering}.
 \newblock bioRxiv preprint, 2025.
+\newblock URL \url{http://dx.doi.org/10.1101/2025.10.04.680449}.
 
-\bibitem[Roy et~al.(2019)Roy, Banville, Albuquerque, Gramfort, Falk, and Faubert]{Roy_2019}
-Yannick Roy, Hubert Banville, Isabela Albuquerque, Alexandre Gramfort, Tiago~H Falk, and Jocelyn Faubert.
-\newblock {Deep learning-based electroencephalography analysis: a systematic review}.
-\newblock \emph{Journal of Neural Engineering}, 16\penalty0 (5):\penalty0 051001, 2019.
-\newblock \doi{10.1088/1741-2552/ab260c}.
+\bibitem[Shanmugavelu et~al.(2024)Shanmugavelu, Taillefumier, Culver, Hernandez, Coletti, and Sedova]{Shanmugavelu_2024}
+Sanjif Shanmugavelu, Mathieu Taillefumier, Christopher Culver, Oscar Hernandez, Mark Coletti, and Ada Sedova.
+\newblock {Impacts of floating-point non-associativity on reproducibility for HPC and deep learning applications}.
+\newblock In \emph{SC24-W: Workshops of the International Conference for High Performance Computing, Networking, Storage and Analysis}, pages 170--179. IEEE, 2024.
+\newblock \doi{10.1109/scw63240.2024.00028}.
 
 \bibitem[Shoeb(2009)]{Shoeb_2009}
 Ali~Hossam Shoeb.
 \newblock \emph{{Application of machine learning to epileptic seizure onset detection and treatment}}.
-\newblock {PhD} thesis, harvard-mit division of health sciences and technology, Massachusetts Institute of Technology, 2009.
+\newblock {{PhD} thesis, Harvard-MIT Division of Health Sciences and Technology}, Massachusetts Institute of Technology, 2009.
 \newblock URL \url{http://hdl.handle.net/1721.1/54669}.
 
-\bibitem[Shoeibi et~al.(2021)Shoeibi, Khodatars, Ghassemi, Jafari, Moridian, Alizadehsani, Panahiazar, Khozeimeh, Zare, Hosseini-Nejad, Khosravi, Atiya, Aminshahidi, Hussain, Rouhani, Nahavandi, and Acharya]{Shoeibi_2021}
-Afshin Shoeibi, Marjane Khodatars, Navid Ghassemi, Mahboobeh Jafari, Parisa Moridian, Roohallah Alizadehsani, Maryam Panahiazar, Fahime Khozeimeh, Assef Zare, Hossein Hosseini-Nejad, Abbas Khosravi, Amir~F. Atiya, Diba Aminshahidi, Sadiq Hussain, Modjtaba Rouhani, Saeid Nahavandi, and Udyavara~Rajendra Acharya.
-\newblock {Epileptic Seizures Detection Using Deep Learning Techniques: A Review}.
-\newblock \emph{International Journal of Environmental Research and Public Health}, 18\penalty0 (11):\penalty0 5780, 2021.
-\newblock \doi{10.3390/ijerph18115780}.
+\bibitem[{\v{S}}o{\v{s}}ki{\'{c}} et~al.(2024){\v{S}}o{\v{s}}ki{\'{c}}, Styles, Kappenman, and Kovi{\'{c}}]{Soskic_2024}
+An{\dj}ela {\v{S}}o{\v{s}}ki{\'{c}}, Suzy~J. Styles, Emily~S. Kappenman, and Vanja Kovi{\'{c}}.
+\newblock {Garden of forking paths in ERP research – Effects of varying pre-processing and analysis steps in an N400 experiment}.
+\newblock \emph{Psychophysiology}, 61\penalty0 (10), 2024.
+\newblock \doi{10.1111/psyp.14628}.
 
 \bibitem[Steegen et~al.(2016)Steegen, Tuerlinckx, Gelman, and Vanpaemel]{Steegen_2016}
 Sara Steegen, Francis Tuerlinckx, Andrew Gelman, and Wolf Vanpaemel.
@@ -218,11 +239,22 @@ Sara Steegen, Francis Tuerlinckx, Andrew Gelman, and Wolf Vanpaemel.
 \newblock \emph{Perspectives on Psychological Science}, 11\penalty0 (5):\penalty0 702--712, 2016.
 \newblock \doi{10.1177/1745691616658637}.
 
-\bibitem[Truong et~al.(2018)Truong, Nguyen, Kuhlmann, Bonyadi, Yang, Ippolito, and Kavehei]{Truong_2018}
-Nhan~Duy Truong, Anh~Duy Nguyen, Levin Kuhlmann, Mohammad~Reza Bonyadi, Jiawei Yang, Samuel Ippolito, and Omid Kavehei.
-\newblock {Convolutional neural networks for seizure prediction using intracranial and scalp electroencephalogram}.
-\newblock \emph{Neural Networks}, 105:\penalty0 104--111, 2018.
-\newblock \doi{10.1016/j.neunet.2018.04.018}.
+\bibitem[Summers and Dinneen(2021)]{Summers2021arxiv}
+Cecilia Summers and Michael~J. Dinneen.
+\newblock {Nondeterminism and Instability in Neural Network Optimization}, 2021.
+\newblock arXiv:2103.04514.
+
+\bibitem[Truong and Delorme(2025)]{Truong_2025}
+Dung Truong and Arnaud Delorme.
+\newblock {Data Normalization Strategies for EEG Deep Learning}.
+\newblock In \emph{2025 12th International IEEE/EMBS Conference on Neural Engineering (NER)}, pages 793--798. IEEE, 2025.
+\newblock \doi{10.1109/ner61569.2025.11589116}.
+
+\bibitem[van~den Berg et~al.(2017)van~den Berg, Ramabhadran, and Picheny]{van_den_Berg_2017}
+Ewout van~den Berg, Bhuvana Ramabhadran, and Michael Picheny.
+\newblock {Training variance and performance evaluation of neural networks in speech}.
+\newblock In \emph{2017 IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)}, pages 2287--2291. IEEE, 2017.
+\newblock \doi{10.1109/icassp.2017.7952564}.
 
 \bibitem[Wang et~al.(2026)Wang, Wei, Qian, Shi, Liu, and Xu]{Wang_2026a}
 Jingyue Wang, Lu~Wei, Zheng Qian, Chengyao Shi, Yuwen Liu, and Yinglan Xu.
@@ -230,16 +262,15 @@ Jingyue Wang, Lu~Wei, Zheng Qian, Chengyao Shi, Yuwen Liu, and Yinglan Xu.
 \newblock \emph{Neurocomputing}, 675:\penalty0 132929, 2026.
 \newblock \doi{10.1016/j.neucom.2026.132929}.
 
-\bibitem[Wang et~al.(2020)Wang, Ristaniemi, and Cong]{Wang_2020}
-Xiaoshuang Wang, Tapani Ristaniemi, and Fengyu Cong.
-\newblock {One and Two Dimensional Convolutional Neural Networks for Seizure Detection Using EEG Signals}.
-\newblock In \emph{2020 28th European Signal Processing Conference (EUSIPCO)}, pages 1387--1391. IEEE, 2020.
-\newblock \doi{10.23919/eusipco47968.2020.9287640}.
+\bibitem[Xiao et~al.(2021)Xiao, Liu, Zheng, and Sui]{Xiao_2021}
+Guanping Xiao, Jun Liu, Zheng Zheng, and Yulei Sui.
+\newblock {Nondeterministic Impact of CPU Multithreading on Training Deep Learning Systems}.
+\newblock In \emph{2021 IEEE 32nd International Symposium on Software Reliability Engineering (ISSRE)}, pages 557--568. IEEE, 2021.
+\newblock \doi{10.1109/issre52982.2021.00063}.
 
-\bibitem[Xu et~al.(2024)Xu, Yan, Deng, Yang, Liu, Wang, and Yuan]{Xu_2024}
-Jie Xu, Kuiting Yan, Zengqian Deng, Yankai Yang, Jin-Xing Liu, Juan Wang, and Shasha Yuan.
-\newblock {EEG-based epileptic seizure detection using deep learning techniques: A survey}.
-\newblock \emph{Neurocomputing}, 610:\penalty0 128644, 2024.
-\newblock \doi{10.1016/j.neucom.2024.128644}.
+\bibitem[Yang et~al.(2021)Yang, Truong, Maher, Nikpour, and Kavehei]{Yang2021arxiv}
+Yikai Yang, Nhan~Duy Truong, Christina Maher, Armin Nikpour, and Omid Kavehei.
+\newblock {Continental generalization of an AI system for clinical seizure recognition}, 2021.
+\newblock arXiv:2103.10900.
 
 \end{thebibliography}

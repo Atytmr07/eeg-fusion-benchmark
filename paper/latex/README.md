@@ -1,4 +1,4 @@
-# LaTeX build: `paper/manuscript.md` → `main.tex` → `main.pdf`
+# LaTeX build: `paper/manuscript_v2.md` → `main.tex` → `main.pdf`
 
 ```bash
 python paper/latex/build.py            # main.tex, main.pdf, arxiv/ and arxiv.zip
@@ -6,10 +6,36 @@ python paper/latex/build.py --draft    # keeps the DRAFT note as a box on page 1
 python paper/latex/build.py --no-pdf   # main.tex only (no LaTeX needed)
 python paper/latex/build.py --bib plain   # reference list as written (option a)
 python paper/latex/build.py --no-supplementary   # without paper/supplementary.md
+python paper/latex/build.py --manuscript paper/manuscript.md   # the previous draft
 ```
 
-`manuscript.md` is the source and is only read. After every change to it, rerun
-the command; do not edit `main.tex` by hand.
+The source is `paper/manuscript_v2.md` by default. It is only read, never written.
+After every change to it, rerun the command; do not edit `main.tex` by hand.
+
+The PDF sent to the advisor is built with `--draft`, so the DRAFT note stays on page 1.
+The [ref] and [abstract] markers in the text are printed as written in every mode.
+
+**Overleaf.** Every build also writes `overleaf/` and `overleaf.zip`. They contain
+`main.tex`, `main.bib` and `figures/`. Upload the zip as a new Overleaf project;
+Overleaf runs pdflatex and bibtex itself. The build checks the folder by compiling it
+on its own, with pdflatex, then bibtex, then pdflatex twice.
+
+**Manuscripts without a reference list.** `manuscript_v2.md` cites as Author (Year)
+and has no reference list. The build then forms the bibliography from the citations
+themselves:
+
+- Each citation is matched to `paper/literature/references.bib` by first author and
+  year.
+- If several entries match, the journal named next to the citation decides, for
+  example "Wang et al. (2026), *Neurocomputing*".
+- A citation without an entry stays plain text and is reported. Nothing is added to
+  `references.bib`.
+
+**Checks of the text.**
+
+- Every "Section X.Y" in the text must name an existing heading; missing ones are
+  listed with their context.
+- Every "Figure N" and "Table N" in the text must have a caption.
 
 ## Tools used (tested 4 October 2026, macOS 27)
 
