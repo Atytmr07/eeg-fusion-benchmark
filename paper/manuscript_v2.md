@@ -2,7 +2,7 @@
 > advisor set on 10 October 2026. This file holds the Introduction (Section 1), the
 > Methods (Section 2, in the advisor's subsections 2.1 to 2.7) and the Results of the
 > five-seed runs (Section 3; the seizure-level metrics of P6 are still being
-> computed); the Discussion follows. The literature review is
+> computed) and the Discussion (Section 4); the Abstract is written last. The literature review is
 > provisional: the systematic search has run, but title and abstract screening was done
 > by an AI assistant, and the human screening and the full texts follow after 17
 > October; claims marked [abstract] rest on a source's abstract only and are to be
@@ -635,9 +635,127 @@ ranking after transfer.
 
 ## 4. Discussion
 
-*(pending the five-seed results)*
+We asked whether conclusions about fusion operators for EEG seizure detection hold when
+the preprocessing, the artefact removal algorithm, the training seed and the dataset
+change. On both datasets the answer is largely no: the operators performed within a few
+hundredths of macro F1 of each other, no difference between them was significant, and
+their order changed with the seed, with the artefact removal algorithm on Siena, and
+between datasets. We take the advisor's questions in turn.
 
-### 4.x Limitations
+### 4.1 How large are the differences between fusion operators?
+
+Small. Within a pipeline the best and worst operator differed by a median of 0.021
+macro F1 on CHB-MIT and 0.053 on Siena, and no pairwise difference survived the
+corrected test. The operator's share of the variance was estimated below zero on
+CHB-MIT and at 1.5 percent on Siena. One operator did stand apart in one respect: early
+fusion ranked windows by ictal probability worst in every pipeline of both datasets
+(lowest AUPRC in 18 of 18 cases), while its thresholded macro F1 was unremarkable and
+its seizure-level sensitivity, at the price of more false alarms, the highest. Early
+fusion is the only operator that combines the two representations before either branch
+has learned its own features, and its weaker ranking of windows is the one property of
+an operator that the multiverse preserved. Whether two operators are *equivalent* is a
+separate question, and the answer depends on the dataset: on CHB-MIT most pairs were
+equivalent within 0.05 macro F1 in most pipelines and two in all, but within 0.02 almost
+none, and on Siena few were equivalent even within 0.05. The data therefore rule out
+large differences between operators on CHB-MIT, but not differences of the size that
+published comparisons typically report as improvements.
+
+### 4.2 Are the differences preserved when preprocessing changes?
+
+Preprocessing had no detectable main effect on performance and did not reorder the
+operators more than a change of seed did. The interaction between operator and
+preprocessing, significant with three seed sets on CHB-MIT, was no longer significant
+after correction with five (p = 0.069), and its variance component was 0.09 percent. The
+one place where preprocessing mattered more than the seed was the choice among the three
+artefact removal algorithms on Siena (p = 0.029), where GEDAI raised late and gated
+fusion by about 0.05 macro F1. This agrees with the wider literature, where
+preprocessing changes results but no pipeline is best throughout (Section 1.1), and it
+adds that, for a comparison of operators, the pipeline mostly adds noise rather than a
+systematic advantage for one operator.
+
+### 4.3 How much does the random seed change the rankings?
+
+More than preprocessing does. On CHB-MIT the rankings from five seeds of the same
+pipeline agreed barely above chance (median Kendall's W 0.22), all seed terms together
+explained more of the variance than preprocessing and the operator, and the
+window-level predictions changed as much between seeds as between pipelines. A ranking
+obtained from one training run is therefore close to a random draw on CHB-MIT. The
+consequence for the literature is direct: a comparison of operators that reports one run
+per operator, as most do, cannot distinguish a better operator from a lucky seed at the
+differences observed here. Five seeds were enough to show this, and to withdraw a result
+that three seeds had suggested (Section 3.3).
+
+### 4.4 Why does the subject dominate?
+
+The held-out subject explained 74 percent of the variance on CHB-MIT and, together with
+its interactions with pipeline and operator, about 60 percent on Siena. Seizures differ
+between people in morphology, location and duration, and the recordings in their
+equipment, montage quality and artefacts; a model trained on the other subjects works
+well or badly on a given person largely for reasons that no fusion operator or
+preprocessing step changes. The interaction of subject with pipeline and operator, 7
+percent on CHB-MIT and 27 percent on Siena, means that the operator that suits one
+person is often not the one that suits another. Averaging over subjects hides this
+heterogeneity, and with 23 and 14 subjects it also limits the precision of every
+comparison between operators: the equivalence bounds of Section 3.2 are as wide as they
+are because the subjects differ so much.
+
+### 4.5 Does the choice of artefact removal algorithm affect reliability?
+
+In two ways. The three algorithms changed performance differently by operator
+(Section 3.5), and on Siena they reordered the operators more than the seed did. Less
+expected, they differed in reproducibility. With the same code, package versions and
+seeds, GEDAI cleaned about a quarter of recordings differently on a second machine, and
+Infomax changed its component decision in 2.5 percent of recordings between machines
+and in about 1 percent between two runs on one machine; scoring the same trained models on the two cleanings changed seizure-level
+sensitivity by up to 0.054 and the order of the operators. Fixed seeds and pinned
+versions are the reproducibility measures a methods section usually reports; for
+ICA-based cleaning they are not sufficient, because decisions made at a threshold (a
+component's |z| against an EOG proxy, GEDAI's noise threshold) amplify rounding
+differences between machines. The window-level results of this study rest on one
+cleaning and are unaffected; but a study that cleans its training data on one machine
+and its test data on another, or that compares its numbers with another group's, can
+see differences of the size of the effect it studies. We recommend that studies using
+artefact removal store the cleaned signals, or at least the decomposition and the
+removed components, alongside the code.
+
+### 4.6 Do results from one dataset carry over to another?
+
+Performance did, rankings did not. Models trained on CHB-MIT reached on Siena the macro
+F1 of models trained on Siena itself, but the order of the operators on CHB-MIT, on
+Siena and after transfer were unrelated (mean Kendall tau between -0.11 and 0.07). Score
+fusion is the clearest case: first in 82 percent of Siena's own runs, it was first in 11
+percent of the transfer runs and among the weaker operators on CHB-MIT. Its advantage on
+Siena is therefore a property of training and testing on Siena, possibly of how its
+blending weight is chosen on Siena's validation subjects, not a property of the
+operator. The two datasets differ in age, seizure types, recording protocol and mains
+frequency (Section 2.1), so we do not attribute the difference to any one of these.
+
+### 4.7 Statistical significance, practical size and ranking stability
+
+The three properties we kept apart gave different answers, and reporting any one alone
+would have misled. On Siena score fusion was first in four of five runs, a stable
+ranking, yet its advantage was not significant and could not be shown to exceed or fall
+below 0.05 macro F1. On CHB-MIT the interaction was significant before correction and
+with three seeds, yet its practical size was 0.004 macro F1. And on CHB-MIT several pairs
+of operators were practically equivalent while their order changed from seed to seed,
+which is what equivalence implies: when two operators are equally good, their order is
+decided by noise. A stable ranking is not evidence of a meaningful difference, a
+significant effect is not evidence of a large one, and the absence of a significant
+difference is not evidence of equivalence.
+
+### 4.8 What this means for comparisons of fusion operators
+
+We did not find a fusion operator that is better than the others across preprocessing,
+seeds and datasets, and our results do not support claims that one is. That is itself
+the main finding: a claim of superiority based on one dataset, one pipeline and one
+training run, the common design in this literature, would have reached a different
+conclusion in different runs of our study. Comparisons of this kind should report
+several seeds and, where feasible, several preprocessing choices; test differences with
+corrected and equivalence tests rather than naive paired tests; report the rank
+distribution rather than one ranking; and state the margin below which a difference is
+considered irrelevant before looking at the results.
+
+### 4.9 Limitations
 
 *(draft; to be completed with the results)*
 
