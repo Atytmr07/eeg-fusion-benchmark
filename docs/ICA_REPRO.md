@@ -62,6 +62,47 @@ parallel worker processes. Recomputing the whole corpus on the laptop, again in 
 | GEDAI | 0 of 670 | 0 |
 | AMICA (first folds) | 0 | 0; cleaned windows differ by at most 1.4 % of their amplitude |
 
+**6. Sensitivity to a rounding-level perturbation** (`src/ica_sensitivity.py`,
+`sensitivity.md`, `sensitivity.csv`). Each of 9 recordings (the 6 of test 4 and 3 that
+agreed between machines) was cleaned, then cleaned again three times after multiplying
+every sample by (1 + 1e-7 N(0, 1)), about the precision of the float32 signal. GEDAI
+was also run on a full-rank montage (16 of the 18 channels, one channel of each closed
+electrode loop dropped) to test the rank-deficiency hypothesis.
+
+| Method | Perturbations that changed the result | Recordings affected | Largest change in retained power |
+|---|---|---|---|
+| Extended Infomax | 7 of 27 | 3 of 9 (chb02_16+, chb03_02, chb07_05) | 0.44 |
+| GEDAI | 16 of 27 | 6 of 9, exactly the 6 that differed between machines | 0.76 |
+| GEDAI, full-rank montage | 11 of 27 | 5 of 9 | 0.61 |
+| AMICA (chb01_09 only; 14 min per cleaning) | 0 of 3 | 0 of 1 | same components, power kept equal to four decimals |
+
+A change is a relative RMS difference above 1e-3 or a different set of removed
+components; unchanged results differed by about 1e-7, the size of the perturbation.
+Infomax's component decision changed only on recordings where it had also changed
+between machines or runs. GEDAI's result moved between a few discrete solutions (for
+chb02_08: 0.446 or 0.999 of the power kept); the three recordings that agreed between
+machines did not change under any perturbation. The full-rank montage was not more
+stable, so rank deficiency is not the cause.
+
+**7. A third machine with a different architecture** (Apple Silicon, ARM, macOS;
+the same package versions; run by H. B. Berber; `berk/`, `compare_berk_*.md`). On the 8
+recordings of test 1 the Mac reproduced the laptop and the lab PC up to rounding
+(relative RMS difference at most 9e-7, the same components). On the 6 recordings of
+test 4 it often agreed with neither:
+
+| Recording | GEDAI power kept: Mac / laptop / lab | Infomax components: Mac / laptop / lab |
+|---|---|---|
+| chb01_09 | 0.374 / 0.347 / 0.999 | [0, 2] on all three |
+| chb01_25 | 0.353 / 0.570 / 0.999 | [0, 2, 12] on all three |
+| chb02_08 | 0.999 / 0.446 / 0.999 | [1, 2, 13] on all three |
+| chb02_16+ | 0.231 / 0.242 / 0.219 | [0, 5, 8] / [0] / [] |
+| chb03_02 | 0.271 / 0.259 / 0.280 | [0] / [0] / [0, 1] |
+| chb07_05 | 0.129 on all three | [] on all three |
+
+Several of the Mac's results are ones the perturbation test found on the laptop (GEDAI
+chb02_08 0.9994 and chb02_16+ 0.2307 to four decimals): a second machine produces the
+same alternatives as a rounding-level change of the input.
+
 ## Conclusions
 
 - **AMICA** reproduces across machines up to rounding: no component decision changed.
@@ -71,12 +112,21 @@ parallel worker processes. Recomputing the whole corpus on the laptop, again in 
   between machines and 1.2 % between two runs on the same machine.
 - **GEDAI** is deterministic on one machine but differs between machines in about a
   quarter of recordings, often by a large amount. Its noise threshold is estimated at the
-  level of numerical precision; a likely contributor, not yet tested, is that our bipolar
-  montage is rank deficient (18 channels, rank 16, possibly one less after the mean removal),
-  so the generalised eigenvalue problem it solves is ill-conditioned.
+  level of numerical precision. The rank deficiency of our bipolar montage is not the
+  cause: a full-rank montage was as unstable (test 6).
+- **Source.** The differences come from the methods' numerical sensitivity on particular
+  recordings, not from one machine, library or setting: on those recordings a relative
+  change of 1e-7 in the input changes the result as much as a change of machine does,
+  three machines of two architectures gave up to three different results, and the
+  recordings that are stable under perturbation agreed on all three machines (tests 6
+  and 7). Machines differ in the order of floating-point operations (SIMD code paths,
+  thread partitions), which changes results at the level of rounding; Infomax's |z| = 3
+  rule and GEDAI's threshold turn that into a different cleaning when a recording lies
+  near a decision boundary. No machine is "correct", and the instability cannot be
+  removed by choosing a different machine or thread count.
 - Fixing seeds and package versions is therefore not enough to reproduce ICA-based
-  cleaning; the outcome also depends on the machine (GEDAI) or on rounding at decision
-  thresholds (Infomax).
+  cleaning; the outcome also depends on rounding at decision thresholds, which differs
+  between machines and, for Infomax, between execution contexts.
 
 ## Consequences for this study
 

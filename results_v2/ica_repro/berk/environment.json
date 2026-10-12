@@ -1,0 +1,34 @@
+{
+  "machine": "192.168.1.5",
+  "cpu": "arm",
+  "platform": "macOS-27.0.1-arm64-arm-64bit",
+  "python": "3.12.13",
+  "packages": {
+    "numpy": "2.5.3",
+    "scipy": "1.16.1",
+    "mne": "1.13.2",
+    "gedai": "0.60",
+    "jamica": "0.3.0",
+    "scikit-learn": "1.7.2",
+    "torch": "2.8.0"
+  },
+  "thread_limit": null,
+  "thread_pools": [],
+  "recordings": [
+    "chb01_09.edf",
+    "chb01_11.edf",
+    "chb01_25.edf",
+    "chb02_08.edf",
+    "chb02_16+.edf",
+    "chb03_02.edf",
+    "chb03_08.edf",
+    "chb05_14.edf",
+    "chb07_05.edf",
+    "chb07_10.edf",
+    "chb08_15.edf",
+    "chb13_03.edf",
+    "chb17b_59.edf",
+    "chb22_10.edf"
+  ],
+  "segment_s": 600
+}

@@ -496,6 +496,13 @@ recordings whose component lay near the |z| = 3 rule: 2.5 percent of recordings 
 two machines and 1.2 percent between two runs on the same machine with different
 process parallelism. GEDAI was deterministic on each machine but gave a different
 result on the second machine in 27 percent of recordings, often by a large amount.
+A third machine of another architecture (ARM) agreed with the other two on recordings
+where they agreed, and often with neither where they differed. Multiplying the input by
+(1 + 1e-7 N(0, 1)), a rounding-level perturbation, changed GEDAI's result on exactly the
+recordings that differed between machines, also on a full-rank montage, and Infomax's
+component decision on recordings where it had differed; AMICA was unchanged. The
+differences therefore come from the methods' sensitivity to rounding near a decision
+threshold on particular recordings, not from one machine or library.
 Window-level results are unaffected, because every P6 training and test window comes
 from one set of signals, cleaned once. The event metrics, which need every recording
 cleaned again, were computed on the machine that produced those signals; they then
@@ -638,7 +645,9 @@ recording can still remove ictal signal selectively from the corpus as a whole.
 
 Artefact removal was not reproducible across machines (Section 2.7, `docs/ICA_REPRO.md`):
 GEDAI cleaned 27 percent of recordings differently on the second machine, Infomax
-changed its component decision in 2.5 percent, AMICA in none. Scoring the same models on
+changed its component decision in 2.5 percent, AMICA in none. On the recordings that
+differed, a rounding-level perturbation of the input on one machine changed the result
+in the same way, and a third machine often gave a third result. Scoring the same models on
 recordings cleaned on the two machines changed seizure-level sensitivity by up to 0.054
 and the operators' order by sensitivity (Kendall tau 0.60 to 1.00) for GEDAI, by at most
 0.005 for Infomax, and not at all for AMICA.
@@ -745,7 +754,9 @@ sensitivity by up to 0.054 and the order of the operators. Fixed seeds and pinne
 versions are the reproducibility measures a methods section usually reports; for
 ICA-based cleaning they are not sufficient, because decisions made at a threshold (a
 component's |z| against an EOG proxy, GEDAI's noise threshold) amplify rounding
-differences between machines. The window-level results of this study rest on one
+differences between machines. A perturbation of the input of one part in ten million
+reproduced the differences, so no machine gives the correct result and none can be
+chosen to avoid them. The window-level results of this study rest on one
 cleaning and are unaffected; but a study that cleans its training data on one machine
 and its test data on another, or that compares its numbers with another group's, can
 see differences of the size of the effect it studies. We recommend that studies using
