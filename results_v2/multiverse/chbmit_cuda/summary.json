@@ -1,0 +1,400 @@
+{
+  "runs": [
+    "loso_P0_cuda",
+    "loso_P0_r1_cuda",
+    "loso_P0_r2_cuda",
+    "loso_P0_r3_cuda",
+    "loso_P0_r4_cuda",
+    "loso_P1_cuda",
+    "loso_P1_r1_cuda",
+    "loso_P1_r2_cuda",
+    "loso_P1_r3_cuda",
+    "loso_P1_r4_cuda",
+    "loso_P2_cuda",
+    "loso_P2_r1_cuda",
+    "loso_P2_r2_cuda",
+    "loso_P2_r3_cuda",
+    "loso_P2_r4_cuda",
+    "loso_P3_cuda",
+    "loso_P3_r1_cuda",
+    "loso_P3_r2_cuda",
+    "loso_P3_r3_cuda",
+    "loso_P3_r4_cuda",
+    "loso_P4_cuda",
+    "loso_P4_r1_cuda",
+    "loso_P4_r2_cuda",
+    "loso_P4_r3_cuda",
+    "loso_P4_r4_cuda",
+    "loso_P5_cuda",
+    "loso_P5_r1_cuda",
+    "loso_P5_r2_cuda",
+    "loso_P5_r3_cuda",
+    "loso_P5_r4_cuda",
+    "loso_P6a_cuda",
+    "loso_P6a_r1_cuda",
+    "loso_P6a_r2_cuda",
+    "loso_P6a_r3_cuda",
+    "loso_P6a_r4_cuda",
+    "loso_P6b_cuda",
+    "loso_P6b_r1_cuda",
+    "loso_P6b_r2_cuda",
+    "loso_P6b_r3_cuda",
+    "loso_P6b_r4_cuda",
+    "loso_P6c_cuda",
+    "loso_P6c_r1_cuda",
+    "loso_P6c_r2_cuda",
+    "loso_P6c_r3_cuda",
+    "loso_P6c_r4_cuda"
+  ],
+  "pipelines": [
+    "P0",
+    "P1",
+    "P2",
+    "P3",
+    "P4",
+    "P5",
+    "P6a",
+    "P6b",
+    "P6c"
+  ],
+  "seeds": [
+    0.0,
+    1.0,
+    2.0,
+    3.0,
+    4.0
+  ],
+  "n_folds": 23,
+  "tau_within": 0.09777777777777777,
+  "tau_between": 0.028000000000000004,
+  "D": 0.06977777777777777,
+  "p_perm": 0.0730926907309269,
+  "rank_summary": {
+    "early": {
+      "n_runs": 45,
+      "mean_rank": 3.2,
+      "median_rank": 3.0,
+      "best_rank": 1,
+      "worst_rank": 5,
+      "share_first": 0.1111111111111111,
+      "share_last": 0.2
+    },
+    "late": {
+      "n_runs": 45,
+      "mean_rank": 2.933333333333333,
+      "median_rank": 3.0,
+      "best_rank": 1,
+      "worst_rank": 5,
+      "share_first": 0.2,
+      "share_last": 0.15555555555555556
+    },
+    "gated": {
+      "n_runs": 45,
+      "mean_rank": 2.6444444444444444,
+      "median_rank": 2.0,
+      "best_rank": 1,
+      "worst_rank": 5,
+      "share_first": 0.37777777777777777,
+      "share_last": 0.2
+    },
+    "attention": {
+      "n_runs": 45,
+      "mean_rank": 2.6444444444444444,
+      "median_rank": 2.0,
+      "best_rank": 1,
+      "worst_rank": 5,
+      "share_first": 0.24444444444444444,
+      "share_last": 0.13333333333333333
+    },
+    "score": {
+      "n_runs": 45,
+      "mean_rank": 3.577777777777778,
+      "median_rank": 4.0,
+      "best_rank": 1,
+      "worst_rank": 5,
+      "share_first": 0.06666666666666667,
+      "share_last": 0.3111111111111111
+    }
+  },
+  "rank_counts": 225,
+  "mean_rank_by_pipeline": {
+    "P0": {
+      "early": 2.6,
+      "late": 2.4,
+      "gated": 3.4,
+      "attention": 2.6,
+      "score": 4.0
+    },
+    "P1": {
+      "early": 2.6,
+      "late": 4.6,
+      "gated": 1.8,
+      "attention": 2.0,
+      "score": 4.0
+    },
+    "P2": {
+      "early": 2.8,
+      "late": 2.4,
+      "gated": 3.8,
+      "attention": 2.4,
+      "score": 3.6
+    },
+    "P3": {
+      "early": 2.8,
+      "late": 3.2,
+      "gated": 3.8,
+      "attention": 2.2,
+      "score": 3.0
+    },
+    "P4": {
+      "early": 2.0,
+      "late": 3.2,
+      "gated": 1.8,
+      "attention": 3.8,
+      "score": 4.2
+    },
+    "P5": {
+      "early": 3.6,
+      "late": 3.0,
+      "gated": 2.6,
+      "attention": 2.0,
+      "score": 3.8
+    },
+    "P6a": {
+      "early": 3.8,
+      "late": 3.0,
+      "gated": 2.0,
+      "attention": 3.0,
+      "score": 3.2
+    },
+    "P6b": {
+      "early": 4.4,
+      "late": 2.4,
+      "gated": 2.4,
+      "attention": 3.0,
+      "score": 2.8
+    },
+    "P6c": {
+      "early": 4.2,
+      "late": 2.2,
+      "gated": 2.2,
+      "attention": 2.8,
+      "score": 3.6
+    }
+  },
+  "p6_D": -0.07200000000000001,
+  "p6_p_perm": 0.8813118688131187,
+  "interaction_F": 1.729642642747416,
+  "interaction_p": 0.06916517502550512,
+  "variance": {
+    "fold (subject)": 0.7422826805751757,
+    "pipeline": 0.0,
+    "fusion": 0.0,
+    "fusion x pipeline": 0.0009068591459167807,
+    "seed (all seed terms)": 0.011068105781962967,
+    "fold x (pipeline, fusion)": 0.07227183844733735,
+    "residual": 0.17347051604960723
+  },
+  "variance_raw": {
+    "fold": 0.01587043823850274,
+    "pipeline": -2.7183472712393626e-05,
+    "model": -2.3758376170488742e-05,
+    "seed": -4.013748092566792e-06,
+    "fold x pipeline": 0.0005247782709780916,
+    "fold x model": 0.0009253583644435981,
+    "fold x seed": 7.1929632342730155e-06,
+    "pipeline x model": 1.9389179409576724e-05,
+    "pipeline x seed": 4.207566805513344e-06,
+    "model x seed": 4.904720391763839e-06,
+    "fold x pipeline x model": 9.507757808083416e-05,
+    "fold x pipeline x seed": -6.56092119483859e-05,
+    "fold x model x seed": 0.00018454254323645752,
+    "pipeline x model x seed": 3.579478715274819e-05,
+    "residual (fold x pipeline x model x seed)": 0.0037089011817347264
+  },
+  "variance_by_metric": {
+    "f1_macro": {
+      "fold (subject)": 0.7422826805751757,
+      "pipeline": 0.0,
+      "fusion": 0.0,
+      "fusion x pipeline": 0.0009068591459167807,
+      "seed (all seed terms)": 0.011068105781962967,
+      "fold x (pipeline, fusion)": 0.07227183844733735,
+      "residual": 0.17347051604960723
+    },
+    "auprc": {
+      "fold (subject)": 0.7680501554220335,
+      "pipeline": 0.0012794316911370939,
+      "fusion": 0.007766714382366729,
+      "fusion x pipeline": 0.0002376448407104623,
+      "seed (all seed terms)": 0.01532197140100728,
+      "fold x (pipeline, fusion)": 0.07570131829018101,
+      "residual": 0.13164276397256386
+    },
+    "balanced_accuracy": {
+      "fold (subject)": 0.7284957630468232,
+      "pipeline": 0.0,
+      "fusion": 0.0,
+      "fusion x pipeline": 0.0006016735829736023,
+      "seed (all seed terms)": 0.013932093445301452,
+      "fold x (pipeline, fusion)": 0.07424850384824006,
+      "residual": 0.18272196607666172
+    }
+  },
+  "robust_equivalent": [
+    "late-attention",
+    "gated-attention"
+  ],
+  "robust_equivalent_strict": [],
+  "kappa_pipelines": 0.5607758756411971,
+  "kappa_seeds": 0.5804409982649021,
+  "p4_per_person": {
+    "chb01": {
+      "ictal_rejected": 0,
+      "nonictal_rejected": 1
+    },
+    "chb02": {
+      "ictal_rejected": 2,
+      "nonictal_rejected": 2
+    },
+    "chb03": {
+      "ictal_rejected": 7,
+      "nonictal_rejected": 1
+    },
+    "chb04": {
+      "ictal_rejected": 5,
+      "nonictal_rejected": 5
+    },
+    "chb05": {
+      "ictal_rejected": 0,
+      "nonictal_rejected": 0
+    },
+    "chb06": {
+      "ictal_rejected": 1,
+      "nonictal_rejected": 0
+    },
+    "chb07": {
+      "ictal_rejected": 2,
+      "nonictal_rejected": 1
+    },
+    "chb08": {
+      "ictal_rejected": 4,
+      "nonictal_rejected": 3
+    },
+    "chb09": {
+      "ictal_rejected": 3,
+      "nonictal_rejected": 0
+    },
+    "chb10": {
+      "ictal_rejected": 11,
+      "nonictal_rejected": 4
+    },
+    "chb11": {
+      "ictal_rejected": 1,
+      "nonictal_rejected": 0
+    },
+    "chb12": {
+      "ictal_rejected": 1,
+      "nonictal_rejected": 7
+    },
+    "chb13": {
+      "ictal_rejected": 0,
+      "nonictal_rejected": 5
+    },
+    "chb14": {
+      "ictal_rejected": 0,
+      "nonictal_rejected": 0
+    },
+    "chb15": {
+      "ictal_rejected": 0,
+      "nonictal_rejected": 1
+    },
+    "chb16": {
+      "ictal_rejected": 0,
+      "nonictal_rejected": 1
+    },
+    "chb17": {
+      "ictal_rejected": 0,
+      "nonictal_rejected": 6
+    },
+    "chb18": {
+      "ictal_rejected": 1,
+      "nonictal_rejected": 0
+    },
+    "chb19": {
+      "ictal_rejected": 3,
+      "nonictal_rejected": 0
+    },
+    "chb20": {
+      "ictal_rejected": 1,
+      "nonictal_rejected": 2
+    },
+    "chb22": {
+      "ictal_rejected": 0,
+      "nonictal_rejected": 0
+    },
+    "chb23": {
+      "ictal_rejected": 0,
+      "nonictal_rejected": 0
+    },
+    "chb24": {
+      "ictal_rejected": 0,
+      "nonictal_rejected": 0
+    }
+  },
+  "p6_retention": {
+    "P6a": {
+      "method": "Infomax (P6a)",
+      "recordings": 683,
+      "power_kept_median": 0.7867758883544617,
+      "q25": 0.535358230342912,
+      "q75": 0.9000816552979521,
+      "min": 0.08974177798396729,
+      "share_below_0.5": 0.21961932650073207,
+      "share_below_0.9": 0.7496339677891655,
+      "components_removed_mean": 1.4846266471449487,
+      "share_none_removed": 0.1376281112737921
+    },
+    "P6b": {
+      "method": "GEDAI auto- (P6b, used)",
+      "recordings": 683,
+      "power_kept_median": 0.9992971503033639,
+      "q25": 0.7189522357296921,
+      "q75": 0.9994273598544774,
+      "min": 0.04065739635916346,
+      "share_below_0.5": 0.20497803806734993,
+      "share_below_0.9": 0.2767203513909224,
+      "components_removed_mean": NaN,
+      "share_none_removed": NaN
+    },
+    "P6b-default": {
+      "method": "GEDAI default (not used)",
+      "recordings": 670,
+      "power_kept_median": 0.6581403760002751,
+      "q25": 0.31733720680159055,
+      "q75": 0.9993226023155068,
+      "min": 0.04065321566478071,
+      "share_below_0.5": 0.43283582089552236,
+      "share_below_0.9": 0.5447761194029851,
+      "components_removed_mean": NaN,
+      "share_none_removed": NaN
+    },
+    "P6c": {
+      "method": "AMICA (P6c)",
+      "recordings": 683,
+      "power_kept_median": 0.7854976410838962,
+      "q25": 0.5367877393819132,
+      "q75": 0.8861570170527471,
+      "min": 0.07642275472517193,
+      "share_below_0.5": 0.22547584187408493,
+      "share_below_0.9": 0.7818448023426061,
+      "components_removed_mean": 1.5300146412884335,
+      "share_none_removed": 0.12152269399707175
+    }
+  },
+  "effect_sentences": {
+    "preprocessing": "Pipeline main effect on macro F1: F(8, 176) = 0.29, p_GG = 0.834, 0.0 % of the variance; the fusion ranking agrees between runs of different pipelines with mean Kendall tau 0.03, against 0.10 between seeds of the same pipeline (D = 0.07, permutation p = 0.073).",
+    "seed": "All seed terms together hold 1.1 % of the variance of macro F1; rankings from different seeds of the same pipeline agree with mean Kendall tau 0.10 (Kendall's W over seeds, median over 9 pipelines: 0.22).",
+    "interaction": "Fusion x Preprocessing: F(32, 704) = 1.73, p_GG = 0.069 (GG epsilon 0.34), partial eta squared 0.073; the fusion x pipeline component holds 0.1 % of the variance."
+  }
+}

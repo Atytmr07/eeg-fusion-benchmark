@@ -1,0 +1,4 @@
+pipeline,method,recordings,median_s_per_recording,mean_s_per_recording,total_compute_h,components_removed_median,components_removed_mean
+P6a,Infomax (P6a),41,125.4,175.27073170731705,1.9961388888888887,2.0,2.048780487804878
+P6b,"GEDAI auto- (P6b, used)",41,49.6,74.53658536585365,0.8488888888888888,,
+P6c,AMICA (P6c),41,676.9,984.8048780487807,11.215833333333336,2.0,1.7317073170731707

@@ -359,7 +359,8 @@ def figure6(data: dict, device: str) -> None:
         xt.append(lab)
     ax.set_xticks(range(len(xt)), xt)
     ax.set_ylabel("macro F1")
-    ax.set_title(f"a  Operators in three settings (pipelines {', '.join(pipes)})", loc="left")
+    plabel = "all nine pipelines" if len(pipes) == 9 else "pipelines " + ", ".join(pipes)
+    ax.set_title(f"a  Operators in three settings ({plabel})", loc="left")
     ax.grid(axis="x", visible=False)
     ax = axes[1]
     pairs = [("CHB-MIT (LOSO)", "Siena (LOSO)"), ("CHB-MIT (LOSO)", "CHB-MIT -> Siena"),
