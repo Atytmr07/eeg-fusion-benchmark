@@ -210,7 +210,11 @@ def widen_table(par: str) -> tuple[str, str | None]:
 
 TABLE_CAP = re.compile(r"^\*\*Table (\d+)\.\s*(.+?)\*\*\s*(.*)$", re.S)
 FIG_CAP = re.compile(r"^\*\*Figure (\d+)\.\*\*\s*(.+)$", re.S)
-IMAGE = re.compile(r"^!\[([^\]]*)\]\(([^)]+)\)\s*$")
+IMAGE = re.compile(r"^!\[([^\]]*)\]\(([^)]+)\)(\{[^}]*\})?\s*$")
+# Figures are set at the full text width: every figure is drawn 6.6 to 7.4 in wide,
+# wider than the 6.3 in text, so 80% would shrink 7.5 pt labels to about 5 pt.
+# A {width=...} after the image line in the manuscript overrides it.
+FIG_WIDTH = "100%"
 
 
 def figure_path(src: str) -> str:
@@ -259,9 +263,10 @@ def restructure(body: str, report: dict) -> str:
                     i += 1
             path = figure_path(im.group(2))
             if not (FIGDIR / path).exists():
-                report["missing_figures"].append(im.group(2))
+                report["missing_figures"].append(path)
             n = len(figures) if figures else 0
-            out.append(f"![{caption}]({path}){{#fig:{n} width=80%}}")
+            wm = re.search(r"width=([^\s}]+)", im.group(3) or "")
+            out.append(f"![{caption}]({path}){{#fig:{n} width={wm.group(1) if wm else FIG_WIDTH}}}")
             i += 1
             continue
         out.append(p)
@@ -843,6 +848,8 @@ def build(draft: bool, make_pdf: bool, bibmode: str = "natbib", supplement: bool
          "--lua-filter", str(HERE / "filters.lua"), "--shift-heading-level-by=-1",
          "--wrap=preserve", "-o", str(HERE / "main.tex")])
     src.unlink()
+    if report["missing_figures"]:
+        placeholder_figures(HERE / "main.tex", report["missing_figures"])
     if bibmode != "natbib":
         for stale in ("main.bib", "main.bbl", "main.blg"):
             (HERE / stale).unlink(missing_ok=True)
@@ -857,6 +864,24 @@ def build(draft: bool, make_pdf: bool, bibmode: str = "natbib", supplement: bool
     print_report(report, pages, warnings, len(refs))
 
 
+def placeholder_figures(tex_path: Path, missing: list):
+    """A figure whose file is not in paper/figures_manuscript/ is printed as a framed
+    box naming the file, so the PDF still builds and the gap is visible."""
+    tex = tex_path.read_text(encoding="utf-8")
+    for name in missing:
+        box = (r"\fbox{\parbox[c][0.25\textheight][c]{0.9\linewidth}{\centering\small "
+               r"Figure file not in the repository:\\ \nolinkurl{paper/figures_manuscript/"
+               + name + "}}}")
+        tex = re.sub(r"\\includegraphics(\[[^\]]*\])?\{" + re.escape(name) + r"\}",
+                     lambda m: box, tex)
+    tex_path.write_text(tex, encoding="utf-8")
+
+
+def copy_figures(tex: str, dest: Path):
+    for name in re.findall(r"\\includegraphics(?:\[[^\]]*\])?\{([^}]+)\}", tex):
+        shutil.copy(FIGDIR / name, dest / name)
+
+
 def bundle_arxiv(report: dict):
     if ARXIV.exists():
         shutil.rmtree(ARXIV)
@@ -865,8 +890,7 @@ def bundle_arxiv(report: dict):
     shutil.copy(HERE / "main.tex", ARXIV / "main.tex")
     if report.get("bibmode") == "natbib":
         shutil.copy(HERE / "main.bbl", ARXIV / "main.bbl")  # arXiv does not run bibtex
-    for name in re.findall(r"\\includegraphics(?:\[[^\]]*\])?\{([^}]+)\}", tex):
-        shutil.copy(FIGDIR / name, ARXIV / "figures" / name)
+    copy_figures(tex, ARXIV / "figures")
     pages, log = pdflatex(ARXIV / "main.tex")
     report["arxiv_pages"] = pages
     report["arxiv_missing"] = re.findall(r"File `([^']+)' not found", log)
@@ -888,8 +912,7 @@ def bundle_overleaf(report: dict):
     shutil.copy(HERE / "main.tex", OVERLEAF / "main.tex")
     if report.get("bibmode") == "natbib":
         shutil.copy(HERE / "main.bib", OVERLEAF / "main.bib")
-    for name in re.findall(r"\\includegraphics(?:\[[^\]]*\])?\{([^}]+)\}", tex):
-        shutil.copy(FIGDIR / name, OVERLEAF / "figures" / name)
+    copy_figures(tex, OVERLEAF / "figures")
     pages, log = compile_tex(OVERLEAF / "main.tex", report.get("bibmode") == "natbib", {})
     report["overleaf_pages"] = pages
     report["overleaf_missing"] = re.findall(r"File `([^']+)' not found", log)

@@ -189,7 +189,7 @@ complexity often did not pay off (\citealp{Rheude_2025}).
   >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.2111}}
   >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3467}}
   >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.4422}}@{}}
-\caption{\textbf{Closest related work} (from the systematic search of 3 October 2026, \nolinkurl{docs/15_LITERATUR_SONUCLARI.md}; studies in bold are the closest to this one; the full texts of the remaining candidates are still being read).}\tabularnewline
+\caption{\textbf{Closest related work} (from the systematic search of 3 October 2026; studies in bold are the closest to this one; the full texts of the remaining candidates are still being read).}\tabularnewline
 \toprule\noalign{}
 \begin{minipage}[b]{\linewidth}\raggedright
 Work
@@ -328,10 +328,16 @@ The study contributes:
 
 \section{2. Methods}\label{methods}
 
-Figure 1 (\nolinkurl{paper/figures_manuscript/figure1_design.png}) summarises the design: the
+Figure 1 summarises the design: the
 datasets, the nine preprocessing pipelines, the two representations, the fusion
 operators and controls, and the evaluation; its panel b shows where each step is
 applied and how leakage between training and test data is prevented.
+
+\begin{figure}
+\centering
+\includegraphics[width=1\linewidth,height=\textheight,keepaspectratio,alt={Study design. a, The multiverse: two datasets harmonised to 18 bipolar channels at 256 Hz and 10 s windows; nine preprocessing pipelines, each trained with five seed sets; a 1D CNN on the raw waveform and a 2D CNN on the log-STFT, combined by five fusion operators under a matched parameter budget, with single-branch and classical controls; evaluation by leave-one-subject-out (LOSO) at the window and the seizure level. b, Where each step is applied and how leakage is prevented: whole persons are held out (chb01 and chb21 together), and validation persons serve only early stopping and the score fusion weight; P4 rejects windows from training and validation data only, so every pipeline is tested on the same windows; P6 cleans each recording on its own, without seizure labels.}]{figure1_design.pdf}
+\caption{Study design. \textbf{a}, The multiverse: two datasets harmonised to 18 bipolar channels at 256 Hz and 10 s windows; nine preprocessing pipelines, each trained with five seed sets; a 1D CNN on the raw waveform and a 2D CNN on the log-STFT, combined by five fusion operators under a matched parameter budget, with single-branch and classical controls; evaluation by leave-one-subject-out (LOSO) at the window and the seizure level. \textbf{b}, Where each step is applied and how leakage is prevented: whole persons are held out (chb01 and chb21 together), and validation persons serve only early stopping and the score fusion weight; P4 rejects windows from training and validation data only, so every pipeline is tested on the same windows; P6 cleans each recording on its own, without seizure labels.}\label{fig:1}
+\end{figure}
 
 \subsection{2.1 Datasets and EEG harmonisation}\label{datasets-and-eeg-harmonisation}
 
@@ -677,7 +683,7 @@ the GPU, one Siena run about a quarter of an hour, and one cross-dataset run abo
 5 min; one fold took 3.7 min on the GPU against 12 min on the CPU.
 
 \textbf{Availability.} Code, the per-fold results of every run, and all analyses are in the
-public repository; Section 9 lists the commands that regenerate each table and figure.
+public repository, whose README lists the commands that regenerate each table and figure.
 Following our own recommendation (Section 4.5), the repository also holds, per recording
 and artefact removal method, the outcome of the cleaning the models were trained and
 tested on (components removed, GEDAI's threshold, power kept;
@@ -769,6 +775,12 @@ macro F1 at the 0.5 threshold was close to the others on CHB-MIT. Its ranking of
 windows by ictal probability is therefore consistently the weakest, while its
 thresholded decisions are not.
 
+\begin{figure}
+\centering
+\includegraphics[width=1\linewidth,height=\textheight,keepaspectratio,alt={Window-level performance of each fusion operator in each preprocessing pipeline: macro F1 (left) and AUPRC (right) on CHB-MIT (top, 23 LOSO folds) and Siena (bottom, 14 folds); mean and SD over five seed sets, each run averaged over its folds. Early fusion has the lowest AUPRC in every pipeline of both datasets.}]{figure2_performance.pdf}
+\caption{Window-level performance of each fusion operator in each preprocessing pipeline: macro F1 (left) and AUPRC (right) on CHB-MIT (top, 23 LOSO folds) and Siena (bottom, 14 folds); mean and SD over five seed sets, each run averaged over its folds. Early fusion has the lowest AUPRC in every pipeline of both datasets.}\label{fig:2}
+\end{figure}
+
 \subsection{3.2 Statistical significance and practical equivalence}\label{statistical-significance-and-practical-equivalence}
 
 No pair of operators differed significantly in any pipeline of either dataset: 0 of 90
@@ -815,6 +827,12 @@ no interaction (F = 1.05, p = 0.39). The window-level predictions themselves cha
 about as much between pipelines as between seeds: Cohen's kappa 0.56 between pipelines
 and 0.58 between seeds on CHB-MIT, 0.44 and 0.50 on Siena.
 
+\begin{figure}
+\centering
+\includegraphics[width=1\linewidth,height=\textheight,keepaspectratio,alt={Ranking stability. Left, rank of each operator by macro F1 in every run (within each pipeline, one column per seed set; darker is better). Right, share of the 45 runs of each dataset in which the operator ranked first. On CHB-MIT the first place changes with the seed; on Siena score fusion ranks first in 82 percent of runs without a significant advantage (Section 3.2).}]{figure3_rank_stability.pdf}
+\caption{Ranking stability. Left, rank of each operator by macro F1 in every run (within each pipeline, one column per seed set; darker is better). Right, share of the 45 runs of each dataset in which the operator ranked first. On CHB-MIT the first place changes with the seed; on Siena score fusion ranks first in 82 percent of runs without a significant advantage (Section 3.2).}\label{fig:3}
+\end{figure}
+
 \subsection{3.4 Sources of variance}\label{sources-of-variance}
 
 Figure 4 decomposes the variance of each metric. On CHB-MIT the held-out subject
@@ -829,6 +847,12 @@ pipeline and operator for 26.9 percent; the operator held 1.5 percent of the var
 macro F1 (SD 0.016) and 5.5 percent of AUPRC, the seed 4.2 percent and preprocessing 0.06
 percent. In both datasets the seed accounted for more variance than preprocessing, and
 on CHB-MIT more than the operator.
+
+\begin{figure}
+\centering
+\includegraphics[width=1\linewidth,height=\textheight,keepaspectratio,alt={Sources of variance of macro F1, AUPRC and balanced accuracy, as percentages of the total (method-of-moments estimates for a fully crossed random-effects model of subject, preprocessing, operator and seed; negative estimates shown as 0; seed: all seed terms together). The held-out subject dominates on both datasets; preprocessing, operator and their interaction explain almost nothing.}]{figure4_variance.pdf}
+\caption{Sources of variance of macro F1, AUPRC and balanced accuracy, as percentages of the total (method-of-moments estimates for a fully crossed random-effects model of subject, preprocessing, operator and seed; negative estimates shown as 0; seed: all seed terms together). The held-out subject dominates on both datasets; preprocessing, operator and their interaction explain almost nothing.}\label{fig:4}
+\end{figure}
 
 \subsection{3.5 Artefact removal}\label{artefact-removal}
 
@@ -864,6 +888,12 @@ recordings cleaned on the two machines changed seizure-level sensitivity by up t
 and the operators' order by sensitivity (Kendall tau 0.60 to 1.00) for GEDAI, by at most
 0.005 for Infomax, and not at all for AMICA.
 
+\begin{figure}
+\centering
+\fbox{\parbox[c][0.25\textheight][c]{0.9\linewidth}{\centering\small Figure file not in the repository:\\ \nolinkurl{paper/figures_manuscript/figure5_artefact_removal.png}}}
+\caption{Artefact removal in P6 (CHB-MIT). \textbf{a}, Share of each recording's power kept after cleaning (670 recordings). \textbf{b}, CPU hours for the 670 recordings on a laptop CPU. \textbf{c}, Change in macro F1 against P1, the same 0.5 to 40 Hz signal without artefact removal, paired by seed set; mean and SD over five seed sets. \textbf{d}, Share of recordings cleaned differently (different components removed, or retained power differing by more than 0.001) on a second machine and in a second run on the same machine, with the same code, package versions and seeds (Section 2.7).}\label{fig:5}
+\end{figure}
+
 \subsection{3.6 Seizure-level detection}\label{seizure-level-detection}
 
 \emph{(P0 to P5, five seed sets each; P6 follows when its remaining event metrics are
@@ -887,6 +917,12 @@ Between the seed-averaged rankings of the same pipeline, Kendall tau was -0.11 o
 between CHB-MIT and Siena, 0.07 between CHB-MIT and the transfer, and -0.11 between Siena
 and the transfer (Figure 6b): neither dataset's ranking predicted the other's, nor the
 ranking after transfer.
+
+\begin{figure}
+\centering
+\includegraphics[width=1\linewidth,height=\textheight,keepaspectratio,alt={Cross-dataset comparison. a, Macro F1 of each operator on CHB-MIT (LOSO), on Siena (LOSO), and trained on CHB-MIT and tested on Siena; mean and SD over the runs of all nine pipelines and five seed sets. b, Kendall tau between the seed-averaged operator rankings of the same pipeline in two settings; one point per pipeline (points can overlap), bar: mean.}]{figure6_cross_dataset.pdf}
+\caption{Cross-dataset comparison. \textbf{a}, Macro F1 of each operator on CHB-MIT (LOSO), on Siena (LOSO), and trained on CHB-MIT and tested on Siena; mean and SD over the runs of all nine pipelines and five seed sets. \textbf{b}, Kendall tau between the seed-averaged operator rankings of the same pipeline in two settings; one point per pipeline (points can overlap), bar: mean.}\label{fig:6}
+\end{figure}
 
 \section{4. Discussion}\label{discussion}
 
@@ -1340,21 +1376,18 @@ all & 6380 & 1276 & 42 & 5104 & 39 & 3.3 & 0.8 \\
 
 \endgroup
 
-\begingroup\footnotesize
+\begingroup\small
 
 \begin{longtable}[]{@{}
-  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.0859}}
-  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1263}}
-  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1364}}
-  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1162}}
-  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1263}}
-  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1566}}
-  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1263}}
-  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1263}}@{}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 8\tabcolsep) * \real{0.0950}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 8\tabcolsep) * \real{0.1650}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 8\tabcolsep) * \real{0.2900}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 8\tabcolsep) * \real{0.2450}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 8\tabcolsep) * \real{0.2050}}@{}}
 \caption{\textbf{Siena: metadata problems and the decisions taken.} Every departure from the published seizure lists, with the decision used in the main analysis, its kind (a correction verified against the recording, or a decision rule applied without such a check), how it was checked, and how much the alternative would change the windows. Other, purely textual fixes (a space inside a time in PN10's list, misspelt file names, PN12's missing registration times taken from the same file's first block, recordings past midnight read modulo 24 h) are listed in \nolinkurl{docs/SIENA.md}, Section 4. Recording time is taken from the EDF headers, 141.0 h; the dataset's description gives 128.4 h, a difference explained for PN14 (the start time above) but not for PN03, PN10 and PN12, whose files contain no padding (\nolinkurl{docs/SIENA.md}, Section 8).}\tabularnewline
 \toprule\noalign{}
 \begin{minipage}[b]{\linewidth}\raggedright
-patient
+item
 \end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
 recording / seizure
 \end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
@@ -1363,18 +1396,12 @@ problem in the metadata
 used
 \end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
 type
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-how it was checked
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-remaining uncertainty
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-effect on the windows
 \end{minipage} \\
 \midrule\noalign{}
 \endfirsthead
 \toprule\noalign{}
 \begin{minipage}[b]{\linewidth}\raggedright
-patient
+item
 \end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
 recording / seizure
 \end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
@@ -1383,6 +1410,34 @@ problem in the metadata
 used
 \end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
 type
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+1 & PN00-3, seizure 3 & listed end 19.29.29 lies 1916 s after the recording ends (18.57.33) & end read as 18.29.29 (a 60 s seizure) & verified correction \\
+2 & PN05-3, seizure 3 & registration start: list 06.01.23, EDF header 06.01.13 & EDF header start time, as for every recording & decision rule (not a verified correction) \\
+3 & PN10-3, seizure 3 & two onsets: 15.43.53 (clinical), 15.43.59 (electrical) & electrical onset (advisor) & decision \\
+4 & PN10-4.5.6, seizure 6 & only a clinical onset (15.18.26) & used as listed, flagged in the corpus's seizure notes & decision \\
+5 & PN10-2, seizure 2 & end ``11.41.04 opure 11.40.43'' (Italian ``or'') & first value, 11.41.04 & decision rule \\
+6 & PN14-3 & registration start: list 16.17.45, EDF header 19.17.45 & EDF header start time & verified correction \\
+\end{longtable}
+
+\endgroup
+
+How each decision was checked, and its effect:
+
+\begingroup\small
+
+{\def\LTcaptype{none} % do not increment counter
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.0800}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.3950}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.2350}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.2900}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+item
 \end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
 how it was checked
 \end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
@@ -1394,13 +1449,14 @@ effect on the windows
 \endhead
 \bottomrule\noalign{}
 \endlastfoot
-PN00 & PN00-3, seizure 3 & listed end 19.29.29 lies 1916 s after the recording ends (18.57.33) & end read as 18.29.29 (a 60 s seizure) & verified correction & signal: the right frontotemporal 3-20 Hz ictal rhythm (FP2-F8, F8-T8) falls below a quarter of its peak 14 s after 18.29.29; the patient's other four seizures end 0 to 13 s after their listed ends by the same rule & offset from an automatic rule on one channel pair & alternative (exclude the seizure and the rest of the recording): 30 instead of 37 ictal windows for PN00 \\
-PN05 & PN05-3, seizure 3 & registration start: list 06.01.23, EDF header 06.01.13 & EDF header start time, as for every recording & decision rule (not a verified correction) & none possible: the header defines the first sample and 39 of 41 recordings agree with their list; the list's value fits the 20 s end offset of 18 other recordings, the header's does not & 10 s in the seizure's position & 4 ictal windows either way, shifted by one: 2 window labels differ \\
-PN10 & PN10-3, seizure 3 & two onsets: 15.43.53 (clinical), 15.43.59 (electrical) & electrical onset (advisor) & decision & CHB-MIT annotates electrographic onsets; the electrical onset keeps the two corpora consistent & none (both listed) & clinical onset instead: 48 instead of 47 ictal windows for PN10 (1 label) \\
-PN10 & PN10-4.5.6, seizure 6 & only a clinical onset (15.18.26) & used as listed, flagged in the corpus's seizure notes & decision & - & electrical onset unknown; in seizure 3 it followed the clinical one by 6 s & at most about one window, by analogy with seizure 3 \\
-PN10 & PN10-2, seizure 2 & end ``11.41.04 opure 11.40.43'' (Italian ``or'') & first value, 11.41.04 & decision rule & - & 21 s in the seizure's end & second value instead: 45 instead of 47 ictal windows for PN10 \\
-PN14 & PN14-3 & registration start: list 16.17.45, EDF header 19.17.45 & EDF header start time & verified correction & header start + duration (41,995 s) gives the listed end time 06.57.40 exactly; the list's start would make the recording three hours longer than the file & none & seizure at 1 h 52 min into the recording, not 4 h 52 min \\
+1 & signal: the right frontotemporal 3-20 Hz ictal rhythm (FP2-F8, F8-T8) falls below a quarter of its peak 14 s after 18.29.29; the patient's other four seizures end 0 to 13 s after their listed ends by the same rule & offset from an automatic rule on one channel pair & alternative (exclude the seizure and the rest of the recording): 30 instead of 37 ictal windows for PN00 \\
+2 & none possible: the header defines the first sample and 39 of 41 recordings agree with their list; the list's value fits the 20 s end offset of 18 other recordings, the header's does not & 10 s in the seizure's position & 4 ictal windows either way, shifted by one: 2 window labels differ \\
+3 & CHB-MIT annotates electrographic onsets; the electrical onset keeps the two corpora consistent & none (both listed) & clinical onset instead: 48 instead of 47 ictal windows for PN10 (1 label) \\
+4 & - & electrical onset unknown; in seizure 3 it followed the clinical one by 6 s & at most about one window, by analogy with seizure 3 \\
+5 & - & 21 s in the seizure's end & second value instead: 45 instead of 47 ictal windows for PN10 \\
+6 & header start + duration (41,995 s) gives the listed end time 06.57.40 exactly; the list's start would make the recording three hours longer than the file & none & seizure at 1 h 52 min into the recording, not 4 h 52 min \\
 \end{longtable}
+}
 
 \endgroup
 

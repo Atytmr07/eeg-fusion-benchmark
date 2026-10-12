@@ -69,6 +69,11 @@ with plain `pdflatex`, which is what arXiv uses.
   - The image line plus the `**Figure N.** ...` paragraph after it become one
     figure with that caption.
   - The PDF version from `paper/figures_manuscript/` is used when one exists.
+  - Figures are set at the full text width. They are drawn 6.6 to 7.4 in wide, wider
+    than the 6.3 in text, so at 80% their smallest labels would shrink to about 4 to
+    5 pt. A `{width=...}` after the image line in the manuscript overrides this.
+  - A figure whose file is missing is printed as a framed box naming the file, and
+    the report lists it, so the PDF still builds.
   - Numbering is checked the same way as for tables.
 - **Math.** `MATH_REWRITES` in `build.py` rewrites δmin and delta_min, D C D^T,
   α = …, ±, ≥, ≤, −, √, p_Holm, Spearman rho and µV into TeX math, outside code
