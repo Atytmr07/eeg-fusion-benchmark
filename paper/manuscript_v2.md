@@ -2,7 +2,7 @@
 > advisor set on 10 October 2026. This file holds the Introduction (Section 1), the
 > Methods (Section 2, in the advisor's subsections 2.1 to 2.7) and the Results of the
 > five-seed runs (Section 3; the seizure-level metrics of P6 are still being
-> computed) and the Discussion (Section 4); the Abstract is written last. The literature review is
+> computed) and the Discussion (Section 4). The literature review is
 > provisional: the systematic search has run, but title and abstract screening was done
 > by an AI assistant, and the human screening and the full texts follow after 17
 > October; claims marked [abstract] rest on a source's abstract only and are to be
@@ -19,7 +19,27 @@ Antalya Bilim University
 
 ## Abstract
 
-*(to be written last)*
+Studies of convolutional networks for EEG seizure detection that fuse the raw waveform
+with its spectrogram often report that one fusion operator outperforms the others, on
+one dataset, one preprocessing pipeline and one training run. We tested whether such
+conclusions hold when these choices change. Five fusion operators (early, late, gated,
+attention and score fusion), with parameter counts matched within 1.3 percent, were
+compared under nine preprocessing pipelines, including three artefact removal
+algorithms (Extended Infomax, GEDAI, AMICA), and five seed sets, with leave-one-subject-out
+evaluation on CHB-MIT (23 subjects) and Siena (14 subjects), and by training on CHB-MIT
+and testing on Siena. Statistical significance (resampling-corrected paired tests),
+practical equivalence (margins of 0.05 and 0.02 macro F1 fixed in advance) and ranking
+stability were assessed separately. The operators differed by a median of 0.021
+(CHB-MIT) and 0.053 (Siena) macro F1 within a pipeline, and no difference was
+significant. The held-out subject explained 74 percent of the variance on CHB-MIT;
+preprocessing and the operator explained none, and the seed more. Rankings changed
+between seeds (median Kendall's W 0.22 on CHB-MIT), more stable on Siena, where score
+fusion ranked first in 82 percent of runs without a significant advantage, and did not
+transfer between datasets. Early fusion had the lowest AUPRC in all 18 pipeline-dataset
+combinations. With fixed seeds and package versions, GEDAI cleaned 27 percent of
+recordings differently on a second machine, enough to change seizure-level sensitivity
+by up to 0.054 and the order of the operators. Claims that one fusion operator is
+superior, made from a single dataset, pipeline and run, are not supported.
 
 ## 1. Introduction
 
