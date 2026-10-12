@@ -806,7 +806,46 @@ corrected and equivalence tests rather than naive paired tests; report the rank
 distribution rather than one ranking; and state the margin below which a difference is
 considered irrelevant before looking at the results.
 
-### 4.9 Limitations
+### 4.9 What do the results mean clinically?
+
+*(Draft. P0 to P5 on CHB-MIT; the numbers for P6 follow when its event metrics are
+complete. Statements marked [ref] need a source from the literature review.)*
+
+None of the systems studied here is close to clinical use, and the study was not
+designed to produce one: the threshold was fixed at 0.5, there was no post-processing,
+and the models were trained on other people's seizures only. At that operating point
+the operators detected 68 to 80 percent of CHB-MIT's seizures with 5.3 to 7.8 false
+alarms per hour, that is 127 to 187 false alarms per day of monitoring, and about 2
+percent of all detections were seizures. Clinically acceptable systems are usually
+described with false alarm rates below about one per hour, often far lower, at a high
+sensitivity [ref]; no person in CHB-MIT reached a mean below one false alarm per hour.
+Post-processing (smoothing consecutive windows, a minimum event duration) and a
+threshold chosen per patient typically trade a little sensitivity for far fewer false
+alarms [ref]; we left both out on purpose, so that the operators are compared on their
+raw output, and the absolute numbers should be read in that light.
+
+Three results nevertheless bear on clinical use. First, the operators that differed by
+a few hundredths of macro F1 at the window level differed by little more at the seizure
+level, except early fusion, which detected the most seizures (0.80) at the most false
+alarms (7.8 per hour); which of these is preferable is a clinical choice between missed
+seizures and alarm fatigue [ref], not a property that window-level metrics reveal.
+Second, the person mattered more than any modelling choice: mean sensitivity ranged
+from 0.23 (chb06) to 1.00 across persons and the false alarm rate from 1.2 to 12.3 per
+hour, while the operators' means spanned 0.68 to 0.80 and 5.3 to 7.8. For a patient,
+whether the detector works depends far more on who they are than on the fusion
+operator, which supports patient-specific adaptation over the search for a better
+generic operator [ref]. Third, an artefact removal step that does not reproduce across
+machines (Section 4.5) is a clinical risk as much as a scientific one: the same model
+could detect a different set of a patient's seizures depending on where the recording
+is cleaned.
+
+Siena cannot answer the clinical question of false alarms: its recordings are cut
+around seizures, so we report only its sensitivity (83 to 86 percent), which is
+consistent with CHB-MIT's and says nothing about specificity in continuous monitoring.
+Neither dataset contains the long, artefact-rich ambulatory or intensive-care
+recordings in which seizure detectors are used, and the persons are few (23 and 14).
+
+### 4.10 Limitations
 
 *(draft; to be completed with the results)*
 
