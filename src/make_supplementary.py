@@ -40,6 +40,7 @@ def md(df: pd.DataFrame, floatfmt: str = "{:.3f}") -> str:
 
 def table_s1() -> str:
     d = pd.read_csv(QC / "p6_recording_logs.csv")
+    d = d[d.record.str.startswith("chb")]                   # CHB-MIT only
     names = {"infomax": "P6a Extended Infomax", "gedai-conservative": "P6b GEDAI, conservative (used)",
              "amica": "P6c AMICA", "gedai": "GEDAI, default (not used)"}
     rows = []

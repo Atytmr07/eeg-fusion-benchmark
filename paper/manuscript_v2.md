@@ -518,6 +518,12 @@ the GPU, one Siena run about a quarter of an hour, and one cross-dataset run abo
 
 **Availability.** Code, the per-fold results of every run, and all analyses are in the
 public repository; Section 9 lists the commands that regenerate each table and figure.
+Following our own recommendation (Section 4.5), the repository also holds, per recording
+and artefact removal method, the outcome of the cleaning the models were trained and
+tested on (components removed, GEDAI's threshold, power kept;
+`results_v2/qc/p6_recording_logs.csv`) and of the recleaning used for the event metrics
+(`p6_recording_logs_events.csv`), so that a reader can check a reproduction recording
+by recording.
 
 ## 3. Results
 

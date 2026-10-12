@@ -254,6 +254,7 @@ def figure5(data: dict) -> None:
     mc = "#4a3aa7"                                          # one hue: methods are not operators
     if logs_f.exists():
         logs = pd.read_csv(logs_f)
+        logs = logs[logs.record.str.startswith("chb")]          # CHB-MIT only
         ax = axes[0, 0]
         vals = [logs[logs.method == m].power_kept.values for _, m, _ in meth]
         bp = ax.boxplot(vals, widths=0.45, patch_artist=True, showfliers=True,

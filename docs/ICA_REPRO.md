@@ -136,6 +136,14 @@ same alternatives as a rounding-level change of the input.
   GEDAI's cleaning is reproduced exactly; Infomax's differs from the training-time
   cleaning in 8 of 670 recordings; AMICA's by at most 1.4 % of the signal amplitude.
   `events.py` reports this per fold (`window_check` in `events/meta.json`).
+- **Published logs.** Per recording and method, the outcome of the training-time cleaning
+  (`results_v2/qc/p6_recording_logs.csv`: components removed, GEDAI threshold, power
+  kept; CHB-MIT and Siena) and of the event-time recleaning on the laptop
+  (`results_v2/qc/p6_recording_logs_events.csv`, including 13 CHB-MIT recordings without
+  selected windows that only the event metrics use). They differ only for Infomax on
+  CHB-MIT: 8 recordings with different components and 2 more whose retained power
+  differs by more than 0.001. A reproduction can be checked against these files without
+  the cached signals.
 - **Effect on the results** (`src/ica_repro_impact.py`, `results_v2/ica_repro/impact_events.md`).
   The same trained models were scored on CHB-MIT's full recordings twice: cleaned on the
   lab PC (`events_lab_FAIL/`) and on the laptop (the valid evaluation), three seed sets
