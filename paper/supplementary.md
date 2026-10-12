@@ -86,3 +86,44 @@ not for PN03, PN10 and PN12, whose files contain no padding (`docs/SIENA.md`, Se
 | PN10 | PN10-4.5.6, seizure 6 | only a clinical onset (15.18.26) | used as listed, flagged in the corpus's seizure notes | decision | - | electrical onset unknown; in seizure 3 it followed the clinical one by 6 s | at most about one window, by analogy with seizure 3 |
 | PN10 | PN10-2, seizure 2 | end "11.41.04 opure 11.40.43" (Italian "or") | first value, 11.41.04 | decision rule | - | 21 s in the seizure's end | second value instead: 45 instead of 47 ictal windows for PN10 |
 | PN14 | PN14-3 | registration start: list 16.17.45, EDF header 19.17.45 | EDF header start time | verified correction | header start + duration (41,995 s) gives the listed end time 06.57.40 exactly; the list's start would make the recording three hours longer than the file | none | seizure at 1 h 52 min into the recording, not 4 h 52 min |
+
+## Table S5. Artefact removal: power kept per window, by band and class
+
+What each method removes from the 0.5 to 40 Hz signal, per 10 s window (cleaned power
+divided by the power of the same window before cleaning, summed over channels), for
+ictal and non-ictal windows, overall and in five bands (delta 0.5-4, theta 4-8, alpha
+8-13, beta 13-30, low gamma 30-40 Hz; medians). The second part compares the classes
+within recordings: per recording the median of each class, their difference, and a
+Wilcoxon signed-rank test over the recordings that hold both. A difference between the
+classes over the whole corpus that is absent within recordings reflects which
+recordings a method cleans heavily, not a preference for one class
+(`src/p6_signal_effects.py`). GEDAI's default preset was applied to CHB-MIT only.
+
+| dataset | method | windows | n | power kept, median | share < 0.5 | delta | theta | alpha | beta | low gamma |
+|---|---|---|---|---|---|---|---|---|---|---|
+| chbmit | Extended Infomax | ictal | 1276 | 0.872 | 0.092 | 0.855 | 0.905 | 0.929 | 0.933 | 0.935 |
+| chbmit | Extended Infomax | non-ictal | 5104 | 0.854 | 0.187 | 0.835 | 0.893 | 0.911 | 0.927 | 0.933 |
+| chbmit | GEDAI conservative (used) | ictal | 1276 | 1.000 | 0.134 | 0.999 | 1.000 | 1.000 | 1.000 | 1.000 |
+| chbmit | GEDAI conservative (used) | non-ictal | 5104 | 0.999 | 0.167 | 0.999 | 1.000 | 1.000 | 1.000 | 1.000 |
+| chbmit | GEDAI default (not used) | ictal | 1276 | 0.625 | 0.448 | 0.583 | 0.739 | 0.836 | 0.882 | 0.909 |
+| chbmit | GEDAI default (not used) | non-ictal | 5104 | 0.925 | 0.372 | 0.920 | 0.966 | 0.983 | 0.991 | 0.994 |
+| chbmit | AMICA | ictal | 1276 | 0.873 | 0.093 | 0.851 | 0.909 | 0.922 | 0.929 | 0.933 |
+| chbmit | AMICA | non-ictal | 5104 | 0.839 | 0.191 | 0.821 | 0.882 | 0.901 | 0.921 | 0.930 |
+| siena | Extended Infomax | ictal | 328 | 0.682 | 0.271 | 0.609 | 0.759 | 0.847 | 0.900 | 0.941 |
+| siena | Extended Infomax | non-ictal | 1312 | 0.657 | 0.370 | 0.520 | 0.714 | 0.862 | 0.906 | 0.914 |
+| siena | GEDAI conservative (used) | ictal | 328 | 0.679 | 0.427 | 0.694 | 0.745 | 0.850 | 0.833 | 0.944 |
+| siena | GEDAI conservative (used) | non-ictal | 1312 | 0.997 | 0.383 | 0.997 | 1.000 | 1.000 | 1.000 | 1.000 |
+| siena | AMICA | ictal | 328 | 0.723 | 0.232 | 0.660 | 0.823 | 0.887 | 0.929 | 0.959 |
+| siena | AMICA | non-ictal | 1312 | 0.719 | 0.334 | 0.627 | 0.800 | 0.915 | 0.936 | 0.939 |
+
+Within recordings:
+
+| dataset | method | recordings | ictal - non-ictal, median | share with ictal lower | Wilcoxon p |
+|---|---|---|---|---|---|
+| chbmit | Extended Infomax | 137 | 0.0098 | 0.2847 | 0.0001 |
+| chbmit | GEDAI conservative (used) | 137 | 0.0001 | 0.3212 | 0.0016 |
+| chbmit | GEDAI default (not used) | 137 | -0.0000 | 0.5036 | 0.0363 |
+| chbmit | AMICA | 137 | 0.0170 | 0.2847 | 0.0000 |
+| siena | Extended Infomax | 41 | -0.0050 | 0.5122 | 0.6769 |
+| siena | GEDAI conservative (used) | 41 | -0.0000 | 0.5610 | 0.6815 |
+| siena | AMICA | 41 | 0.0000 | 0.4390 | 0.8790 |

@@ -317,7 +317,8 @@ preset of 17 percent, and neither removed more from ictal than from non-ictal wi
 (Supplementary Table S2); P6b uses the conservative preset. The comparison among P6a,
 P6b and P6c is therefore a comparison of whole cleaning procedures: for Infomax and
 AMICA it isolates the decomposition algorithm, while GEDAI differs also in how it
-decides what to remove. Signal retention and compute are in Supplementary Table S1.
+decides what to remove. Signal retention and compute are in Supplementary Table S1, and the power removed by band
+and class in Supplementary Table S5.
 
 **No leakage through P6.** Each recording is decomposed and cleaned on its own, from
 its own unlabelled signal; seizure annotations are never used, and no decomposition,
@@ -621,6 +622,19 @@ change in macro F1 was small and depended on the operator: on CHB-MIT late fusio
 0.014 to 0.022 under all three algorithms and early fusion lost 0.012 to 0.022; on Siena
 GEDAI raised late and gated fusion by 0.045 and 0.061. AUPRC fell under every algorithm
 for most operators, by up to 0.060 (early fusion under GEDAI, CHB-MIT).
+
+What the methods remove (Supplementary Table S5): Infomax and AMICA removed mostly delta
+power (a median of 15 to 18 percent of it on CHB-MIT) and, within a recording, slightly
+less from ictal than from non-ictal windows (a median difference of 0.010 and 0.017 of
+the power kept, Wilcoxon p < 0.001); GEDAI's conservative preset removed almost nothing
+on CHB-MIT and showed no difference between the classes within recordings. Over the
+whole corpus, however, GEDAI's default preset kept a median of 63 percent of the power
+of CHB-MIT's ictal windows against 93 percent of the non-ictal ones, removing mainly
+delta and theta power, because the recordings it cleaned heavily held many of the
+seizures; within recordings it showed no difference. On Siena the conservative preset
+behaved the same way over the corpus (68 against 99.7 percent) without a difference
+within recordings (p = 0.68). A cleaning step that treats the classes alike within each
+recording can still remove ictal signal selectively from the corpus as a whole.
 
 Artefact removal was not reproducible across machines (Section 2.7, `docs/ICA_REPRO.md`):
 GEDAI cleaned 27 percent of recordings differently on the second machine, Infomax

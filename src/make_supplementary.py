@@ -137,6 +137,22 @@ def table_s4() -> str:
     return md(t)
 
 
+def table_s5() -> str:
+    s = pd.read_csv(QC / "p6_signal_effects_summary.csv")
+    b = pd.read_csv(QC / "p6_signal_effects_bands.csv")
+    i = pd.read_csv(QC / "p6_signal_effects_ictal.csv")
+    t = s[s.windows != "all"].merge(b, on=["dataset", "pipeline", "method", "windows"])
+    t = t[["dataset", "method", "windows", "n", "median", "share_below_0.5", "delta", "theta",
+           "alpha", "beta", "low gamma"]].rename(columns={"median": "power kept, median",
+                                                          "share_below_0.5": "share < 0.5"})
+    i = i[["dataset", "method", "recordings_with_both", "median_ictal_minus_nonictal",
+           "share_ictal_lower", "wilcoxon_p"]].rename(columns={
+               "recordings_with_both": "recordings", "median_ictal_minus_nonictal":
+               "ictal - non-ictal, median", "share_ictal_lower": "share with ictal lower",
+               "wilcoxon_p": "Wilcoxon p"})
+    return md(t) + "\n\nWithin recordings:\n\n" + md(i, "{:.4f}")
+
+
 def main() -> None:
     text = f"""# Supplementary Material
 
@@ -182,6 +198,20 @@ description gives 128.4 h, a difference explained for PN14 (the start time above
 not for PN03, PN10 and PN12, whose files contain no padding (`docs/SIENA.md`, Section 8).
 
 {table_s4()}
+
+## Table S5. Artefact removal: power kept per window, by band and class
+
+What each method removes from the 0.5 to 40 Hz signal, per 10 s window (cleaned power
+divided by the power of the same window before cleaning, summed over channels), for
+ictal and non-ictal windows, overall and in five bands (delta 0.5-4, theta 4-8, alpha
+8-13, beta 13-30, low gamma 30-40 Hz; medians). The second part compares the classes
+within recordings: per recording the median of each class, their difference, and a
+Wilcoxon signed-rank test over the recordings that hold both. A difference between the
+classes over the whole corpus that is absent within recordings reflects which
+recordings a method cleans heavily, not a preference for one class
+(`src/p6_signal_effects.py`). GEDAI's default preset was applied to CHB-MIT only.
+
+{table_s5()}
 """
     OUT.write_text(text, encoding="utf-8")
     print(f"written: {OUT}")
