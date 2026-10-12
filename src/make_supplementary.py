@@ -153,6 +153,31 @@ def table_s5() -> str:
     return md(t) + "\n\nWithin recordings:\n\n" + md(i, "{:.4f}")
 
 
+def table_s6() -> str:
+    """Per pipeline and operator, mean and SD over seed sets, three window-level metrics."""
+    res = RESULTS_ROOT / "results"
+    ops = ["early", "late", "gated", "attention", "score"]
+    order = ["P0", "P1", "P2", "P3", "P4", "P5", "P6a", "P6b", "P6c"]
+    out = []
+    for ds, name in (("chbmit", "CHB-MIT"), ("siena", "Siena")):
+        for metric, label in (("f1_macro", "macro F1"), ("auprc", "AUPRC"),
+                              ("balanced_accuracy", "balanced accuracy")):
+            f = res / f"main_{ds}_{metric}.csv"
+            if not f.exists():
+                continue
+            t = pd.read_csv(f)
+            n = int(t.n_seeds.min())
+            cell = t.assign(c=[f"{m:.3f} ± {s:.3f}" for m, s in zip(t["mean"], t["sd"])])
+            w = cell.pivot(index="pipeline", columns="model", values="c").reindex(order)[ops]
+            best = t.pivot(index="pipeline", columns="model", values="mean").reindex(order)[ops]
+            for p in w.index:
+                b = best.loc[p].idxmax()
+                w.at[p, b] = f"**{w.at[p, b]}**"
+            out += [f"**{name}, {label}** ({n} seed sets; best operator of each pipeline in bold)",
+                    "", md(w.reset_index()), ""]
+    return "\n".join(out)
+
+
 def main() -> None:
     text = f"""# Supplementary Material
 
@@ -212,6 +237,13 @@ recordings a method cleans heavily, not a preference for one class
 (`src/p6_signal_effects.py`). GEDAI's default preset was applied to CHB-MIT only.
 
 {table_s5()}
+
+## Table S6. Window-level performance per pipeline and operator
+
+Mean and SD over the five seed sets of each run's fold mean, for every pipeline and
+fusion operator (`python -m src.make_results`, `results_v2/results/main_*.csv`).
+
+{table_s6()}
 """
     OUT.write_text(text, encoding="utf-8")
     print(f"written: {OUT}")

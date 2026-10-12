@@ -523,7 +523,7 @@ All numbers below come from the 45 runs per dataset (nine pipelines by five seed
 
 **Table 2. Window-level performance of the fusion operators**, mean and SD over the 45
 runs of each dataset (fold means within a run). Per pipeline: Figure 2 and
-`results_v2/results/main_*.csv`.
+Supplementary Table S6.
 
 | Operator | CHB-MIT macro F1 | CHB-MIT AUPRC | CHB-MIT bal. acc. | Siena macro F1 | Siena AUPRC | Siena bal. acc. |
 |---|---|---|---|---|---|---|
