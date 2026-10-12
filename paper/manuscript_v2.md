@@ -98,8 +98,7 @@ Controlled comparisons in other domains point the same way: in ECG classificatio
 matter more than the architecture (Camastra et al. 2026), and added multimodal
 complexity often did not pay off (Rheude et al. 2025).
 
-**Table 1. Closest related work** (from the systematic search of 3 October 2026,
-`docs/15_LITERATUR_SONUCLARI.md`; studies in bold are the closest to this one; the full
+**Table 1. Closest related work** (from the systematic search of 3 October 2026; studies in bold are the closest to this one; the full
 texts of the remaining candidates are still being read).
 
 | Work | Contribution | What it leaves open |
@@ -204,10 +203,14 @@ The study contributes:
 
 ## 2. Methods
 
-Figure 1 (`paper/figures_manuscript/figure1_design.png`) summarises the design: the
+Figure 1 summarises the design: the
 datasets, the nine preprocessing pipelines, the two representations, the fusion
 operators and controls, and the evaluation; its panel b shows where each step is
 applied and how leakage between training and test data is prevented.
+
+![Study design](figures_manuscript/figure1_design.png)
+
+**Figure 1.** Study design. **a**, The multiverse: two datasets harmonised to 18 bipolar channels at 256 Hz and 10 s windows; nine preprocessing pipelines, each trained with five seed sets; a 1D CNN on the raw waveform and a 2D CNN on the log-STFT, combined by five fusion operators under a matched parameter budget, with single-branch and classical controls; evaluation by leave-one-subject-out (LOSO) at the window and the seizure level. **b**, Where each step is applied and how leakage is prevented: whole persons are held out (chb01 and chb21 together), and validation persons serve only early stopping and the score fusion weight; P4 rejects windows from training and validation data only, so every pipeline is tested on the same windows; P6 cleans each recording on its own, without seizure labels.
 
 ### 2.1 Datasets and EEG harmonisation
 
@@ -517,7 +520,7 @@ the GPU, one Siena run about a quarter of an hour, and one cross-dataset run abo
 5 min; one fold took 3.7 min on the GPU against 12 min on the CPU.
 
 **Availability.** Code, the per-fold results of every run, and all analyses are in the
-public repository; Section 9 lists the commands that regenerate each table and figure.
+public repository, whose README lists the commands that regenerate each table and figure.
 Following our own recommendation (Section 4.5), the repository also holds, per recording
 and artefact removal method, the outcome of the cleaning the models were trained and
 tested on (components removed, GEDAI's threshold, power kept;
@@ -562,6 +565,10 @@ operator) and in 9 of 9 on Siena (0.453 to 0.540 against at least 0.522), althou
 macro F1 at the 0.5 threshold was close to the others on CHB-MIT. Its ranking of
 windows by ictal probability is therefore consistently the weakest, while its
 thresholded decisions are not.
+
+![Performance per pipeline and operator](figures_manuscript/figure2_performance.png)
+
+**Figure 2.** Window-level performance of each fusion operator in each preprocessing pipeline: macro F1 (left) and AUPRC (right) on CHB-MIT (top, 23 LOSO folds) and Siena (bottom, 14 folds); mean and SD over five seed sets, each run averaged over its folds. Early fusion has the lowest AUPRC in every pipeline of both datasets.
 
 ### 3.2 Statistical significance and practical equivalence
 
@@ -609,6 +616,10 @@ no interaction (F = 1.05, p = 0.39). The window-level predictions themselves cha
 about as much between pipelines as between seeds: Cohen's kappa 0.56 between pipelines
 and 0.58 between seeds on CHB-MIT, 0.44 and 0.50 on Siena.
 
+![Rank of every operator in every run](figures_manuscript/figure3_rank_stability.png)
+
+**Figure 3.** Ranking stability. Left, rank of each operator by macro F1 in every run (within each pipeline, one column per seed set; darker is better). Right, share of the 45 runs of each dataset in which the operator ranked first. On CHB-MIT the first place changes with the seed; on Siena score fusion ranks first in 82 percent of runs without a significant advantage (Section 3.2).
+
 ### 3.4 Sources of variance
 
 Figure 4 decomposes the variance of each metric. On CHB-MIT the held-out subject
@@ -623,6 +634,10 @@ pipeline and operator for 26.9 percent; the operator held 1.5 percent of the var
 macro F1 (SD 0.016) and 5.5 percent of AUPRC, the seed 4.2 percent and preprocessing 0.06
 percent. In both datasets the seed accounted for more variance than preprocessing, and
 on CHB-MIT more than the operator.
+
+![Variance decomposition](figures_manuscript/figure4_variance.png)
+
+**Figure 4.** Sources of variance of macro F1, AUPRC and balanced accuracy, as percentages of the total (method-of-moments estimates for a fully crossed random-effects model of subject, preprocessing, operator and seed; negative estimates shown as 0; seed: all seed terms together). The held-out subject dominates on both datasets; preprocessing, operator and their interaction explain almost nothing.
 
 ### 3.5 Artefact removal
 
@@ -658,6 +673,10 @@ recordings cleaned on the two machines changed seizure-level sensitivity by up t
 and the operators' order by sensitivity (Kendall tau 0.60 to 1.00) for GEDAI, by at most
 0.005 for Infomax, and not at all for AMICA.
 
+![Artefact removal](figures_manuscript/figure5_artefact_removal.png)
+
+**Figure 5.** Artefact removal in P6 (CHB-MIT). **a**, Share of each recording's power kept after cleaning (670 recordings). **b**, CPU hours for the 670 recordings on a laptop CPU. **c**, Change in macro F1 against P1, the same 0.5 to 40 Hz signal without artefact removal, paired by seed set; mean and SD over five seed sets. **d**, Share of recordings cleaned differently (different components removed, or retained power differing by more than 0.001) on a second machine and in a second run on the same machine, with the same code, package versions and seeds (Section 2.7).
+
 ### 3.6 Seizure-level detection
 
 *(P0 to P5, five seed sets each; P6 follows when its remaining event metrics are
@@ -681,6 +700,10 @@ Between the seed-averaged rankings of the same pipeline, Kendall tau was -0.11 o
 between CHB-MIT and Siena, 0.07 between CHB-MIT and the transfer, and -0.11 between Siena
 and the transfer (Figure 6b): neither dataset's ranking predicted the other's, nor the
 ranking after transfer.
+
+![Cross-dataset comparison](figures_manuscript/figure6_cross_dataset.png)
+
+**Figure 6.** Cross-dataset comparison. **a**, Macro F1 of each operator on CHB-MIT (LOSO), on Siena (LOSO), and trained on CHB-MIT and tested on Siena; mean and SD over the runs of all nine pipelines and five seed sets. **b**, Kendall tau between the seed-averaged operator rankings of the same pipeline in two settings; one point per pipeline (points can overlap), bar: mean.
 
 ## 4. Discussion
 

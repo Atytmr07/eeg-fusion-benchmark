@@ -132,10 +132,14 @@ SIENA_DECISIONS = [
 
 
 def table_s4() -> str:
+    """Two narrower tables (the decisions, then how each was checked), one row per item."""
     t = pd.DataFrame(SIENA_DECISIONS, columns=[
         "patient", "recording / seizure", "problem in the metadata", "used", "type",
         "how it was checked", "remaining uncertainty", "effect on the windows"])
-    return md(t)
+    t.insert(0, "item", range(1, len(t) + 1))
+    a = t[["item", "recording / seizure", "problem in the metadata", "used", "type"]]
+    c = t[["item", "how it was checked", "remaining uncertainty", "effect on the windows"]]
+    return md(a) + "\n\nHow each decision was checked, and its effect:\n\n" + md(c)
 
 
 def table_s5() -> str:
