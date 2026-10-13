@@ -44,8 +44,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import sys
 import time
+import zlib
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
@@ -295,6 +297,30 @@ def print_summary(tag: str, summ: pd.DataFrame, dataset: str) -> None:
                     "fa_per_hour_median"]].round(3).to_string())
 
 
+# --- Checkpoints -------------------------------------------------------------------------
+
+def checkpoint_dir(kind: str, tags) -> Path:
+    """Per-fold results of one invocation, written as each fold finishes, so that an
+    interrupted run resumes at the fold it was in; removed when the run completes."""
+    key = zlib.crc32("|".join(sorted(tags)).encode())
+    return RESULTS_ROOT / "_events_partial" / f"{kind}_{key:08x}"
+
+
+def load_part(ck: Path, i: int):
+    f = ck / f"{i}.json"
+    if not f.exists():
+        return None
+    d = json.loads(f.read_text(encoding="utf-8"))
+    return d["rows"], d["diff"]
+
+
+def save_part(ck: Path, i: int, rows: list[dict], diff: float) -> None:
+    ck.mkdir(parents=True, exist_ok=True)
+    tmp = ck / f"{i}.tmp"
+    tmp.write_text(json.dumps({"rows": rows, "diff": diff}), encoding="utf-8")
+    tmp.replace(ck / f"{i}.json")
+
+
 # --- Modes -------------------------------------------------------------------------------
 
 def run_loso(args, pipe, t_start: float) -> None:
@@ -328,6 +354,7 @@ def run_loso(args, pipe, t_start: float) -> None:
     decisions = corpus["info"].get("decisions") if args.dataset == "siena" else None
 
     rows, window_diff = [], np.nan
+    ck = checkpoint_dir(f"{args.dataset}_{pipe.name}", runs)
     pool = ProcessPoolExecutor(args.jobs) if args.jobs > 1 else None
     for fi, (key, tr_all, te) in enumerate(splits):
         t_fold = time.time()
@@ -338,6 +365,14 @@ def run_loso(args, pipe, t_start: float) -> None:
             if held and held != {",".join(cases)}:
                 raise SystemExit(f"{tag}: fold {fi} tested {held} in training, but the corpus "
                                  f"now gives {','.join(cases)}; the folds do not match")
+        done = load_part(ck, fi)
+        if done is not None:
+            part_rows, diff = done
+            rows += part_rows
+            window_diff = max(window_diff, diff) if np.isfinite(window_diff) else diff
+            print(f"[{fi + 1}/{len(splits)}] {','.join(cases)}: resumed from checkpoint, "
+                  f"windows vs corpus {diff:.1e}", flush=True)
+            continue
         tr = tr_all[~rejected[tr_all]]
         clfs = {b: baselines.make_clf().fit(f[tr], corpus["y"][tr]) for b, f in feats.items()}
         models = {tag: load_fold_models(d, fi, args.device) for tag, d in runs.items()}
@@ -351,7 +386,9 @@ def run_loso(args, pipe, t_start: float) -> None:
         diff = acc.get("_window_diff", np.nan)
         window_diff = max(window_diff, diff) if np.isfinite(window_diff) else diff
         person = str(corpus["group"][te][0])
-        rows += event_rows(acc, fold=fi, person=person, cases=",".join(cases))
+        fold_rows = event_rows(acc, fold=fi, person=person, cases=",".join(cases))
+        rows += fold_rows
+        save_part(ck, fi, fold_rows, diff)
         print(f"[{fi + 1}/{len(splits)}] {','.join(cases)}: {len(recs)} recordings, "
               f"{time.time() - t_fold:.0f}s, windows vs corpus {diff:.1e}"
               + ("  WARNING: the recomputed signal differs from the corpus"
@@ -374,6 +411,7 @@ def run_loso(args, pipe, t_start: float) -> None:
             meta["decisions"] = decisions
         summ = write_outputs(d / "events", part, args.dataset, meta)
         print_summary(tag, summ, args.dataset)
+    shutil.rmtree(ck, ignore_errors=True)
 
 
 def run_cross(args, t_start: float) -> None:
@@ -419,13 +457,21 @@ def run_cross(args, t_start: float) -> None:
 
     patients = args.siena_subjects or available_subjects()
     rows = []
+    ck = checkpoint_dir(f"cross_{pipe.name}", dirs)
     pool = ProcessPoolExecutor(args.jobs) if args.jobs > 1 else None
     for k, sub in enumerate(patients):
         t_p = time.time()
+        done = load_part(ck, k)
+        if done is not None:
+            rows += done[0]
+            print(f"[{k + 1}/{len(patients)}] {sub}: resumed from checkpoint", flush=True)
+            continue
         recs = person_recordings("siena", [sub])
         acc = score_recordings(recs, pipe, "siena", models, blend, clfs, args.device,
                                args.jobs, pool)
-        rows += event_rows(acc, patient=sub)
+        part_rows = event_rows(acc, patient=sub)
+        rows += part_rows
+        save_part(ck, k, part_rows, np.nan)
         print(f"[{k + 1}/{len(patients)}] {sub}: {len(recs)} recordings, "
               f"{time.time() - t_p:.0f}s", flush=True)
     if pool:
@@ -442,6 +488,7 @@ def run_cross(args, t_start: float) -> None:
                 "elapsed_s": round(time.time() - t_start, 1)}
         summ = write_outputs(d / "events", part, "siena", meta)
         print_summary(tag, summ, "siena")
+    shutil.rmtree(ck, ignore_errors=True)
 
 
 def run_oracle(args) -> bool:
