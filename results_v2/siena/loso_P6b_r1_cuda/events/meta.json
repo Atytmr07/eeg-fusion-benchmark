@@ -1,0 +1,34 @@
+{
+  "definition": "docs/EVENTS.md",
+  "threshold": 0.5,
+  "window_s": 10.0,
+  "scoring": "timescoring EventScoring defaults (SzCORE)",
+  "pipeline": {
+    "name": "P6b",
+    "band": [
+      0.5,
+      40.0
+    ],
+    "notch_hz": null,
+    "ica": "gedai",
+    "reject": false,
+    "norm": "window",
+    "signal_tag": "bp0.5-40_gedai-conservative",
+    "ica_settings": {
+      "noise_multiplier": "auto-",
+      "reference": "fsaverage leadfield covariance mapped to the bipolar montage"
+    }
+  },
+  "folds": 14,
+  "elapsed_s": 3173.5,
+  "window_diff_vs_corpus": 0.0,
+  "window_check": "pass",
+  "decisions": {
+    "PN00_seizure3": "typo",
+    "PN10_seizure3_onset": "electric",
+    "PN10_seizure2_end": "first"
+  },
+  "dataset": "siena",
+  "reported": "seizure-level sensitivity only",
+  "false_alarms_per_hour": "not representative for Siena, not compared (recordings are cut around the seizures; docs/EVENTS.md)"
+}

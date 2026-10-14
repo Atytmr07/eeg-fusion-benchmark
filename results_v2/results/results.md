@@ -735,3 +735,23 @@ Siena: only seizure-level sensitivity is reported. Its recordings are cut around
 | PN16 | 5 | 0.591 ± 0.124 | **0.689 ± 0.073** | 0.682 ± 0.061 | 0.585 ± 0.059 | 0.554 ± 0.054 |
 | PN17 | 5 | 0.696 ± 0.077 | **0.793 ± 0.081** | 0.729 ± 0.092 | 0.790 ± 0.045 | 0.762 ± 0.064 |
 | mean over patients | 5 | 0.598 ± 0.044 | **0.652 ± 0.052** | 0.645 ± 0.023 | 0.599 ± 0.067 | 0.603 ± 0.023 |
+
+**Table R38. Trained on CHB-MIT, tested on Siena (P6c): detected seizures per patient (mean over seed sets) out of the annotated ones.** SzCORE event scoring; sensitivity over all patients: early 0.89, late 0.85, gated 0.86, attention 0.88, score 0.85. False alarms are not reported for Siena. Source: `events/perperson.csv`.
+
+| patient | seizures | early | late | gated | attention | score |
+|---|---|---|---|---|---|---|
+| PN00 | 5 | 5.00 | 5.00 | 5.00 | 5.00 | 5.00 |
+| PN01 | 2 | 2.00 | 2.00 | 2.00 | 2.00 | 2.00 |
+| PN03 | 2 | 2.00 | 2.00 | 2.00 | 2.00 | 2.00 |
+| PN05 | 3 | 2.80 | 3.00 | 3.00 | 3.00 | 3.00 |
+| PN06 | 5 | 5.00 | 4.20 | 3.60 | 4.80 | 5.00 |
+| PN07 | 1 | 0.80 | 1.00 | 1.00 | 0.80 | 0.20 |
+| PN09 | 3 | 3.00 | 3.00 | 3.00 | 2.80 | 2.80 |
+| PN10 | 10 | 5.20 | 3.60 | 4.60 | 4.80 | 4.40 |
+| PN11 | 1 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 |
+| PN12 | 4 | 4.00 | 4.00 | 4.00 | 4.00 | 4.00 |
+| PN13 | 3 | 3.00 | 3.00 | 3.00 | 3.00 | 2.40 |
+| PN14 | 4 | 4.00 | 4.00 | 4.00 | 4.00 | 4.00 |
+| PN16 | 2 | 2.00 | 2.00 | 2.00 | 2.00 | 2.00 |
+| PN17 | 2 | 2.00 | 2.00 | 2.00 | 2.00 | 2.00 |
+| all patients | 47 | 41.80 | 39.80 | 40.20 | 41.20 | 39.80 |
