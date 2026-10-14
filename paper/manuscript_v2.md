@@ -778,7 +778,9 @@ trained operators in macro F1 on CHB-MIT and better on Siena, and a logistic reg
 on seven hand-crafted features performed as well as or better than every network.
 Fusion did improve the ranking of windows on CHB-MIT, so it is not without value; but
 which operator is used matters less than whether the representations are fused at all,
-and neither matters as much as the subject. An improvement of one fusion operator over
+and neither matters as much as the subject. This agrees with a broader evaluation of
+multimodal models in which added fusion complexity often did not pay off (Rheude et
+al. 2025). An improvement of one fusion operator over
 another says little without a parameter-matched unimodal control and a simple classical
 baseline evaluated in the same way.
 
