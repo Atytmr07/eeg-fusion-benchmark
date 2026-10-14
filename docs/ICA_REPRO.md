@@ -60,7 +60,7 @@ parallel worker processes. Recomputing the whole corpus on the laptop, again in 
 |---|---|---|
 | Extended Infomax | 8 of 670 (1.2 %) | 9 |
 | GEDAI | 0 of 670 | 0 |
-| AMICA (first folds) | 0 | 0; cleaned windows differ by at most 1.4 % of their amplitude |
+| AMICA | 0 of 711 (CHB-MIT and Siena) | 0; largest difference 0.0007; cleaned windows differ by at most 1.4 % of their amplitude |
 
 **6. Sensitivity to a rounding-level perturbation** (`src/ica_sensitivity.py`,
 `sensitivity.md`, `sensitivity.csv`). Each of 9 recordings (the 6 of test 4 and 3 that
