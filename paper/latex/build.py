@@ -160,6 +160,17 @@ def cells(row: str):
 
 TEXT_PT = 455.0                              # \linewidth of template.tex (A4, 2.5 cm)
 CHAR_PT = {"small": 4.9, "footnotesize": 4.3}   # mean character width (lmodern), with margin
+FONT_PT = {"small": 10.0, "footnotesize": 9.0}  # \small and \footnotesize of an 11pt article
+# Widths in em of Latin Modern characters that differ much from the mean (lowercase 0.5).
+EM = {**dict.fromkeys("0123456789", 0.5), **dict.fromkeys(".,:;", 0.278),
+      **dict.fromkeys("\u00a0 ", 0.333), "±": 0.778, "(": 0.389, ")": 0.389, "-": 0.333,
+      "%": 0.833, **dict.fromkeys("ijl", 0.278), "t": 0.389, "f": 0.306, "r": 0.392,
+      "m": 0.833, "w": 0.722}
+
+
+def word_em(w: str) -> float:
+    """Approximate printed width of a word in em (Latin Modern)."""
+    return sum(EM.get(c, 0.73 if c.isupper() else 0.5) for c in w)
 
 
 def widen_table(par: str) -> tuple[str, str | None]:
@@ -169,7 +180,11 @@ def widen_table(par: str) -> tuple[str, str | None]:
     Widths follow the cell lengths (square-root damped, so short label columns such as
     author names still get room), but no column is narrower than its longest word, so
     headers like "recordings" do not run into the next column. If the longest words
-    alone do not fit at \small, the table is set in \footnotesize."""
+    alone do not fit at \small, the table is set in \footnotesize. If they do not fit
+    there either (Table 3: eight columns of mean ± SD), the gaps between the columns are
+    narrowed from 6 to 3 pt on each side and the words are measured in points, since
+    digits are narrower than the mean character. Returns the LaTeX that sets the font
+    (and the gap) for the table."""
     rows = par.strip().splitlines()
     if max(len(r) for r in rows) <= 72:
         return par, None
@@ -178,21 +193,30 @@ def widen_table(par: str) -> tuple[str, str | None]:
         return re.sub(r"[*`]", "", c)
     data = [[printed(c) for c in cells(r)] for i, r in enumerate(rows) if i != 1]
     ncol = len(data[0])
-    lens, longest = [], []
+    lens, longest, longest_em = [], [], []
     for j in range(ncol):
         col = [d[j] for d in data if j < len(d)]
         n = [len(c) for c in col]
         lens.append(max(6, sum(n) / len(n) * 0.5 + max(n) * 0.5) ** 0.5)
-        longest.append(max((len(w) + w.count("±") for c in col for w in re.split(r"[ \t]+", c)),
+        words = [w for c in col for w in re.split(r"[ \t]+", c)]
+        longest.append(max((len(w) + w.count("±") for w in words),
                            default=1))            # ± is set in math, about two characters wide
+        longest_em.append(max((word_em(w) for w in words), default=0.5))
+    setting = None
     sizes = list(CHAR_PT)[1:] if ncol >= 8 else list(CHAR_PT)   # 8+ columns: footnotesize
     for size in sizes:
         avail = (TEXT_PT - 12.0 * ncol) / CHAR_PT[size]       # characters, minus tabcolsep
         need = [(w + 2) / avail for w in longest]
         if sum(need) <= 1:
+            setting = "\\" + size
             break
-    else:                             # even the longest words do not fit: share by them
-        need = [x / sum(need) for x in need]
+    else:                             # not even at \footnotesize: narrow gaps, measure in pt
+        sep = 3.0
+        avail_pt = TEXT_PT - 2 * sep * ncol
+        need = [(FONT_PT[size] * w + 4) / avail_pt for w in longest_em]
+        if sum(need) > 1:             # still too wide: share by the longest words
+            need = [x / sum(need) for x in need]
+        setting = f"\\{size}\\setlength{{\\tabcolsep}}{{{sep:g}pt}}"
     share = [l / sum(lens) for l in lens]
     fixed: set[int] = set()
     while True:                       # raise columns below their minimum, rescale the rest
@@ -205,7 +229,7 @@ def widen_table(par: str) -> tuple[str, str | None]:
             break
         fixed |= low
     rows[1] = "|" + "|".join("-" * max(3, round(200 * x)) for x in w) + "|"
-    return "\n".join(rows), size
+    return "\n".join(rows), setting
 
 
 TABLE_CAP = re.compile(r"^\*\*Table (\d+)\.\s*(.+?)\*\*\s*(.*)$", re.S)
@@ -247,7 +271,7 @@ def restructure(body: str, report: dict) -> str:
                 block += f"\n\n: {pending_caption}"
                 pending_caption = None
             if size:
-                block = f"```{{=latex}}\n\\begingroup\\{size}\n```\n\n" + block + \
+                block = f"```{{=latex}}\n\\begingroup{size}\n```\n\n" + block + \
                         "\n\n```{=latex}\n\\endgroup\n```"
             out.append(block)
             i += 1
@@ -317,7 +341,7 @@ def supplement_markdown(text: str, report: dict) -> str:
                                                    if pending["text"] else "")
                 pending = None
             if size:
-                block = f"```{{=latex}}\n\\begingroup\\{size}\n```\n\n" + block + \
+                block = f"```{{=latex}}\n\\begingroup{size}\n```\n\n" + block + \
                         "\n\n```{=latex}\n\\endgroup\n```"
             out.append(block)
             continue

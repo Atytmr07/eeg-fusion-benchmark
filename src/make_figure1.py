@@ -86,7 +86,8 @@ def panel_a(ax):
         ["early", "late", "gated", "attention", "score", "", "controls:", "single branch",
          "(raw1d, spec2d,", "also widened),", "logvar, shallow"])
     box(ax, xs["clf"][0], y, xs["clf"][1], h, C["clf"], "Classifier",
-        ["ictal vs", "non-ictal", "", "parameter", "budget", "matched", "within", "1.3 %"])
+        ["ictal vs", "non-ictal", "", "parameter", "budget", "matched", "within", "1.3 %",
+         "(joint", "operators)"])
     box(ax, xs["eval"][0], y, xs["eval"][1], h, C["eval"], "Evaluation",
         ["LOSO by person", "macro F1, AUPRC", "corrected paired", "t test + Holm",
          "equivalence", "(±0.05, ±0.02)", "rank stability", "event metrics",
