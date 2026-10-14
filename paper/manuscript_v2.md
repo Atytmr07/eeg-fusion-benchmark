@@ -36,9 +36,10 @@ preprocessing and the operator explained none, and the seed more. Rankings chang
 between seeds (median Kendall's W 0.22 on CHB-MIT), more stable on Siena, where score
 fusion ranked first in 82 percent of runs without a significant advantage, and did not
 transfer between datasets. Early fusion had the lowest AUPRC in all 18 pipeline-dataset
-combinations. Fusion did not improve macro F1 over a spectrogram network of the same
-size, and a logistic regression on seven hand-crafted features matched (CHB-MIT) or
-exceeded (Siena) every network. With fixed seeds and package versions, GEDAI cleaned 27 percent of
+combinations. The mean macro F1 of a spectrogram network of the same size lay within the range of
+the jointly trained operators on CHB-MIT and above it on Siena, and a logistic
+regression on seven hand-crafted features had a mean macro F1 as high as (CHB-MIT) or
+higher than (Siena) every network. With fixed seeds and package versions, GEDAI cleaned 27 percent of
 recordings differently on a second machine, enough to change seizure-level sensitivity
 by up to 0.054 and the order of the operators. Claims that one fusion operator is
 superior, made from a single dataset, pipeline and run, are not supported.
@@ -576,14 +577,17 @@ alone: the spectrogram network widened to the fusion budget reached 0.683 on CHB
 within the range of the jointly trained operators (0.677 to 0.686), and 0.663 on Siena,
 above every jointly trained operator (0.617 to 0.640) and below only score fusion
 (0.670); it exceeded the best operator of a run in 9 (CHB-MIT) and 16 (Siena) of 45
-runs. The waveform branch alone was weaker (0.662 and 0.612). Fusion did improve the
-ranking of windows on CHB-MIT, where late, gated, attention and score fusion reached an
-AUPRC of 0.655 to 0.666 against at most 0.618 for a single branch; on Siena the gain was
-smaller and not consistent (late fusion 0.599 and score fusion 0.631 against 0.581).
+runs. The waveform branch was weaker (0.663 and 0.609 at default width, 0.662 and
+0.612 widened). Fusion did improve the ranking of windows on CHB-MIT, where late, gated,
+attention and score fusion reached an AUPRC of 0.655 to 0.666 against at most 0.618 for
+a single branch; on Siena the difference from the best single branch (0.581) was
+inconsistent, from -0.085 (early fusion, 0.496) to +0.050 (score fusion, 0.631). The
+controls are compared here by their means and by how often they exceeded the operators,
+not with the corrected test of Section 2.6.
 Widening a single branch to the fusion budget changed little (on CHB-MIT, raw1d 0.663
 and 0.662, spec2d 0.679 and 0.683 macro F1), so the comparison is not limited by the
 smaller size of the default-width branches. The classical shallow model, a logistic
-regression with 126 parameters on seven hand-crafted features per channel, had the
+regression with 127 parameters on seven hand-crafted features per channel, had the
 highest mean macro F1 and balanced accuracy on both datasets: on CHB-MIT 0.690, above
 the best operator of a run in 12 of 45 runs and above every operator's seed mean in 5
 of 9 pipelines, although its AUPRC (0.640) was below that of four operators; on Siena
@@ -595,7 +599,8 @@ ranking of windows.
 
 **Table 3. Controls**, mean and SD over the same 45 runs per dataset as Table 2
 (`results_v2/results/controls_*.csv`). Parameters with 18 input channels; the classical
-models are logistic regressions (18 log variances; seven features per channel).
+models are logistic regressions (18 log variances; seven features per channel), with
+an intercept.
 
 | Control | Parameters | CHB-MIT macro F1 | CHB-MIT AUPRC | CHB-MIT bal. acc. | Siena macro F1 | Siena AUPRC | Siena bal. acc. |
 |---|---|---|---|---|---|---|---|
@@ -603,8 +608,8 @@ models are logistic regressions (18 log variances; seven features per channel).
 | spec2d | 34,546 | 0.679 ± 0.010 | 0.598 ± 0.017 | 0.676 ± 0.010 | 0.660 ± 0.022 | 0.576 ± 0.031 | 0.680 ± 0.019 |
 | raw1d_wide | 103,712 | 0.662 ± 0.012 | 0.605 ± 0.017 | 0.673 ± 0.010 | 0.612 ± 0.028 | 0.577 ± 0.033 | 0.657 ± 0.019 |
 | spec2d_wide | 102,236 | 0.683 ± 0.014 | 0.618 ± 0.016 | 0.680 ± 0.013 | 0.663 ± 0.026 | 0.581 ± 0.027 | 0.681 ± 0.021 |
-| logvar | 18 | 0.631 ± 0.009 | 0.577 ± 0.016 | 0.708 ± 0.006 | 0.630 ± 0.034 | 0.572 ± 0.036 | 0.705 ± 0.027 |
-| shallow | 126 | 0.690 ± 0.008 | 0.640 ± 0.008 | 0.739 ± 0.007 | 0.720 ± 0.019 | 0.667 ± 0.015 | 0.770 ± 0.017 |
+| logvar | 19 | 0.631 ± 0.009 | 0.577 ± 0.016 | 0.708 ± 0.006 | 0.630 ± 0.034 | 0.572 ± 0.036 | 0.705 ± 0.027 |
+| shallow | 127 | 0.690 ± 0.008 | 0.640 ± 0.008 | 0.739 ± 0.007 | 0.720 ± 0.019 | 0.667 ± 0.015 | 0.770 ± 0.017 |
 
 ![Performance per pipeline and operator](figures_manuscript/figure2_performance.png)
 
@@ -776,14 +781,16 @@ large differences between operators on CHB-MIT, but not differences of the size 
 published comparisons typically report as improvements.
 
 The controls put these differences in proportion (Section 3.1, Table 3). A
-single-branch spectrogram network of the same size performed as well as the jointly
-trained operators in macro F1 on CHB-MIT and better on Siena, and a logistic regression
-on seven hand-crafted features performed as well as or better than every network.
-Fusion did improve the ranking of windows on CHB-MIT, so it is not without value; but
-which operator is used matters less than whether the representations are fused at all,
-and neither matters as much as the subject. This agrees with a broader evaluation of
-multimodal models in which added fusion complexity often did not pay off (Rheude et
-al. 2025). An improvement of one fusion operator over
+single-branch spectrogram network of the same size had a mean macro F1 similar to
+that of the jointly trained operators on CHB-MIT and higher on Siena, and a logistic
+regression on seven hand-crafted features had a mean macro F1 as high as or higher than
+every network, though not a higher AUPRC on CHB-MIT. These are comparisons of means,
+not tests. Fusion did improve the ranking of windows on CHB-MIT, by about as much as
+the operators differed from each other there, so fusing the two representations is
+not without value; but neither the choice to fuse nor the choice of operator changed
+performance as much as the subject did. This agrees with a broader evaluation of
+multimodal models, available as a preprint, in which added fusion complexity often did
+not pay off (Rheude et al. 2025). An improvement of one fusion operator over
 another says little without a parameter-matched unimodal control and a simple classical
 baseline evaluated in the same way.
 
@@ -856,8 +863,8 @@ fusion is the clearest case: first in 82 percent of Siena's own runs, it was fir
 percent of the transfer runs and among the weaker operators on CHB-MIT. Its advantage on
 Siena is therefore a property of training and testing on Siena, not a property of the
 operator. Part of it is inherited from its spectrogram branch: on Siena the
-spectrogram network alone (0.660 macro F1) already outperformed every jointly trained
-operator, and score fusion averages it with the waveform network, with a weight chosen
+spectrogram network alone (0.660 macro F1) already had a higher mean than every
+jointly trained operator, and score fusion averages it with the waveform network, with a weight chosen
 on Siena's validation subjects. Whether end-to-end training of the joint operators
 overfits Siena's 14 subjects, which training the branches independently would avoid,
 we did not test. The two datasets differ in age, seizure types, recording protocol and mains
@@ -972,6 +979,6 @@ recordings in which seizure detectors are used, and the persons are few (23 and 
 
 ## Use of AI assistance
 
-An AI assistant (Claude, Anthropic) was used to help write code and to edit the text.
-The authors designed the study, made every methodological decision, checked the code,
-results and text, and take full responsibility for them.
+The authors acknowledge the use of AI-supported language editing, structuring and
+coding assistance (Claude, Anthropic) during manuscript preparation. The authors remain
+fully responsible for the data, analysis, interpretation, and final text.
