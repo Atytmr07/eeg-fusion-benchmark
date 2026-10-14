@@ -972,6 +972,6 @@ recordings in which seizure detectors are used, and the persons are few (23 and 
 
 ## Use of AI assistance
 
-An AI assistant (Claude, Anthropic) was used to help write code and to edit the text.
-The authors designed the study, made every methodological decision, checked the code,
-results and text, and take full responsibility for them.
+The authors acknowledge the use of AI-supported language editing, structuring and
+coding assistance (Claude, Anthropic) during manuscript preparation. The authors remain
+fully responsible for the data, analysis, interpretation, and final text.
