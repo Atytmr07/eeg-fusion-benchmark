@@ -1,8 +1,8 @@
 > **DRAFT v2, NOT FOR SUBMISSION.** Restructured around the three research questions the
 > advisor set on 10 October 2026. This file holds the Introduction (Section 1), the
 > Methods (Section 2, in the advisor's subsections 2.1 to 2.7) and the Results of the
-> five-seed runs (Section 3; the seizure-level metrics of P6 are still being
-> computed) and the Discussion (Section 4). The literature review is
+> five-seed runs (Section 3; the seizure-level metrics of P6c on CHB-MIT and of P6c
+> after transfer are still being computed) and the Discussion (Section 4). The literature review is
 > provisional: the systematic search has run, but title and abstract screening was done
 > by an AI assistant, and the human screening and the full texts follow after 17
 > October; claims marked [abstract] rest on a source's abstract only and are to be
@@ -23,8 +23,8 @@ Studies of convolutional networks for EEG seizure detection that fuse the raw wa
 with its spectrogram often report that one fusion operator outperforms the others, on
 one dataset, one preprocessing pipeline and one training run. We tested whether such
 conclusions hold when these choices change. Five fusion operators (early, late, gated,
-attention and score fusion), with parameter counts matched within 1.3 percent, were
-compared under nine preprocessing pipelines, including three artefact removal
+attention and score fusion), the four jointly trained ones matched in size, and
+single-branch and classical controls were compared under nine preprocessing pipelines, including three artefact removal
 algorithms (Extended Infomax, GEDAI, AMICA), and five seed sets, with leave-one-subject-out
 evaluation on CHB-MIT (23 subjects) and Siena (14 subjects), and by training on CHB-MIT
 and testing on Siena. Statistical significance (resampling-corrected paired tests),
@@ -36,7 +36,9 @@ preprocessing and the operator explained none, and the seed more. Rankings chang
 between seeds (median Kendall's W 0.22 on CHB-MIT), more stable on Siena, where score
 fusion ranked first in 82 percent of runs without a significant advantage, and did not
 transfer between datasets. Early fusion had the lowest AUPRC in all 18 pipeline-dataset
-combinations. With fixed seeds and package versions, GEDAI cleaned 27 percent of
+combinations. Fusion did not improve macro F1 over a spectrogram network of the same
+size, and a logistic regression on seven hand-crafted features matched (CHB-MIT) or
+exceeded (Siena) every network. With fixed seeds and package versions, GEDAI cleaned 27 percent of
 recordings differently on a second machine, enough to change seizure-level sensitivity
 by up to 0.054 and the order of the operators. Claims that one fusion operator is
 superior, made from a single dataset, pipeline and run, are not supported.
@@ -358,7 +360,9 @@ widened single-branch controls) is sized to a common budget by solving the fusio
 head's hidden width numerically (`src/models.py`): with 18 input channels the models
 have 102,236 to 103,712 parameters, the four joint operators within 0.36 percent of
 each other. Score fusion, an ensemble of two independently sized classifiers, keeps
-its natural size.
+its natural size: it blends the probabilities of the two default-width single-branch
+controls below (28,850 and 34,546 parameters, 63,396 together, about 62 percent of the
+budget).
 
 **Controls.** The two single-branch networks at their default width (raw1d, spec2d)
 and widened to the fusion budget (raw1d_wide, spec2d_wide), which asks whether fusion
@@ -566,6 +570,42 @@ macro F1 at the 0.5 threshold was close to the others on CHB-MIT. Its ranking of
 windows by ictal probability is therefore consistently the weakest, while its
 thresholded decisions are not.
 
+**Fusion against the controls.** Table 3 gives the controls over the same runs.
+Combining the two representations did not improve macro F1 over the spectrogram branch
+alone: the spectrogram network widened to the fusion budget reached 0.683 on CHB-MIT,
+within the range of the jointly trained operators (0.677 to 0.686), and 0.663 on Siena,
+above every jointly trained operator (0.617 to 0.640) and below only score fusion
+(0.670); it exceeded the best operator of a run in 9 (CHB-MIT) and 16 (Siena) of 45
+runs. The waveform branch alone was weaker (0.662 and 0.612). Fusion did improve the
+ranking of windows on CHB-MIT, where late, gated, attention and score fusion reached an
+AUPRC of 0.655 to 0.666 against at most 0.618 for a single branch; on Siena the gain was
+smaller and not consistent (late fusion 0.599 and score fusion 0.631 against 0.581).
+Widening a single branch to the fusion budget changed little (on CHB-MIT, raw1d 0.663
+and 0.662, spec2d 0.679 and 0.683 macro F1), so the comparison is not limited by the
+smaller size of the default-width branches. The classical shallow model, a logistic
+regression with 126 parameters on seven hand-crafted features per channel, had the
+highest mean macro F1 and balanced accuracy on both datasets: on CHB-MIT 0.690, above
+the best operator of a run in 12 of 45 runs and above every operator's seed mean in 5
+of 9 pipelines, although its AUPRC (0.640) was below that of four operators; on Siena
+0.720 with an AUPRC of 0.667, above the best operator in 43 of 45 runs and in all nine
+pipelines. Score fusion, which blends the two default-width single-branch networks, had
+the lowest Brier score of all models (0.265 and 0.304), and early fusion the highest
+among the operators on CHB-MIT (0.330 against 0.294 to 0.300), in line with its weaker
+ranking of windows.
+
+**Table 3. Controls**, mean and SD over the same 45 runs per dataset as Table 2
+(`results_v2/results/controls_*.csv`). Parameters with 18 input channels; the classical
+models are logistic regressions (18 log variances; seven features per channel).
+
+| Control | Parameters | CHB-MIT macro F1 | CHB-MIT AUPRC | CHB-MIT bal. acc. | Siena macro F1 | Siena AUPRC | Siena bal. acc. |
+|---|---|---|---|---|---|---|---|
+| raw1d | 28,850 | 0.663 ± 0.014 | 0.604 ± 0.019 | 0.678 ± 0.013 | 0.609 ± 0.034 | 0.565 ± 0.040 | 0.659 ± 0.024 |
+| spec2d | 34,546 | 0.679 ± 0.010 | 0.598 ± 0.017 | 0.676 ± 0.010 | 0.660 ± 0.022 | 0.576 ± 0.031 | 0.680 ± 0.019 |
+| raw1d_wide | 103,712 | 0.662 ± 0.012 | 0.605 ± 0.017 | 0.673 ± 0.010 | 0.612 ± 0.028 | 0.577 ± 0.033 | 0.657 ± 0.019 |
+| spec2d_wide | 102,236 | 0.683 ± 0.014 | 0.618 ± 0.016 | 0.680 ± 0.013 | 0.663 ± 0.026 | 0.581 ± 0.027 | 0.681 ± 0.021 |
+| logvar | 18 | 0.631 ± 0.009 | 0.577 ± 0.016 | 0.708 ± 0.006 | 0.630 ± 0.034 | 0.572 ± 0.036 | 0.705 ± 0.027 |
+| shallow | 126 | 0.690 ± 0.008 | 0.640 ± 0.008 | 0.739 ± 0.007 | 0.720 ± 0.019 | 0.667 ± 0.015 | 0.770 ± 0.017 |
+
 ![Performance per pipeline and operator](figures_manuscript/figure2_performance.png)
 
 **Figure 2.** Window-level performance of each fusion operator in each preprocessing pipeline: macro F1 (left) and AUPRC (right) on CHB-MIT (top, 23 LOSO folds) and Siena (bottom, 14 folds); mean and SD over five seed sets, each run averaged over its folds. Early fusion has the lowest AUPRC in every pipeline of both datasets.
@@ -679,14 +719,17 @@ and the operators' order by sensitivity (Kendall tau 0.60 to 1.00) for GEDAI, by
 
 ### 3.6 Seizure-level detection
 
-*(P0 to P5, five seed sets each; P6 follows when its remaining event metrics are
-computed.)* On CHB-MIT the operators detected 68 to 80 percent of seizures on average,
-with 5.3 to 7.8 false alarms per hour at the 0.5 threshold without post-processing
-(`results_v2/results/events_chbmit.csv`). Early fusion detected the most seizures (mean
-0.80, the highest in 83 percent of runs) but also raised the most false alarms (7.8 per
-hour against 5.3 to 5.7 for the others): at the common threshold it labels more windows
-ictal, consistent with its weaker probability ranking (Section 3.1). On Siena the
-operators detected 83 to 86 percent of seizures, with no consistent order.
+*(All nine pipelines, five seed sets each, except P6c on CHB-MIT with three; its last
+two seed sets follow.)* On CHB-MIT the operators detected 68 to 79 percent of seizures
+on average, with 5.3 to 7.7 false alarms per hour at the 0.5 threshold without
+post-processing (`results_v2/results/events_chbmit.csv`). Early fusion detected the
+most seizures (mean 0.79, the highest in 81 percent of runs) but also raised the most
+false alarms in every run (7.7 per hour against 5.3 to 5.7 for the others): at the
+common threshold it labels more windows ictal, consistent with its weaker probability
+ranking (Section 3.1). Artefact removal did not change this picture: under Infomax and
+AMICA the operators detected 66 to 75 percent of seizures with 4.9 to 7.2 false alarms
+per hour, under GEDAI 71 to 80 percent with 5.5 to 8.7. On Siena the operators detected
+84 to 87 percent of seizures, with no consistent order.
 
 ### 3.7 Cross-dataset generalisation (RQ3)
 
@@ -731,6 +774,18 @@ equivalent within 0.05 macro F1 in most pipelines and two in all, but within 0.0
 none, and on Siena few were equivalent even within 0.05. The data therefore rule out
 large differences between operators on CHB-MIT, but not differences of the size that
 published comparisons typically report as improvements.
+
+The controls put these differences in proportion (Section 3.1, Table 3). A
+single-branch spectrogram network of the same size performed as well as the jointly
+trained operators in macro F1 on CHB-MIT and better on Siena, and a logistic regression
+on seven hand-crafted features performed as well as or better than every network.
+Fusion did improve the ranking of windows on CHB-MIT, so it is not without value; but
+which operator is used matters less than whether the representations are fused at all,
+and neither matters as much as the subject. This agrees with a broader evaluation of
+multimodal models in which added fusion complexity often did not pay off (Rheude et
+al. 2025). An improvement of one fusion operator over
+another says little without a parameter-matched unimodal control and a simple classical
+baseline evaluated in the same way.
 
 ### 4.2 Are the differences preserved when preprocessing changes?
 
@@ -799,9 +854,13 @@ F1 of models trained on Siena itself, but the order of the operators on CHB-MIT,
 Siena and after transfer were unrelated (mean Kendall tau between -0.11 and 0.07). Score
 fusion is the clearest case: first in 82 percent of Siena's own runs, it was first in 11
 percent of the transfer runs and among the weaker operators on CHB-MIT. Its advantage on
-Siena is therefore a property of training and testing on Siena, possibly of how its
-blending weight is chosen on Siena's validation subjects, not a property of the
-operator. The two datasets differ in age, seizure types, recording protocol and mains
+Siena is therefore a property of training and testing on Siena, not a property of the
+operator. Part of it is inherited from its spectrogram branch: on Siena the
+spectrogram network alone (0.660 macro F1) already outperformed every jointly trained
+operator, and score fusion averages it with the waveform network, with a weight chosen
+on Siena's validation subjects. Whether end-to-end training of the joint operators
+overfits Siena's 14 subjects, which training the branches independently would avoid,
+we did not test. The two datasets differ in age, seizure types, recording protocol and mains
 frequency (Section 2.1), so we do not attribute the difference to any one of these.
 
 ### 4.7 Statistical significance, practical size and ranking stability
@@ -826,19 +885,20 @@ training run, the common design in this literature, would have reached a differe
 conclusion in different runs of our study. Comparisons of this kind should report
 several seeds and, where feasible, several preprocessing choices; test differences with
 corrected and equivalence tests rather than naive paired tests; report the rank
-distribution rather than one ranking; and state the margin below which a difference is
+distribution rather than one ranking; include a parameter-matched unimodal control and
+a simple classical baseline; and state the margin below which a difference is
 considered irrelevant before looking at the results.
 
 ### 4.9 What do the results mean clinically?
 
-*(Draft. P0 to P5 on CHB-MIT; the numbers for P6 follow when its event metrics are
-complete. Statements marked [ref] need a source from the literature review.)*
+*(Draft. All nine pipelines on CHB-MIT, P6c with three of five seed sets. Statements
+marked [ref] need a source from the literature review.)*
 
 None of the systems studied here is close to clinical use, and the study was not
 designed to produce one: the threshold was fixed at 0.5, there was no post-processing,
 and the models were trained on other people's seizures only. At that operating point
-the operators detected 68 to 80 percent of CHB-MIT's seizures with 5.3 to 7.8 false
-alarms per hour, that is 127 to 187 false alarms per day of monitoring, and about 2
+the operators detected 68 to 79 percent of CHB-MIT's seizures with 5.3 to 7.7 false
+alarms per hour, that is 126 to 185 false alarms per day of monitoring, and about 2
 percent of all detections were seizures. Clinically acceptable systems are usually
 described with false alarm rates below about one per hour, often far lower, at a high
 sensitivity [ref]; no person in CHB-MIT reached a mean below one false alarm per hour.
@@ -849,12 +909,12 @@ raw output, and the absolute numbers should be read in that light.
 
 Three results nevertheless bear on clinical use. First, the operators that differed by
 a few hundredths of macro F1 at the window level differed by little more at the seizure
-level, except early fusion, which detected the most seizures (0.80) at the most false
-alarms (7.8 per hour); which of these is preferable is a clinical choice between missed
+level, except early fusion, which detected the most seizures (0.79) at the most false
+alarms (7.7 per hour); which of these is preferable is a clinical choice between missed
 seizures and alarm fatigue [ref], not a property that window-level metrics reveal.
 Second, the person mattered more than any modelling choice: mean sensitivity ranged
-from 0.23 (chb06) to 1.00 across persons and the false alarm rate from 1.2 to 12.3 per
-hour, while the operators' means spanned 0.68 to 0.80 and 5.3 to 7.8. For a patient,
+from 0.24 (chb06) to 1.00 across persons and the false alarm rate from 1.3 to 12.3 per
+hour, while the operators' means spanned 0.68 to 0.79 and 5.3 to 7.7. For a patient,
 whether the detector works depends far more on who they are than on the fusion
 operator, which supports patient-specific adaptation over the search for a better
 generic operator [ref]. Third, an artefact removal step that does not reproduce across
@@ -863,7 +923,7 @@ could detect a different set of a patient's seizures depending on where the reco
 is cleaned.
 
 Siena cannot answer the clinical question of false alarms: its recordings are cut
-around seizures, so we report only its sensitivity (83 to 86 percent), which is
+around seizures, so we report only its sensitivity (84 to 87 percent), which is
 consistent with CHB-MIT's and says nothing about specificity in continuous monitoring.
 Neither dataset contains the long, artefact-rich ambulatory or intensive-care
 recordings in which seizure detectors are used, and the persons are few (23 and 14).
@@ -879,7 +939,8 @@ recordings in which seizure detectors are used, and the persons are few (23 and 
 - **One design family.** All operators share one pair of representations (raw waveform
   and log-magnitude STFT), one backbone family and one parameter budget; other
   representations (wavelets, other time-frequency transforms) or larger models may
-  behave differently.
+  behave differently. Widening a single branch to the fusion budget did not change its
+  performance (Section 3.1), but deeper backbones were not tested.
 - **Windows, not sessions.** Window-level metrics use non-ictal windows subsampled to
   four per ictal window, so they do not reflect the true prevalence of seizures; the
   seizure-level metrics on the full recordings address this but are secondary. A window

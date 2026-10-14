@@ -108,6 +108,41 @@ def run_means(long: pd.DataFrame) -> pd.DataFrame:
             .mean().reset_index())
 
 
+CONTROLS = ("raw1d", "spec2d", "raw1d_wide", "spec2d_wide", "logvar", "shallow")
+CONTROL_METRICS = ("f1_macro", "auprc", "balanced_accuracy", "brier")
+
+
+def control_table(long: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Fusion operators next to the controls, over the same complete runs: per model the
+    mean and SD over runs of each run's fold mean; and per control, in how many runs it
+    beat the best fusion operator of that run (macro F1) and in how many pipelines its
+    seed-averaged macro F1 exceeded every operator's."""
+    models = [*FUSION, *CONTROLS]
+    sub = long[long.model.isin(models)]
+    per_run = sub.groupby(["pipeline", "seed", "model"], sort=False)[
+        list(CONTROL_METRICS)].mean().reset_index()
+    rows = []
+    for m in models:
+        g = per_run[per_run.model == m]
+        if not len(g):
+            continue
+        d = {"model": m, "kind": "fusion" if m in FUSION else "control", "runs": len(g)}
+        for c in CONTROL_METRICS:
+            d[f"{c}_mean"], d[f"{c}_sd"] = g[c].mean(), g[c].std(ddof=1)
+        rows.append(d)
+    table = pd.DataFrame(rows)
+    f1 = per_run.pivot_table(index=["pipeline", "seed"], columns="model", values="f1_macro")
+    best_fusion = f1[list(FUSION)].max(axis=1)
+    pipe = f1.groupby(level="pipeline").mean()
+    pipe_best = pipe[list(FUSION)].max(axis=1)
+    wins = [{"control": c, "runs": int(f1[c].notna().sum()),
+             "runs_above_best_fusion": int((f1[c] > best_fusion).sum()),
+             "pipelines_above_every_fusion": int((pipe[c] > pipe_best).sum()),
+             "pipelines": int(pipe[c].notna().sum())}
+            for c in CONTROLS if c in f1]
+    return table, pd.DataFrame(wins)
+
+
 def order_pipelines(df: pd.DataFrame, col: str = "pipeline") -> pd.DataFrame:
     return df.iloc[sorted(range(len(df)), key=lambda i: _pipeline_key(df[col].iat[i]))]
 
@@ -225,6 +260,21 @@ def build_results(results_root: Path, out: Path, fig_dir: Path, datasets=("chbmi
                       f"Source: `results_v2/{ds}/loso_*/perfold.csv`"
                       + (" and `preds/`" if metric == "auprc" else "") + ".", "",
                       md_table(w), ""]
+
+        # fusion operators against the single-branch and classical controls
+        ct, wins = control_table(long)
+        ct.to_csv(out / f"controls_{ds}.csv", index=False)
+        wins.to_csv(out / f"controls_{ds}_wins.csv", index=False)
+        r["controls"], r["controls_wins"] = ct, wins
+        show = pd.DataFrame({"model": ct.model, "kind": ct.kind, **{
+            c: [pm(a, b) for a, b in zip(ct[f"{c}_mean"], ct[f"{c}_sd"])]
+            for c in CONTROL_METRICS}})
+        t += 1
+        lines += [f"**Table R{t}. {name}, fusion operators and controls, mean ± SD over the "
+                  f"{len(inc)} runs** (fold means within a run; Brier: lower is better). "
+                  f"Controls: single-branch networks at default width and widened to the "
+                  f"fusion budget, and two classical models. Source: as Table R1.", "",
+                  md_table(show), "", md_table(wins), ""]
 
         # event table
         ev, missing = event_table(inc, ds)
