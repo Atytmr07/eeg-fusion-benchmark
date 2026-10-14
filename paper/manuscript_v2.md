@@ -1,8 +1,8 @@
 > **DRAFT v2, NOT FOR SUBMISSION.** Restructured around the three research questions the
 > advisor set on 10 October 2026. This file holds the Introduction (Section 1), the
 > Methods (Section 2, in the advisor's subsections 2.1 to 2.7) and the Results of the
-> five-seed runs (Section 3; the seizure-level metrics of P6 are still being
-> computed) and the Discussion (Section 4). The literature review is
+> five-seed runs (Section 3; the seizure-level metrics of P6c on CHB-MIT and of P6c
+> after transfer are still being computed) and the Discussion (Section 4). The literature review is
 > provisional: the systematic search has run, but title and abstract screening was done
 > by an AI assistant, and the human screening and the full texts follow after 17
 > October; claims marked [abstract] rest on a source's abstract only and are to be
@@ -719,14 +719,17 @@ and the operators' order by sensitivity (Kendall tau 0.60 to 1.00) for GEDAI, by
 
 ### 3.6 Seizure-level detection
 
-*(P0 to P5, five seed sets each; P6 follows when its remaining event metrics are
-computed.)* On CHB-MIT the operators detected 68 to 80 percent of seizures on average,
-with 5.3 to 7.8 false alarms per hour at the 0.5 threshold without post-processing
-(`results_v2/results/events_chbmit.csv`). Early fusion detected the most seizures (mean
-0.80, the highest in 83 percent of runs) but also raised the most false alarms (7.8 per
-hour against 5.3 to 5.7 for the others): at the common threshold it labels more windows
-ictal, consistent with its weaker probability ranking (Section 3.1). On Siena the
-operators detected 83 to 86 percent of seizures, with no consistent order.
+*(All nine pipelines, five seed sets each, except P6c on CHB-MIT with three; its last
+two seed sets follow.)* On CHB-MIT the operators detected 68 to 79 percent of seizures
+on average, with 5.3 to 7.7 false alarms per hour at the 0.5 threshold without
+post-processing (`results_v2/results/events_chbmit.csv`). Early fusion detected the
+most seizures (mean 0.79, the highest in 81 percent of runs) but also raised the most
+false alarms in every run (7.7 per hour against 5.3 to 5.7 for the others): at the
+common threshold it labels more windows ictal, consistent with its weaker probability
+ranking (Section 3.1). Artefact removal did not change this picture: under Infomax and
+AMICA the operators detected 66 to 75 percent of seizures with 4.9 to 7.2 false alarms
+per hour, under GEDAI 71 to 80 percent with 5.5 to 8.7. On Siena the operators detected
+84 to 87 percent of seizures, with no consistent order.
 
 ### 3.7 Cross-dataset generalisation (RQ3)
 
@@ -888,14 +891,14 @@ considered irrelevant before looking at the results.
 
 ### 4.9 What do the results mean clinically?
 
-*(Draft. P0 to P5 on CHB-MIT; the numbers for P6 follow when its event metrics are
-complete. Statements marked [ref] need a source from the literature review.)*
+*(Draft. All nine pipelines on CHB-MIT, P6c with three of five seed sets. Statements
+marked [ref] need a source from the literature review.)*
 
 None of the systems studied here is close to clinical use, and the study was not
 designed to produce one: the threshold was fixed at 0.5, there was no post-processing,
 and the models were trained on other people's seizures only. At that operating point
-the operators detected 68 to 80 percent of CHB-MIT's seizures with 5.3 to 7.8 false
-alarms per hour, that is 127 to 187 false alarms per day of monitoring, and about 2
+the operators detected 68 to 79 percent of CHB-MIT's seizures with 5.3 to 7.7 false
+alarms per hour, that is 126 to 185 false alarms per day of monitoring, and about 2
 percent of all detections were seizures. Clinically acceptable systems are usually
 described with false alarm rates below about one per hour, often far lower, at a high
 sensitivity [ref]; no person in CHB-MIT reached a mean below one false alarm per hour.
@@ -906,12 +909,12 @@ raw output, and the absolute numbers should be read in that light.
 
 Three results nevertheless bear on clinical use. First, the operators that differed by
 a few hundredths of macro F1 at the window level differed by little more at the seizure
-level, except early fusion, which detected the most seizures (0.80) at the most false
-alarms (7.8 per hour); which of these is preferable is a clinical choice between missed
+level, except early fusion, which detected the most seizures (0.79) at the most false
+alarms (7.7 per hour); which of these is preferable is a clinical choice between missed
 seizures and alarm fatigue [ref], not a property that window-level metrics reveal.
 Second, the person mattered more than any modelling choice: mean sensitivity ranged
-from 0.23 (chb06) to 1.00 across persons and the false alarm rate from 1.2 to 12.3 per
-hour, while the operators' means spanned 0.68 to 0.80 and 5.3 to 7.8. For a patient,
+from 0.24 (chb06) to 1.00 across persons and the false alarm rate from 1.3 to 12.3 per
+hour, while the operators' means spanned 0.68 to 0.79 and 5.3 to 7.7. For a patient,
 whether the detector works depends far more on who they are than on the fusion
 operator, which supports patient-specific adaptation over the search for a better
 generic operator [ref]. Third, an artefact removal step that does not reproduce across
@@ -920,7 +923,7 @@ could detect a different set of a patient's seizures depending on where the reco
 is cleaned.
 
 Siena cannot answer the clinical question of false alarms: its recordings are cut
-around seizures, so we report only its sensitivity (83 to 86 percent), which is
+around seizures, so we report only its sensitivity (84 to 87 percent), which is
 consistent with CHB-MIT's and says nothing about specificity in continuous monitoring.
 Neither dataset contains the long, artefact-rich ambulatory or intensive-care
 recordings in which seizure detectors are used, and the persons are few (23 and 14).
