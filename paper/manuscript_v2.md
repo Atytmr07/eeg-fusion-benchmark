@@ -577,12 +577,16 @@ within the range of the jointly trained operators (0.677 to 0.686), and 0.663 on
 above every jointly trained operator (0.617 to 0.640) and below only score fusion
 (0.670); it exceeded the best operator of a run in 9 (CHB-MIT) and 16 (Siena) of 45
 runs. The waveform branch was weaker (0.663 and 0.609 at default width, 0.662 and
-0.612 widened). Fusion did improve the ranking of windows on CHB-MIT, where late, gated,
-attention and score fusion reached an AUPRC of 0.655 to 0.666 against at most 0.618 for
-a single branch; on Siena the difference from the best single branch (0.581) was
-inconsistent, from -0.085 (early fusion, 0.496) to +0.050 (score fusion, 0.631). The
-controls are compared here by their means and by how often they exceeded the operators,
-not with the corrected test of Section 2.6.
+0.612 widened). On CHB-MIT the fused models ranked windows better on average: late,
+gated, attention and score fusion reached a mean AUPRC of 0.655 to 0.666 against at
+most 0.618 for a single branch; on Siena the difference from the best single branch (0.581) was
+inconsistent, from -0.085 (early fusion, 0.496) to +0.050 (score fusion, 0.631). Tested like
+the operator pairs (corrected test, Holm across the 30 control-operator comparisons of
+a pipeline; `src/controls_stats.py`), no control differed significantly from any
+operator in any pipeline of either dataset, in macro F1 or AUPRC; the smallest
+corrected p was 0.12 (shallow against early fusion on Siena, macro F1). Equivalence
+within 0.05 macro F1 could be shown in 34 of the 270 control-operator comparisons on
+CHB-MIT and 13 on Siena.
 Widening a single branch to the fusion budget changed little (on CHB-MIT, raw1d 0.663
 and 0.662, spec2d 0.679 and 0.683 macro F1), so the comparison is not limited by the
 smaller size of the default-width branches. The classical shallow model, a logistic
@@ -782,11 +786,13 @@ The controls put these differences in proportion (Section 3.1, Table 3). A
 single-branch spectrogram network of the same size had a mean macro F1 similar to
 that of the jointly trained operators on CHB-MIT and higher on Siena, and a logistic
 regression on seven hand-crafted features had a mean macro F1 as high as or higher than
-every network, though not a higher AUPRC on CHB-MIT. These are comparisons of means,
-not tests. Fusion did improve the ranking of windows on CHB-MIT, by about as much as
-the operators differed from each other there, so fusing the two representations is
-not without value; but neither the choice to fuse nor the choice of operator changed
-performance as much as the subject did. This agrees with a broader evaluation of
+every network, though not a higher AUPRC on CHB-MIT. Under the corrected test none of these
+differences was significant, nor was the higher mean AUPRC of the fused models on
+CHB-MIT, and few were demonstrably equivalent: the controls stand to the operators as
+the operators stand to each other. Fusing the two representations may help the ranking
+of windows, by about as much as the operators differed from each other on CHB-MIT, but
+neither the choice to fuse nor the choice of operator changed performance as much as
+the subject did. This agrees with a broader evaluation of
 multimodal models, available as a preprint, in which added fusion complexity often did
 not pay off (Rheude et al. 2025). An improvement of one fusion operator over
 another says little without a parameter-matched unimodal control and a simple classical
