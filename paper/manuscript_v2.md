@@ -507,9 +507,9 @@ A third machine of another architecture (ARM) agreed with the other two on recor
 where they agreed, and often with neither where they differed. Multiplying the input by
 (1 + 1e-7 N(0, 1)), a rounding-level perturbation, changed GEDAI's result on exactly the
 recordings that differed between machines, also on a full-rank montage, and Infomax's
-component decision on recordings where it had differed; AMICA was unchanged. The
-differences therefore come from the methods' sensitivity to rounding near a decision
-threshold on particular recordings, not from one machine or library.
+component decision on recordings where it had differed; AMICA was unchanged. This
+suggests that the differences arise from the methods' sensitivity to rounding near a
+decision threshold on particular recordings rather than from one machine or library.
 Window-level results are unaffected, because every P6 training and test window comes
 from one set of signals, cleaned once. The event metrics, which need every recording
 cleaned again, were computed on the machine that produced those signals; they then
@@ -847,11 +847,11 @@ Infomax changed its component decision in 2.5 percent of recordings between mach
 and in about 1 percent between two runs on one machine; scoring the same trained models on the two cleanings changed seizure-level
 sensitivity by up to 0.054 and the order of the operators. Fixed seeds and pinned
 versions are the reproducibility measures a methods section usually reports; for
-ICA-based cleaning they are not sufficient, because decisions made at a threshold (a
-component's |z| against an EOG proxy, GEDAI's noise threshold) amplify rounding
-differences between machines. A perturbation of the input of one part in ten million
-reproduced the differences, so no machine gives the correct result and none can be
-chosen to avoid them. The window-level results of this study rest on one
+ICA-based cleaning they were not sufficient here, plausibly because decisions made at
+a threshold (a component's |z| against an EOG proxy, GEDAI's noise threshold) amplify
+rounding differences between machines. A perturbation of the input of one part in ten million
+produced differences of the same kind, which suggests that no machine gives the
+correct result and that choosing a different machine would not avoid them. The window-level results of this study rest on one
 cleaning and are unaffected; but a study that cleans its training data on one machine
 and its test data on another, or that compares its numbers with another group's, can
 see differences of the size of the effect it studies. We recommend that studies using
