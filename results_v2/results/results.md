@@ -85,7 +85,7 @@ Complete runs (45, 23 folds each): P0/seed 0, P0/seed 1, P0/seed 2, P0/seed 3, P
 | P5 | 5 | **0.827 ± 0.067** | 0.712 ± 0.052 | 0.707 ± 0.048 | 0.753 ± 0.028 | 0.725 ± 0.036 |
 | P6a | 5 | **0.750 ± 0.032** | 0.696 ± 0.032 | 0.691 ± 0.020 | 0.688 ± 0.034 | 0.662 ± 0.024 |
 | P6b | 5 | **0.797 ± 0.032** | 0.712 ± 0.048 | 0.730 ± 0.032 | 0.749 ± 0.048 | 0.710 ± 0.039 |
-| P6c | 3 | **0.743 ± 0.042** | 0.683 ± 0.027 | 0.693 ± 0.025 | 0.684 ± 0.023 | 0.667 ± 0.036 |
+| P6c | 5 | **0.758 ± 0.037** | 0.702 ± 0.033 | 0.691 ± 0.033 | 0.703 ± 0.030 | 0.667 ± 0.026 |
 
 **Table R6. CHB-MIT, false alarms per hour (pooled over persons, true recording time) by pipeline and fusion operator, mean ± SD over seed sets.** Lower is better; no bold. Source: as Table R5.
 
@@ -99,9 +99,7 @@ Complete runs (45, 23 folds each): P0/seed 0, P0/seed 1, P0/seed 2, P0/seed 3, P
 | P5 | 5 | 8.376 ± 0.489 | 5.624 ± 0.427 | 5.207 ± 0.387 | 5.716 ± 0.347 | 5.867 ± 0.503 |
 | P6a | 5 | 7.148 ± 0.735 | 5.182 ± 0.235 | 4.856 ± 0.681 | 5.282 ± 0.730 | 5.476 ± 0.377 |
 | P6b | 5 | 8.737 ± 0.371 | 5.886 ± 0.442 | 5.717 ± 0.230 | 5.453 ± 0.408 | 6.410 ± 0.704 |
-| P6c | 3 | 6.500 ± 0.611 | 4.952 ± 0.504 | 4.854 ± 0.186 | 5.590 ± 0.500 | 5.667 ± 0.306 |
-
-Event metrics not yet computed for: loso_P6c_r3_cuda, loso_P6c_r4_cuda.
+| P6c | 5 | 6.694 ± 0.539 | 4.973 ± 0.385 | 4.758 ± 0.188 | 5.349 ± 0.565 | 5.661 ± 0.217 |
 
 **Figure R (CHB-MIT).** Rank of each fusion operator (1 = best macro F1) in each of the 45 pipeline x seed runs: counts per rank (left) and the rank of every run (right). `paper/figures_manuscript/results_rank_distribution_chbmit.png`
 

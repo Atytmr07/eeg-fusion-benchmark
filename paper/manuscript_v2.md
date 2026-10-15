@@ -1,8 +1,7 @@
 > **DRAFT v2, NOT FOR SUBMISSION.** Restructured around the three research questions the
 > advisor set on 10 October 2026. This file holds the Introduction (Section 1), the
 > Methods (Section 2, in the advisor's subsections 2.1 to 2.7) and the Results of the
-> five-seed runs (Section 3; the seizure-level metrics of P6c on CHB-MIT and of P6c
-> after transfer are still being computed) and the Discussion (Section 4). The literature review is
+> five-seed runs (Section 3) and the Discussion (Section 4). The literature review is
 > provisional: the systematic search has run, but title and abstract screening was done
 > by an AI assistant, and the human screening and the full texts follow after 17
 > October; claims marked [abstract] rest on a source's abstract only and are to be
@@ -724,15 +723,14 @@ and the operators' order by sensitivity (Kendall tau 0.60 to 1.00) for GEDAI, by
 
 ### 3.6 Seizure-level detection
 
-*(All nine pipelines, five seed sets each, except P6c on CHB-MIT with three; its last
-two seed sets follow.)* On CHB-MIT the operators detected 68 to 79 percent of seizures
-on average, with 5.3 to 7.7 false alarms per hour at the 0.5 threshold without
+*(All nine pipelines, five seed sets each.)* On CHB-MIT the operators detected 68 to 79 percent of seizures
+on average, with 5.2 to 7.7 false alarms per hour at the 0.5 threshold without
 post-processing (`results_v2/results/events_chbmit.csv`). Early fusion detected the
-most seizures (mean 0.79, the highest in 81 percent of runs) but also raised the most
-false alarms in every run (7.7 per hour against 5.3 to 5.7 for the others): at the
+most seizures (mean 0.79, the highest in 82 percent of runs) but also raised the most
+false alarms in every run (7.7 per hour against 5.2 to 5.7 for the others): at the
 common threshold it labels more windows ictal, consistent with its weaker probability
 ranking (Section 3.1). Artefact removal did not change this picture: under Infomax and
-AMICA the operators detected 66 to 75 percent of seizures with 4.9 to 7.2 false alarms
+AMICA the operators detected 66 to 76 percent of seizures with 4.8 to 7.2 false alarms
 per hour, under GEDAI 71 to 80 percent with 5.5 to 8.7. On Siena the operators detected
 84 to 87 percent of seizures, with no consistent order.
 
@@ -898,14 +896,14 @@ considered irrelevant before looking at the results.
 
 ### 4.9 What do the results mean clinically?
 
-*(Draft. All nine pipelines on CHB-MIT, P6c with three of five seed sets. Statements
+*(Draft. All nine pipelines on CHB-MIT, five seed sets each. Statements
 marked [ref] need a source from the literature review.)*
 
 None of the systems studied here is close to clinical use, and the study was not
 designed to produce one: the threshold was fixed at 0.5, there was no post-processing,
 and the models were trained on other people's seizures only. At that operating point
-the operators detected 68 to 79 percent of CHB-MIT's seizures with 5.3 to 7.7 false
-alarms per hour, that is 126 to 185 false alarms per day of monitoring, and about 2
+the operators detected 68 to 79 percent of CHB-MIT's seizures with 5.2 to 7.7 false
+alarms per hour, that is 125 to 185 false alarms per day of monitoring, and about 2
 percent of all detections were seizures. Clinically acceptable systems are usually
 described with false alarm rates below about one per hour, often far lower, at a high
 sensitivity [ref]; no person in CHB-MIT reached a mean below one false alarm per hour.
@@ -921,7 +919,7 @@ alarms (7.7 per hour); which of these is preferable is a clinical choice between
 seizures and alarm fatigue [ref], not a property that window-level metrics reveal.
 Second, the person mattered more than any modelling choice: mean sensitivity ranged
 from 0.24 (chb06) to 1.00 across persons and the false alarm rate from 1.3 to 12.3 per
-hour, while the operators' means spanned 0.68 to 0.79 and 5.3 to 7.7. For a patient,
+hour, while the operators' means spanned 0.68 to 0.79 and 5.2 to 7.7. For a patient,
 whether the detector works depends far more on who they are than on the fusion
 operator, which supports patient-specific adaptation over the search for a better
 generic operator [ref]. Third, an artefact removal step that does not reproduce across
