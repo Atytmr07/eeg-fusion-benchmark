@@ -1,32 +1,36 @@
 # Do Fusion Operators Matter? EEG Seizure Detection Benchmark
 
-A parameter matched, statistically controlled comparison of multimodal CNN fusion
-operators (early, late, gated, attention, score level) that combine the raw EEG signal
-with its spectrogram, evaluated on two corpora: Bonn (Andrzejak et al. 2001) and CHB-MIT
-(Shoeb 2009).
+A parameter-matched, statistically controlled comparison of multimodal CNN fusion
+operators (early, late, gated, attention and score fusion) that combine the raw EEG
+signal with its spectrogram, run as a multiverse: nine preprocessing pipelines (including
+three artefact removal algorithms), five seed sets, leave-one-subject-out evaluation on
+CHB-MIT (Shoeb 2009) and Siena (Detti et al. 2020), and training on CHB-MIT with testing
+on Siena. An earlier stage of the project used the Bonn dataset (Andrzejak et al. 2001).
 
-**Status:** working draft under advisor review. The manuscript is in
-`paper/manuscript.md`; its Limitations section lists what is still open.
+**Status:** working draft under advisor review. The manuscript is
+`paper/manuscript_v2.md`; the literature review in it is provisional.
 
-## Research question
+## Research questions
 
-With the backbone, training protocol, and parameter budget held fixed, does the choice of
-fusion operator make a difference that survives a statistically valid test?
+1. Are differences between fusion operators preserved across preprocessing pipelines?
+2. How stable are the rankings of the operators across seeds and pipelines?
+3. Do the results carry over from one dataset to another?
 
 ## Findings so far
 
-- **Bonn:** late, gated, attention, and score fusion are not distinguishable under a
-  corrected test in any of three task formulations, and are positively shown to be
-  equivalent within about 0.02 to 0.03 macro F1. Early fusion is the one operator that
-  departs, downward.
-- **CHB-MIT (leave one subject out, 23 persons):** no operator pair differs either, but
-  between subject variance is too large to establish equivalence. This is reported as a
-  different kind of negative result from Bonn's. A full re-run after correcting the
-  subject grouping and the optimiser kept these conclusions but reordered the models,
-  so the CHB-MIT results do not rank the operators.
+- **Operators:** no pair of operators differs significantly under a corrected test in any
+  pipeline of either dataset. The held-out subject explains most of the variance (74
+  percent of macro F1 on CHB-MIT); preprocessing and the operator explain almost none.
+- **Rankings:** on CHB-MIT the order of the operators changes with the seed (median
+  Kendall's W 0.22); on Siena it is more stable, but it does not transfer between datasets.
+- **Controls:** a single-branch spectrogram network of the same size and a logistic
+  regression on seven hand-crafted features reach mean scores similar to or higher than
+  the fusion operators; none of these differences is significant either.
+- **Reproducibility:** with the same code, package versions and seeds, ICA-based artefact
+  removal (GEDAI, and Infomax less often) cleaned some recordings differently on another
+  machine (`docs/ICA_REPRO.md`).
 - **Evaluation practice:** the naive paired test common in this literature has a 38
-  percent false positive rate under repeated cross validation (simulation), and CPU thread
-  count alone moves per fold results by amounts comparable to the operator differences.
+  percent false positive rate under repeated cross-validation (simulation).
 
 ## Documentation
 
