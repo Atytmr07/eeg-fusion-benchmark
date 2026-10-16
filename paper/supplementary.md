@@ -228,3 +228,40 @@ fusion operator (`python -m src.make_results`, `results_v2/results/main_*.csv`).
 | P6b | 0.622 ± 0.011 | 0.688 ± 0.017 | **0.694 ± 0.018** | 0.676 ± 0.015 | 0.691 ± 0.022 |
 | P6c | 0.654 ± 0.019 | 0.676 ± 0.006 | 0.660 ± 0.019 | 0.663 ± 0.020 | **0.697 ± 0.018** |
 
+
+## Supplementary Note 1. The Bonn corpus (earlier stage)
+
+An earlier stage of this project compared the same operators and controls on the Bonn
+corpus (Andrzejak et al. 2001): five sets of 100 single-channel segments (23.6 s,
+173.61 Hz); A and B scalp recordings of healthy volunteers, C and D interictal and E
+ictal intracranial recordings. Three label groupings were used: T1, three classes
+(A,B / C,D / E); T2, intracranial only (C,D vs E); T3, the common binary split
+(A,B,C,D vs E). Evaluation was 5 x 5 repeated stratified cross-validation over
+segments: Bonn has no subject identifiers, so a subject-wise split, as in the main
+study, is not possible. One preprocessing pipeline, CPU, earlier code version; these
+results are not part of the multiverse.
+
+| Model | T1 F1 | T1 AUC | T2 F1 | T2 AUC | T3 F1 | T3 AUC | Params |
+|---|---|---|---|---|---|---|---|
+| late | 0.974 | 0.999 | 0.987 | 1.000 | 0.986 | 1.000 | 98,571 |
+| gated | 0.973 | 0.999 | 0.987 | 0.999 | 0.980 | 1.000 | 98,698 |
+| attention | 0.969 | 0.997 | 0.985 | 0.999 | 0.977 | 0.998 | 98,544 |
+| spec2d_wide | 0.966 | 0.998 | 0.984 | 0.999 | 0.982 | 1.000 | 97,775 |
+| score | 0.964 | 0.998 | 0.981 | 0.999 | 0.976 | 0.999 | 59,302 |
+| raw1d_wide | 0.963 | 0.997 | 0.973 | 0.998 | 0.976 | 0.992 | 99,795 |
+| spec2d | 0.960 | 0.998 | 0.979 | 0.999 | 0.972 | 0.999 | 32,227 |
+| shallow | 0.954 | 0.996 | 0.964 | 0.995 | 0.964 | 0.995 | 8 |
+| raw1d | 0.951 | 0.996 | 0.964 | 0.997 | 0.969 | 0.995 | 27,075 |
+| early | 0.896 | 0.977 | 0.923 | 0.981 | 0.899 | 0.965 | 97,507 |
+| logvar | 0.646 | 0.755 | 0.933 | 0.986 | 0.954 | 0.992 | 1 |
+
+Macro F1 and AUC, mean over the 25 paired measurements (`results_v2/T{1,2,3}_*/perfold.csv`;
+parameter counts of that code version, single-channel input).
+
+Findings: (1) the naive paired Wilcoxon test found 22, 20 and 13 of 55 pairs significant
+on T1, T2 and T3; the corrected test found 10, 0 and 0, all ten on T1 involving logvar
+and none between two deep models (`results_v2/phase0/summary.csv`); (2) late, gated,
+attention and score fusion were equivalent to each other within about 0.02 to 0.03
+macro F1 on T1; (3) early fusion was the one operator that separated, and only
+downward; (4) T3 is close to saturation: a single-feature logistic regression (logvar)
+reached 0.954 macro F1 against 0.986 for the best model.

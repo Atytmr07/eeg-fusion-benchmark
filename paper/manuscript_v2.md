@@ -7,8 +7,7 @@
 > October; claims marked [abstract] rest on a source's abstract only and are to be
 > checked against its full text. `paper/manuscript.md` is the previous draft
 > (Bonn and CHB-MIT, single pipeline) and stays unchanged until this one replaces it;
-> where the Bonn benchmark goes (supplementary material or a separate note) is still
-> to be decided with the advisor. Every number below is traceable to a file in the
+> the Bonn benchmark moves to Supplementary Note 1 (advisor, 16 October 2026). Every number below is traceable to a file in the
 > repository (paths given).
 
 # Do Fusion Operators Matter, and Does the Answer Survive Preprocessing? A Parameter-Matched Multiverse Comparison of Multimodal CNN Fusion for EEG Seizure Detection
@@ -22,23 +21,24 @@ Studies of convolutional networks for EEG seizure detection that fuse the raw wa
 with its spectrogram often report that one fusion operator outperforms the others, on
 one dataset, one preprocessing pipeline and one training run. We tested whether such
 conclusions hold when these choices change. Five fusion operators (early, late, gated,
-attention and score fusion), the four jointly trained ones matched in size, and
-single-branch and classical controls were compared under nine preprocessing pipelines, including three artefact removal
-algorithms (Extended Infomax, GEDAI, AMICA), and five seed sets, with leave-one-subject-out
-evaluation on CHB-MIT (23 subjects) and Siena (14 subjects), and by training on CHB-MIT
-and testing on Siena. Statistical significance (resampling-corrected paired tests),
-practical equivalence (margins of 0.05 and 0.02 macro F1 fixed in advance) and ranking
-stability were assessed separately. The operators differed by a median of 0.021
-(CHB-MIT) and 0.053 (Siena) macro F1 within a pipeline, and no difference was
-significant. The held-out subject explained 74 percent of the variance on CHB-MIT;
-preprocessing and the operator explained none, and the seed more. Rankings changed
-between seeds (median Kendall's W 0.22 on CHB-MIT), more stable on Siena, where score
-fusion ranked first in 82 percent of runs without a significant advantage, and did not
-transfer between datasets. Early fusion had the lowest AUPRC in all 18 pipeline-dataset
-combinations. The mean macro F1 of a spectrogram network of the same size lay within the range of
-the jointly trained operators on CHB-MIT and above it on Siena, and a logistic
-regression on seven hand-crafted features had a mean macro F1 as high as (CHB-MIT) or
-higher than (Siena) every network. With fixed seeds and package versions, GEDAI cleaned 27 percent of
+attention and score fusion) and single-branch and classical controls were compared
+under nine preprocessing pipelines, including three artefact removal algorithms
+(Extended Infomax, GEDAI, AMICA), and five seed sets, with leave-one-subject-out
+evaluation on CHB-MIT (23 subjects) and Siena (14 subjects) and by training on CHB-MIT
+and testing on Siena. Statistical significance (resampling-corrected tests), practical
+equivalence (margins fixed in advance) and ranking stability were assessed separately.
+The operators differed by a median of 0.021 (CHB-MIT) and 0.053 (Siena) macro F1 within
+a pipeline, and no difference was significant. The held-out subject explained 74
+percent of the variance on CHB-MIT; preprocessing and the operator explained none, and
+the seed more. Rankings changed between seeds (median Kendall's W 0.22 on CHB-MIT), were
+more stable on Siena, where score fusion ranked first in 82 percent of runs without a
+significant advantage, and did not transfer between datasets. Early fusion had the
+lowest AUPRC in all 18 pipeline-dataset combinations. The controls stood to the
+operators as the operators stood to each other: a spectrogram network of the same size
+and a logistic regression on seven hand-crafted features reached similar or higher
+means, the latter above the best operator in 43 of 45 Siena runs, but no difference was
+significant. With fixed seeds and package versions, GEDAI's threshold-based cleaning
+was deterministic on each machine but not across machines: it cleaned 27 percent of
 recordings differently on a second machine, enough to change seizure-level sensitivity
 by up to 0.054 and the order of the operators. Claims that one fusion operator is
 superior, made from a single dataset, pipeline and run, are not supported.
@@ -430,7 +430,9 @@ pipeline.
 **Pairwise comparisons.** Leave-one-subject-out folds share training data, so the
 standard paired test overstates significance; in a simulation of two equivalent
 classifiers the naive paired Wilcoxon test rejected in 37.6 percent of cases at a
-nominal 5 percent (`src/sim_cv_correlation.py`). Pairs of operators are therefore
+nominal 5 percent (`src/sim_cv_correlation.py`). On the Bonn corpus, studied in an
+earlier stage of this project, the naive test found 13 to 22 significant pairs among
+55 per task and the corrected test none among the deep models (Supplementary Note 1). Pairs of operators are therefore
 compared with the resampling-corrected paired t test (Nadeau and Bengio 2003; test to
 training ratio 1/22 on CHB-MIT, 1/13 on Siena), with Holm correction over the ten
 operator pairs within each pipeline.
@@ -820,8 +822,11 @@ window-level predictions changed as much between seeds as between pipelines. A r
 obtained from one training run is therefore close to a random draw on CHB-MIT. The
 consequence for the literature is direct: a comparison of operators that reports one run
 per operator, as most do, cannot distinguish a better operator from a lucky seed at the
-differences observed here. Five seeds were enough to show this, and to withdraw a result
-that three seeds had suggested (Section 3.3).
+differences observed here. Five seeds were enough to show this, and gave a more reliable
+estimate of the Fusion x Preprocessing interaction than three: significant with three
+seed sets, it was not with five (Section 3.3). That the seed explains more variance than
+the pipeline, shown with five seed sets, is a direct caution for the many comparisons
+that report a single run.
 
 ### 4.4 Why does the subject dominate?
 
@@ -854,7 +859,10 @@ produced differences of the same kind, which suggests that no machine gives the
 correct result and that choosing a different machine would not avoid them. The window-level results of this study rest on one
 cleaning and are unaffected; but a study that cleans its training data on one machine
 and its test data on another, or that compares its numbers with another group's, can
-see differences of the size of the effect it studies. We recommend that studies using
+see differences of the size of the effect it studies. We are not aware that this has been reported for EEG artefact
+removal [ref]: algorithms that take threshold decisions near floating-point precision
+can be deterministic within a machine (GEDAI) or even within one execution context
+(Infomax) and still not reproducible across machines. We recommend that studies using
 artefact removal store the cleaned signals, or at least the decomposition and the
 removed components, alongside the code.
 
@@ -916,7 +924,9 @@ sensitivity [ref]; no person in CHB-MIT reached a mean below one false alarm per
 Post-processing (smoothing consecutive windows, a minimum event duration) and a
 threshold chosen per patient typically trade a little sensitivity for far fewer false
 alarms [ref]; we left both out on purpose, so that the operators are compared on their
-raw output, and the absolute numbers should be read in that light.
+raw output, and the absolute numbers should be read in that light. The criteria were
+fixed before the runs; choosing a threshold or a post-processing rule after seeing the
+results would select the criterion on the outcome.
 
 Three results nevertheless bear on clinical use. First, the operators that differed by
 a few hundredths of macro F1 at the window level differed by little more at the seizure
@@ -968,8 +978,9 @@ recordings in which seizure detectors are used, and the persons are few (23 and 
 - **Artefact removal.** The settings (16 components, frontopolar channels as EOG proxies,
   no muscle rejection) and the projection of GEDAI's reference onto a bipolar montage are
   our choices for montages without EOG; GEDAI was designed for referential, high-density
-  recordings. Infomax's and GEDAI's results do not reproduce across machines (Section
-  2.7); window-level results rest on one cleaning, but the seizure-level metrics of P6a
+  recordings. That Infomax's and GEDAI's results do not reproduce across machines is a
+  finding of this study (Sections 2.7 and 4.5); for its own results, window-level
+  metrics rest on one cleaning, but the seizure-level metrics of P6a
   differ from the training-time cleaning in 8 of 670 recordings.
 - **Device.** All multiverse runs used one GPU; GPU and CPU results differ at the level
   of a seed change, so absolute numbers are not interchangeable with the CPU results of
