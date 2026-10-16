@@ -1,4 +1,4 @@
-\begin{thebibliography}{46}
+\begin{thebibliography}{47}
 \providecommand{\natexlab}[1]{#1}
 \providecommand{\url}[1]{\texttt{#1}}
 \expandafter\ifx\csname urlstyle\endcsname\relax
@@ -16,6 +16,12 @@ Jiayu An, Ruimin Peng, Xinyao Yang, and Dongrui Wu.
 \newblock {fastSeizureNet: Accurate and efficient knowledge-data fusion for semi-supervised seizure detection}.
 \newblock \emph{Neural Networks}, 202:\penalty0 109078, 2026.
 \newblock \doi{10.1016/j.neunet.2026.109078}.
+
+\bibitem[Andrzejak et~al.(2001)Andrzejak, Lehnertz, Mormann, Rieke, David, and Elger]{Andrzejak_2001}
+Ralph~G. Andrzejak, Klaus Lehnertz, Florian Mormann, Christoph Rieke, Peter David, and Christian~E. Elger.
+\newblock {Indications of nonlinear deterministic and finite-dimensional structures in time series of brain electrical activity: Dependence on recording region and brain state}.
+\newblock \emph{Physical Review E}, 64\penalty0 (6), 2001.
+\newblock \doi{10.1103/physreve.64.061907}.
 
 \bibitem[Banerjee et~al.(2025)Banerjee, Marrinan, Cannon, Chiang, and Sarwate]{Banerjee_2025}
 Sinjini Banerjee, Tim Marrinan, Reilly Cannon, Tony Chiang, and Anand~D. Sarwate.

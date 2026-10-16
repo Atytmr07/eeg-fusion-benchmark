@@ -92,15 +92,13 @@
 \textbf{DRAFT v2, NOT FOR SUBMISSION.} Restructured around the three research questions the
 advisor set on 10 October 2026. This file holds the Introduction (Section 1), the
 Methods (Section 2, in the advisor's subsections 2.1 to 2.7) and the Results of the
-five-seed runs (Section 3; the seizure-level metrics of P6c on CHB-MIT and of P6c
-after transfer are still being computed) and the Discussion (Section 4). The literature review is
+five-seed runs (Section 3) and the Discussion (Section 4). The literature review is
 provisional: the systematic search has run, but title and abstract screening was done
 by an AI assistant, and the human screening and the full texts follow after 17
 October; claims marked {[}abstract{]} rest on a source's abstract only and are to be
 checked against its full text. \nolinkurl{paper/manuscript.md} is the previous draft
 (Bonn and CHB-MIT, single pipeline) and stays unchanged until this one replaces it;
-where the Bonn benchmark goes (supplementary material or a separate note) is still
-to be decided with the advisor. Every number below is traceable to a file in the
+the Bonn benchmark moves to Supplementary Note 1 (advisor, 16 October 2026). Every number below is traceable to a file in the
 repository (paths given).
 \end{minipage}}
 \end{center}
@@ -110,23 +108,24 @@ Studies of convolutional networks for EEG seizure detection that fuse the raw wa
 with its spectrogram often report that one fusion operator outperforms the others, on
 one dataset, one preprocessing pipeline and one training run. We tested whether such
 conclusions hold when these choices change. Five fusion operators (early, late, gated,
-attention and score fusion), the four jointly trained ones matched in size, and
-single-branch and classical controls were compared under nine preprocessing pipelines, including three artefact removal
-algorithms (Extended Infomax, GEDAI, AMICA), and five seed sets, with leave-one-subject-out
-evaluation on CHB-MIT (23 subjects) and Siena (14 subjects), and by training on CHB-MIT
-and testing on Siena. Statistical significance (resampling-corrected paired tests),
-practical equivalence (margins of 0.05 and 0.02 macro F1 fixed in advance) and ranking
-stability were assessed separately. The operators differed by a median of 0.021
-(CHB-MIT) and 0.053 (Siena) macro F1 within a pipeline, and no difference was
-significant. The held-out subject explained 74 percent of the variance on CHB-MIT;
-preprocessing and the operator explained none, and the seed more. Rankings changed
-between seeds (median Kendall's W 0.22 on CHB-MIT), more stable on Siena, where score
-fusion ranked first in 82 percent of runs without a significant advantage, and did not
-transfer between datasets. Early fusion had the lowest AUPRC in all 18 pipeline-dataset
-combinations. The mean macro F1 of a spectrogram network of the same size lay within the range of
-the jointly trained operators on CHB-MIT and above it on Siena, and a logistic
-regression on seven hand-crafted features had a mean macro F1 as high as (CHB-MIT) or
-higher than (Siena) every network. With fixed seeds and package versions, GEDAI cleaned 27 percent of
+attention and score fusion) and single-branch and classical controls were compared
+under nine preprocessing pipelines, including three artefact removal algorithms
+(Extended Infomax, GEDAI, AMICA), and five seed sets, with leave-one-subject-out
+evaluation on CHB-MIT (23 subjects) and Siena (14 subjects) and by training on CHB-MIT
+and testing on Siena. Statistical significance (resampling-corrected tests), practical
+equivalence (margins fixed in advance) and ranking stability were assessed separately.
+The operators differed by a median of 0.021 (CHB-MIT) and 0.053 (Siena) macro F1 within
+a pipeline, and no difference was significant. The held-out subject explained 74
+percent of the variance on CHB-MIT; preprocessing and the operator explained none, and
+the seed more. Rankings changed between seeds (median Kendall's W 0.22 on CHB-MIT), were
+more stable on Siena, where score fusion ranked first in 82 percent of runs without a
+significant advantage, and did not transfer between datasets. Early fusion had the
+lowest AUPRC in all 18 pipeline-dataset combinations. The controls stood to the
+operators as the operators stood to each other: a spectrogram network of the same size
+and a logistic regression on seven hand-crafted features reached similar or higher
+means, the latter above the best operator in 43 of 45 Siena runs, but no difference was
+significant. With fixed seeds and package versions, GEDAI's threshold-based cleaning
+was deterministic on each machine but not across machines: it cleaned 27 percent of
 recordings differently on a second machine, enough to change seizure-level sensitivity
 by up to 0.054 and the order of the operators. Claims that one fusion operator is
 superior, made from a single dataset, pipeline and run, are not supported.
@@ -594,7 +593,9 @@ pipeline.
 \textbf{Pairwise comparisons.} Leave-one-subject-out folds share training data, so the
 standard paired test overstates significance; in a simulation of two equivalent
 classifiers the naive paired Wilcoxon test rejected in 37.6 percent of cases at a
-nominal 5 percent (\nolinkurl{src/sim_cv_correlation.py}). Pairs of operators are therefore
+nominal 5 percent (\nolinkurl{src/sim_cv_correlation.py}). On the Bonn corpus, studied in an
+earlier stage of this project, the naive test found 13 to 22 significant pairs among
+55 per task and the corrected test none among the deep models (Supplementary Note 1). Pairs of operators are therefore
 compared with the resampling-corrected paired t test (\citealp{Nadeau_2003}; test to
 training ratio 1/22 on CHB-MIT, 1/13 on Siena), with Holm correction over the ten
 operator pairs within each pipeline.
@@ -671,9 +672,9 @@ A third machine of another architecture (ARM) agreed with the other two on recor
 where they agreed, and often with neither where they differed. Multiplying the input by
 (1 + 1e-7 N(0, 1)), a rounding-level perturbation, changed GEDAI's result on exactly the
 recordings that differed between machines, also on a full-rank montage, and Infomax's
-component decision on recordings where it had differed; AMICA was unchanged. The
-differences therefore come from the methods' sensitivity to rounding near a decision
-threshold on particular recordings, not from one machine or library.
+component decision on recordings where it had differed; AMICA was unchanged. This
+suggests that the differences arise from the methods' sensitivity to rounding near a
+decision threshold on particular recordings rather than from one machine or library.
 Window-level results are unaffected, because every P6 training and test window comes
 from one set of signals, cleaned once. The event metrics, which need every recording
 cleaned again, were computed on the machine that produced those signals; they then
@@ -787,12 +788,16 @@ within the range of the jointly trained operators (0.677 to 0.686), and 0.663 on
 above every jointly trained operator (0.617 to 0.640) and below only score fusion
 (0.670); it exceeded the best operator of a run in 9 (CHB-MIT) and 16 (Siena) of 45
 runs. The waveform branch was weaker (0.663 and 0.609 at default width, 0.662 and
-0.612 widened). Fusion did improve the ranking of windows on CHB-MIT, where late, gated,
-attention and score fusion reached an AUPRC of 0.655 to 0.666 against at most 0.618 for
-a single branch; on Siena the difference from the best single branch (0.581) was
-inconsistent, from -0.085 (early fusion, 0.496) to +0.050 (score fusion, 0.631). The
-controls are compared here by their means and by how often they exceeded the operators,
-not with the corrected test of Section 2.6.
+0.612 widened). On CHB-MIT the fused models ranked windows better on average: late,
+gated, attention and score fusion reached a mean AUPRC of 0.655 to 0.666 against at
+most 0.618 for a single branch; on Siena the difference from the best single branch (0.581) was
+inconsistent, from -0.085 (early fusion, 0.496) to +0.050 (score fusion, 0.631). Tested like
+the operator pairs (corrected test, Holm across the 30 control-operator comparisons of
+a pipeline; \nolinkurl{src/controls_stats.py}), no control differed significantly from any
+operator in any pipeline of either dataset, in macro F1 or AUPRC; the smallest
+corrected p was 0.12 (shallow against early fusion on Siena, macro F1). Equivalence
+within 0.05 macro F1 could be shown in 34 of the 270 control-operator comparisons on
+CHB-MIT and 13 on Siena.
 Widening a single branch to the fusion budget changed little (on CHB-MIT, raw1d 0.663
 and 0.662, spec2d 0.679 and 0.683 macro F1), so the comparison is not limited by the
 smaller size of the default-width branches. The classical shallow model, a logistic
@@ -991,15 +996,14 @@ and the operators' order by sensitivity (Kendall tau 0.60 to 1.00) for GEDAI, by
 
 \subsection{3.6 Seizure-level detection}\label{seizure-level-detection}
 
-\emph{(All nine pipelines, five seed sets each, except P6c on CHB-MIT with three; its last
-two seed sets follow.)} On CHB-MIT the operators detected 68 to 79 percent of seizures
-on average, with 5.3 to 7.7 false alarms per hour at the 0.5 threshold without
+\emph{(All nine pipelines, five seed sets each.)} On CHB-MIT the operators detected 68 to 79 percent of seizures
+on average, with 5.2 to 7.7 false alarms per hour at the 0.5 threshold without
 post-processing (\nolinkurl{results_v2/results/events_chbmit.csv}). Early fusion detected the
-most seizures (mean 0.79, the highest in 81 percent of runs) but also raised the most
-false alarms in every run (7.7 per hour against 5.3 to 5.7 for the others): at the
+most seizures (mean 0.79, the highest in 82 percent of runs) but also raised the most
+false alarms in every run (7.7 per hour against 5.2 to 5.7 for the others): at the
 common threshold it labels more windows ictal, consistent with its weaker probability
 ranking (Section 3.1). Artefact removal did not change this picture: under Infomax and
-AMICA the operators detected 66 to 75 percent of seizures with 4.9 to 7.2 false alarms
+AMICA the operators detected 66 to 76 percent of seizures with 4.8 to 7.2 false alarms
 per hour, under GEDAI 71 to 80 percent with 5.5 to 8.7. On Siena the operators detected
 84 to 87 percent of seizures, with no consistent order.
 
@@ -1053,11 +1057,13 @@ The controls put these differences in proportion (Section 3.1, Table 3). A
 single-branch spectrogram network of the same size had a mean macro F1 similar to
 that of the jointly trained operators on CHB-MIT and higher on Siena, and a logistic
 regression on seven hand-crafted features had a mean macro F1 as high as or higher than
-every network, though not a higher AUPRC on CHB-MIT. These are comparisons of means,
-not tests. Fusion did improve the ranking of windows on CHB-MIT, by about as much as
-the operators differed from each other there, so fusing the two representations is
-not without value; but neither the choice to fuse nor the choice of operator changed
-performance as much as the subject did. This agrees with a broader evaluation of
+every network, though not a higher AUPRC on CHB-MIT. Under the corrected test none of these
+differences was significant, nor was the higher mean AUPRC of the fused models on
+CHB-MIT, and few were demonstrably equivalent: the controls stand to the operators as
+the operators stand to each other. Fusing the two representations may help the ranking
+of windows, by about as much as the operators differed from each other on CHB-MIT, but
+neither the choice to fuse nor the choice of operator changed performance as much as
+the subject did. This agrees with a broader evaluation of
 multimodal models, available as a preprint, in which added fusion complexity often did
 not pay off (\citealp{Rheude_2025}). An improvement of one fusion operator over
 another says little without a parameter-matched unimodal control and a simple classical
@@ -1085,8 +1091,11 @@ window-level predictions changed as much between seeds as between pipelines. A r
 obtained from one training run is therefore close to a random draw on CHB-MIT. The
 consequence for the literature is direct: a comparison of operators that reports one run
 per operator, as most do, cannot distinguish a better operator from a lucky seed at the
-differences observed here. Five seeds were enough to show this, and to withdraw a result
-that three seeds had suggested (Section 3.3).
+differences observed here. Five seeds were enough to show this, and gave a more reliable
+estimate of the Fusion x Preprocessing interaction than three: significant with three
+seed sets, it was not with five (Section 3.3). That the seed explains more variance than
+the pipeline, shown with five seed sets, is a direct caution for the many comparisons
+that report a single run.
 
 \subsection{4.4 Why does the subject dominate?}\label{why-does-the-subject-dominate}
 
@@ -1112,14 +1121,17 @@ Infomax changed its component decision in 2.5 percent of recordings between mach
 and in about 1 percent between two runs on one machine; scoring the same trained models on the two cleanings changed seizure-level
 sensitivity by up to 0.054 and the order of the operators. Fixed seeds and pinned
 versions are the reproducibility measures a methods section usually reports; for
-ICA-based cleaning they are not sufficient, because decisions made at a threshold (a
-component's \textbar z\textbar{} against an EOG proxy, GEDAI's noise threshold) amplify rounding
-differences between machines. A perturbation of the input of one part in ten million
-reproduced the differences, so no machine gives the correct result and none can be
-chosen to avoid them. The window-level results of this study rest on one
+ICA-based cleaning they were not sufficient here, plausibly because decisions made at
+a threshold (a component's \textbar z\textbar{} against an EOG proxy, GEDAI's noise threshold) amplify
+rounding differences between machines. A perturbation of the input of one part in ten million
+produced differences of the same kind, which suggests that no machine gives the
+correct result and that choosing a different machine would not avoid them. The window-level results of this study rest on one
 cleaning and are unaffected; but a study that cleans its training data on one machine
 and its test data on another, or that compares its numbers with another group's, can
-see differences of the size of the effect it studies. We recommend that studies using
+see differences of the size of the effect it studies. We are not aware that this has been reported for EEG artefact
+removal {[}ref{]}: algorithms that take threshold decisions near floating-point precision
+can be deterministic within a machine (GEDAI) or even within one execution context
+(Infomax) and still not reproducible across machines. We recommend that studies using
 artefact removal store the cleaned signals, or at least the decomposition and the
 removed components, alongside the code.
 
@@ -1167,21 +1179,23 @@ considered irrelevant before looking at the results.
 
 \subsection{4.9 What do the results mean clinically?}\label{what-do-the-results-mean-clinically}
 
-\emph{(Draft. All nine pipelines on CHB-MIT, P6c with three of five seed sets. Statements
+\emph{(Draft. All nine pipelines on CHB-MIT, five seed sets each. Statements
 marked {[}ref{]} need a source from the literature review.)}
 
 None of the systems studied here is close to clinical use, and the study was not
 designed to produce one: the threshold was fixed at 0.5, there was no post-processing,
 and the models were trained on other people's seizures only. At that operating point
-the operators detected 68 to 79 percent of CHB-MIT's seizures with 5.3 to 7.7 false
-alarms per hour, that is 126 to 185 false alarms per day of monitoring, and about 2
+the operators detected 68 to 79 percent of CHB-MIT's seizures with 5.2 to 7.7 false
+alarms per hour, that is 125 to 185 false alarms per day of monitoring, and about 2
 percent of all detections were seizures. Clinically acceptable systems are usually
 described with false alarm rates below about one per hour, often far lower, at a high
 sensitivity {[}ref{]}; no person in CHB-MIT reached a mean below one false alarm per hour.
 Post-processing (smoothing consecutive windows, a minimum event duration) and a
 threshold chosen per patient typically trade a little sensitivity for far fewer false
 alarms {[}ref{]}; we left both out on purpose, so that the operators are compared on their
-raw output, and the absolute numbers should be read in that light.
+raw output, and the absolute numbers should be read in that light. The criteria were
+fixed before the runs; choosing a threshold or a post-processing rule after seeing the
+results would select the criterion on the outcome.
 
 Three results nevertheless bear on clinical use. First, the operators that differed by
 a few hundredths of macro F1 at the window level differed by little more at the seizure
@@ -1190,7 +1204,7 @@ alarms (7.7 per hour); which of these is preferable is a clinical choice between
 seizures and alarm fatigue {[}ref{]}, not a property that window-level metrics reveal.
 Second, the person mattered more than any modelling choice: mean sensitivity ranged
 from 0.24 (chb06) to 1.00 across persons and the false alarm rate from 1.3 to 12.3 per
-hour, while the operators' means spanned 0.68 to 0.79 and 5.3 to 7.7. For a patient,
+hour, while the operators' means spanned 0.68 to 0.79 and 5.2 to 7.7. For a patient,
 whether the detector works depends far more on who they are than on the fusion
 operator, which supports patient-specific adaptation over the search for a better
 generic operator {[}ref{]}. Third, an artefact removal step that does not reproduce across
@@ -1241,8 +1255,9 @@ recordings in which seizure detectors are used, and the persons are few (23 and 
   \textbf{Artefact removal.} The settings (16 components, frontopolar channels as EOG proxies,
   no muscle rejection) and the projection of GEDAI's reference onto a bipolar montage are
   our choices for montages without EOG; GEDAI was designed for referential, high-density
-  recordings. Infomax's and GEDAI's results do not reproduce across machines (Section
-  2.7); window-level results rest on one cleaning, but the seizure-level metrics of P6a
+  recordings. That Infomax's and GEDAI's results do not reproduce across machines is a
+  finding of this study (Sections 2.7 and 4.5); for its own results, window-level
+  metrics rest on one cleaning, but the seizure-level metrics of P6a
   differ from the training-time cleaning in 8 of 670 recordings.
 \item
   \textbf{Device.} All multiverse runs used one GPU; GPU and CPU results differ at the level
@@ -1983,5 +1998,50 @@ P6c & 0.654~\(\pm 0.019\) & 0.676~\(\pm 0.006\) & 0.660~\(\pm 0.019\) & 0.663~\(
 }
 
 \endgroup
+
+\section{Supplementary Note 1. The Bonn corpus (earlier stage)}\label{supplementary-note-1.-the-bonn-corpus-earlier-stage}
+
+An earlier stage of this project compared the same operators and controls on the Bonn
+corpus (\citealp{Andrzejak_2001}): five sets of 100 single-channel segments (23.6 s,
+173.61 Hz); A and B scalp recordings of healthy volunteers, C and D interictal and E
+ictal intracranial recordings. Three label groupings were used: T1, three classes
+(A,B / C,D / E); T2, intracranial only (C,D vs E); T3, the common binary split
+(A,B,C,D vs E). Evaluation was 5 x 5 repeated stratified cross-validation over
+segments: Bonn has no subject identifiers, so a subject-wise split, as in the main
+study, is not possible. One preprocessing pipeline, CPU, earlier code version; these
+results are not part of the multiverse.
+
+{\def\LTcaptype{none} % do not increment counter
+\begin{longtable}[]{@{}llllllll@{}}
+\toprule\noalign{}
+Model & T1 F1 & T1 AUC & T2 F1 & T2 AUC & T3 F1 & T3 AUC & Params \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+late & 0.974 & 0.999 & 0.987 & 1.000 & 0.986 & 1.000 & 98,571 \\
+gated & 0.973 & 0.999 & 0.987 & 0.999 & 0.980 & 1.000 & 98,698 \\
+attention & 0.969 & 0.997 & 0.985 & 0.999 & 0.977 & 0.998 & 98,544 \\
+spec2d\_wide & 0.966 & 0.998 & 0.984 & 0.999 & 0.982 & 1.000 & 97,775 \\
+score & 0.964 & 0.998 & 0.981 & 0.999 & 0.976 & 0.999 & 59,302 \\
+raw1d\_wide & 0.963 & 0.997 & 0.973 & 0.998 & 0.976 & 0.992 & 99,795 \\
+spec2d & 0.960 & 0.998 & 0.979 & 0.999 & 0.972 & 0.999 & 32,227 \\
+shallow & 0.954 & 0.996 & 0.964 & 0.995 & 0.964 & 0.995 & 8 \\
+raw1d & 0.951 & 0.996 & 0.964 & 0.997 & 0.969 & 0.995 & 27,075 \\
+early & 0.896 & 0.977 & 0.923 & 0.981 & 0.899 & 0.965 & 97,507 \\
+logvar & 0.646 & 0.755 & 0.933 & 0.986 & 0.954 & 0.992 & 1 \\
+\end{longtable}
+}
+
+Macro F1 and AUC, mean over the 25 paired measurements (\nolinkurl{results_v2/T{1,2,3}_*/perfold.csv};
+parameter counts of that code version, single-channel input).
+
+Findings: (1) the naive paired Wilcoxon test found 22, 20 and 13 of 55 pairs significant
+on T1, T2 and T3; the corrected test found 10, 0 and 0, all ten on T1 involving logvar
+and none between two deep models (\nolinkurl{results_v2/phase0/summary.csv}); (2) late, gated,
+attention and score fusion were equivalent to each other within about 0.02 to 0.03
+macro F1 on T1; (3) early fusion was the one operator that separated, and only
+downward; (4) T3 is close to saturation: a single-feature logistic regression (logvar)
+reached 0.954 macro F1 against 0.986 for the best model.
 
 \end{document}

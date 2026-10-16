@@ -9,6 +9,7 @@ decides. Nothing is added to references.bib by the build.
 |---|---|
 | Ali et al. (2024) | Ali_2024 |
 | An et al. 2026) | An_2026 |
+| Andrzejak et al. 2001) | Andrzejak_2001 |
 | Banerjee et al. 2025) | Banerjee_2025 |
 | Basheer and Mishra 2026) | Basheer_2026 |
 | Bouckaert and Frank 2004) | Bouckaert_2004 |
