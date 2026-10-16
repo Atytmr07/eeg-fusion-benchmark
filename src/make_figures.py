@@ -316,7 +316,9 @@ def figure5(data: dict) -> None:
         ax.set_xticks(range(3), [l for _, _, l in meth])
         ax.set_ylabel("recordings cleaned differently (%)")
         ax.set_title("d  Reproducibility (CHB-MIT, fixed seeds)", loc="left")
-        ax.legend(fontsize=7.5, loc="upper left")
+        ax.set_ylim(0, 1.3 * 100 * t.share.max())
+        # upper right sits above AMICA's near-zero bars, clear of GEDAI's tall one
+        ax.legend(fontsize=7.5, loc="upper right", frameon=False)
         ax.grid(axis="x", visible=False)
     fig.tight_layout()
     from matplotlib.lines import Line2D
