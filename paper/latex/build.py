@@ -35,7 +35,8 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 PAPER = HERE.parent
-MANUSCRIPT = PAPER / "manuscript.md"
+MANUSCRIPT = PAPER / "manuscript_v2.md"   # --manuscript to build another file
+OVERLEAF = HERE / "overleaf"
 SUPPLEMENT = PAPER / "supplementary.md"
 FIGDIR = PAPER / "figures_manuscript"
 BIBFILE = PAPER / "literature" / "references.bib"
@@ -159,6 +160,17 @@ def cells(row: str):
 
 TEXT_PT = 455.0                              # \linewidth of template.tex (A4, 2.5 cm)
 CHAR_PT = {"small": 4.9, "footnotesize": 4.3}   # mean character width (lmodern), with margin
+FONT_PT = {"small": 10.0, "footnotesize": 9.0}  # \small and \footnotesize of an 11pt article
+# Widths in em of Latin Modern characters that differ much from the mean (lowercase 0.5).
+EM = {**dict.fromkeys("0123456789", 0.5), **dict.fromkeys(".,:;", 0.278),
+      **dict.fromkeys("\u00a0 ", 0.333), "±": 0.778, "(": 0.389, ")": 0.389, "-": 0.333,
+      "%": 0.833, **dict.fromkeys("ijl", 0.278), "t": 0.389, "f": 0.306, "r": 0.392,
+      "m": 0.833, "w": 0.722}
+
+
+def word_em(w: str) -> float:
+    """Approximate printed width of a word in em (Latin Modern)."""
+    return sum(EM.get(c, 0.73 if c.isupper() else 0.5) for c in w)
 
 
 def widen_table(par: str) -> tuple[str, str | None]:
@@ -168,7 +180,11 @@ def widen_table(par: str) -> tuple[str, str | None]:
     Widths follow the cell lengths (square-root damped, so short label columns such as
     author names still get room), but no column is narrower than its longest word, so
     headers like "recordings" do not run into the next column. If the longest words
-    alone do not fit at \small, the table is set in \footnotesize."""
+    alone do not fit at \small, the table is set in \footnotesize. If they do not fit
+    there either (Table 3: eight columns of mean ± SD), the gaps between the columns are
+    narrowed from 6 to 3 pt on each side and the words are measured in points, since
+    digits are narrower than the mean character. Returns the LaTeX that sets the font
+    (and the gap) for the table."""
     rows = par.strip().splitlines()
     if max(len(r) for r in rows) <= 72:
         return par, None
@@ -177,19 +193,30 @@ def widen_table(par: str) -> tuple[str, str | None]:
         return re.sub(r"[*`]", "", c)
     data = [[printed(c) for c in cells(r)] for i, r in enumerate(rows) if i != 1]
     ncol = len(data[0])
-    lens, longest = [], []
+    lens, longest, longest_em = [], [], []
     for j in range(ncol):
         col = [d[j] for d in data if j < len(d)]
         n = [len(c) for c in col]
         lens.append(max(6, sum(n) / len(n) * 0.5 + max(n) * 0.5) ** 0.5)
-        longest.append(max((len(w) for c in col for w in c.split()), default=1))
-    for size in CHAR_PT:
+        words = [w for c in col for w in re.split(r"[ \t]+", c)]
+        longest.append(max((len(w) + w.count("±") for w in words),
+                           default=1))            # ± is set in math, about two characters wide
+        longest_em.append(max((word_em(w) for w in words), default=0.5))
+    setting = None
+    sizes = list(CHAR_PT)[1:] if ncol >= 8 else list(CHAR_PT)   # 8+ columns: footnotesize
+    for size in sizes:
         avail = (TEXT_PT - 12.0 * ncol) / CHAR_PT[size]       # characters, minus tabcolsep
-        need = [(w + 1.5) / avail for w in longest]
+        need = [(w + 2) / avail for w in longest]
         if sum(need) <= 1:
+            setting = "\\" + size
             break
-    else:                             # even the longest words do not fit: share by them
-        need = [x / sum(need) for x in need]
+    else:                             # not even at \footnotesize: narrow gaps, measure in pt
+        sep = 3.0
+        avail_pt = TEXT_PT - 2 * sep * ncol
+        need = [(FONT_PT[size] * w + 4) / avail_pt for w in longest_em]
+        if sum(need) > 1:             # still too wide: share by the longest words
+            need = [x / sum(need) for x in need]
+        setting = f"\\{size}\\setlength{{\\tabcolsep}}{{{sep:g}pt}}"
     share = [l / sum(lens) for l in lens]
     fixed: set[int] = set()
     while True:                       # raise columns below their minimum, rescale the rest
@@ -202,12 +229,16 @@ def widen_table(par: str) -> tuple[str, str | None]:
             break
         fixed |= low
     rows[1] = "|" + "|".join("-" * max(3, round(200 * x)) for x in w) + "|"
-    return "\n".join(rows), size
+    return "\n".join(rows), setting
 
 
 TABLE_CAP = re.compile(r"^\*\*Table (\d+)\.\s*(.+?)\*\*\s*(.*)$", re.S)
 FIG_CAP = re.compile(r"^\*\*Figure (\d+)\.\*\*\s*(.+)$", re.S)
-IMAGE = re.compile(r"^!\[([^\]]*)\]\(([^)]+)\)\s*$")
+IMAGE = re.compile(r"^!\[([^\]]*)\]\(([^)]+)\)(\{[^}]*\})?\s*$")
+# Figures are set at the full text width: every figure is drawn 6.6 to 7.4 in wide,
+# wider than the 6.3 in text, so 80% would shrink 7.5 pt labels to about 5 pt.
+# A {width=...} after the image line in the manuscript overrides it.
+FIG_WIDTH = "100%"
 
 
 def figure_path(src: str) -> str:
@@ -229,17 +260,18 @@ def restructure(body: str, report: dict) -> str:
         if tm and i + 1 < len(pars) and is_table(pars[i + 1]):
             tables.append(int(tm.group(1)))
             title, extra = tm.group(2).strip(), tm.group(3).strip()
-            pending_caption = f"**{title}**" + (f" {extra}" if extra else "")
+            sep = "" if extra[:1] in ",.;:" else " "
+            pending_caption = f"**{title}**" + (f"{sep}{extra}" if extra else "")
             i += 1
             continue
         if is_table(p):
-            table, size = widen_table(p)
+            table, size = widen_table(re.sub(r" (?=±)", "\u00a0", p))
             block = table
             if pending_caption:
                 block += f"\n\n: {pending_caption}"
                 pending_caption = None
             if size:
-                block = f"```{{=latex}}\n\\begingroup\\{size}\n```\n\n" + block + \
+                block = f"```{{=latex}}\n\\begingroup{size}\n```\n\n" + block + \
                         "\n\n```{=latex}\n\\endgroup\n```"
             out.append(block)
             i += 1
@@ -255,9 +287,10 @@ def restructure(body: str, report: dict) -> str:
                     i += 1
             path = figure_path(im.group(2))
             if not (FIGDIR / path).exists():
-                report["missing_figures"].append(im.group(2))
+                report["missing_figures"].append(path)
             n = len(figures) if figures else 0
-            out.append(f"![{caption}]({path}){{#fig:{n} width=80%}}")
+            wm = re.search(r"width=([^\s}]+)", im.group(3) or "")
+            out.append(f"![{caption}]({path}){{#fig:{n} width={wm.group(1) if wm else FIG_WIDTH}}}")
             i += 1
             continue
         out.append(p)
@@ -299,7 +332,7 @@ def supplement_markdown(text: str, report: dict) -> str:
             pending = {"title": m.group(2).strip(), "text": []}
             continue
         if is_table(p):
-            table, size = widen_table(p)
+            table, size = widen_table(re.sub(r" (?=±)", "\u00a0", p))
             block = table
             if pending:
                 title = pending["title"]
@@ -308,7 +341,7 @@ def supplement_markdown(text: str, report: dict) -> str:
                                                    if pending["text"] else "")
                 pending = None
             if size:
-                block = f"```{{=latex}}\n\\begingroup\\{size}\n```\n\n" + block + \
+                block = f"```{{=latex}}\n\\begingroup{size}\n```\n\n" + block + \
                         "\n\n```{=latex}\n\\endgroup\n```"
             out.append(block)
             continue
@@ -487,8 +520,9 @@ def natbib_authors(entry: dict) -> str:
 def natbib_body(body: str, refs, bib: dict, report: dict) -> str:
     r"""Replace "Author (Year)" by \citet and "Author Year" (inside the manuscript's own
     parentheses) by \citealp, so the surrounding punctuation stays as written."""
-    index = {(_norm(d["surname"]), d["year"]): d["bibkey"] for d in refs if d["bibkey"]}
-    changed = {}
+    index = {(_norm(d["surname"]), d["year"]): d.get("candidates") or d["bibkey"]
+             for d in refs if d.get("candidates") or d["bibkey"]}
+    changed, used = {}, []
 
     def repl(m):
         first = m.group("first")
@@ -498,8 +532,14 @@ def natbib_body(body: str, refs, bib: dict, report: dict) -> str:
         if not (m.group("rest") or m.group("close") or lead == "(" or lead.startswith(";")):
             return m.group(0)
         key = index.get((_norm(first), year))
+        if isinstance(key, list):
+            key = resolve_by_venue(key, bib, m.string[m.end():m.end() + 120])
+            if key is None:
+                report.setdefault("ambiguous", []).append(m.group(0).strip())
+                return m.group(0)
         if key is None:
             return m.group(0)
+        used.append(key)
         written = " ".join((first + (m.group("rest") or "")).split())
         printed = natbib_authors(bib[key])
         if _norm(written.replace(",", "")) != _norm(printed.replace(",", "")):
@@ -512,8 +552,37 @@ def natbib_body(body: str, refs, bib: dict, report: dict) -> str:
 
     out = outside_code(body, lambda chunk: CITE.sub(repl, chunk))
     report["natbib_changed"] = changed
+    report["used_keys"] = list(dict.fromkeys(used))
     return out
 
+
+def resolve_by_venue(keys: list[str], bib: dict, after: str) -> str | None:
+    """Among several references.bib entries with the same first author and year, the one
+    whose journal or booktitle is written right after the citation (e.g. "Wang et al.
+    (2026), *Neurocomputing*"); None if the text does not decide."""
+    text = _norm(re.sub(r"[*_`]", "", after))
+    hits = [k for k in keys
+            if (v := _norm(bib[k]["fields"].get("journal") or bib[k]["fields"].get("booktitle")
+                           or "")) and v in text]
+    return hits[0] if len(hits) == 1 else None
+
+
+def refs_from_citations(text: str, bib: dict, report: dict) -> list[dict]:
+    """For a manuscript without a reference list: one entry per distinct "Author (Year)"
+    citation, matched to references.bib by first author surname and year. Several
+    matching entries are kept as candidates (resolved per citation by the venue written
+    next to it); citations without any entry are reported and stay plain text."""
+    refs, missing = [], []
+    for (s, y), written in sorted(text_citations(text).items()):
+        keys = [k for k, b in bib.items() if _norm(b["surname"]) == s and b["year"] == y]
+        if not keys:
+            missing.append(written)
+            continue
+        refs.append({"surname": bib[keys[0]]["surname"], "year": y, "entry": "",
+                     "bibkey": keys[0] if len(keys) == 1 else None,
+                     "candidates": keys if len(keys) > 1 else None, "written": written})
+    report["cited_not_in_bib"] = missing
+    return refs
 
 def write_main_bib(refs, bib: dict, path: Path):
     """The cited entries, prepared for plainnat: titles brace-protected so the style
@@ -534,10 +603,19 @@ def write_main_bib(refs, bib: dict, path: Path):
         f = {k: v.replace("\u2010", "-").replace("\u00a0", " ") for k, v in f.items()}
         if "pages" in f:  # plainnat recognises a range only by "-"
             f["pages"] = f["pages"].replace("\u2013", "--")
-        if f.get("doi"):
+        if f.get("doi") and etype != "misc":
             f.pop("url", None)
         if f.pop("archiveprefix", "").lower() == "arxiv" and f.get("eprint"):
             f["note"] = f"arXiv:{f.pop('eprint')}"
+        if "author" in f:             # accents as LaTeX commands so bibtex sorts them by letter
+            f["author"] = latex_accents(f["author"])
+        if "type" in f:               # plainnat lowercases the thesis type otherwise
+            f["type"] = "{" + f["type"] + "}"
+        if etype == "misc" and f.get("doi") and not f.get("url"):
+            f["url"] = "https://doi.org/" + f["doi"]   # plainnat's misc prints a url, not a doi
+        for k in f:                   # LaTeX specials in text fields (Picard: manual_seed)
+            if k not in ("doi", "url"):
+                f[k] = re.sub(r"(?<!\\)([_&%#])", r"\\\1", f[k])
         if "title" in f:
             f["title"] = "{" + f["title"] + "}"
         body = ",\n".join(f"  {k} = {{{v}}}" for k, v in f.items())
@@ -545,7 +623,44 @@ def write_main_bib(refs, bib: dict, path: Path):
     path.write_text("\n".join(out), encoding="utf-8")
 
 
-def citation_report(body: str, refs, report: dict):
+ACCENTS = {"\u0301": "'", "\u0300": "`", "\u0302": "^", "\u0308": '"', "\u0303": "~",
+           "\u030c": "v", "\u0327": "c", "\u0306": "u", "\u0328": "k", "\u030b": "H"}
+SPECIAL = {"ı": "{\\i}", "ł": "{\\l}", "Ł": "{\\L}", "ø": "{\\o}", "Ø": "{\\O}", "ß": "{\\ss}",
+           "đ": "{\\dj}", "Đ": "{\\DJ}"}
+
+
+def latex_accents(s: str) -> str:
+    """Accented letters as LaTeX accent commands ({\\v{S}}o\\v{s}ki\\'{c}): bibtex then
+    sorts and abbreviates them by their base letter (Šoškić under S, not after Z)."""
+    out = []
+    for ch in s:
+        if ch in SPECIAL:
+            out.append(SPECIAL[ch])
+            continue
+        d = unicodedata.normalize("NFD", ch)
+        if len(d) == 2 and d[1] in ACCENTS:
+            out.append("{\\" + ACCENTS[d[1]] + "{" + d[0] + "}}")
+        else:
+            out.append(ch)
+    return "".join(out)
+
+
+def citation_report(body: str, refs, report: dict, derived: bool = False):
+    if derived:
+        report["cited_not_in_refs"] = report.get("cited_not_in_bib", [])
+        report["refs_not_cited"] = []
+        report["bib_unmapped"] = report.get("cited_not_in_bib", [])
+        report["_report_lines"] = [
+            "# Citation report (generated by build.py)", "",
+            "The manuscript has no reference list. Every \"Author (Year)\" citation in the",
+            "text is matched to `paper/literature/references.bib` by first author surname",
+            "and year; where several entries match, the venue written next to the citation",
+            "decides. Nothing is added to references.bib by the build.", "",
+            "| Citation in the text | references.bib key |", "|---|---|"] + [
+            f"| {d['written']} | {d['bibkey'] or ' / '.join(d['candidates'])} |" for d in refs] + [
+            "", f"Citations without a references.bib entry: "
+            f"{', '.join(report['bib_unmapped']) or 'none'}.", ""]
+        return
     cited = text_citations(body)
     ref_index = {(strip_accents(d["surname"]).lower(), d["year"]): d for d in refs}
     report["cited_not_in_refs"] = sorted(v for k, v in cited.items() if k not in ref_index)
@@ -584,10 +699,13 @@ def finish_citation_report(refs, report: dict):
                   "\"et al.\", from the author list in references.bib.", "",
                   "| Manuscript text | natbib prints |", "|---|---|"]
         lines += [f"| {k} | {v} |" for k, v in sorted(changed.items())] + [""]
+    if report.get("ambiguous"):
+        lines += ["Citations matching several references.bib entries that the text does not "
+                  "decide (left as plain text): " + "; ".join(report["ambiguous"]), ""]
     diffs = []
     bib = report["bib"]
     for d in refs:
-        if not d["bibkey"]:
+        if not d["bibkey"] or not d["entry"]:
             continue
         e = bib[d["bibkey"]]
         if e["year"] != d["year"]:
@@ -617,6 +735,31 @@ def check_numbering(report: dict, body: str):
             if n not in report[kind]:
                 issues.append(f"text refers to {word} {n}, which has no caption")
     report["numbering"] = issues
+
+
+SECTION_REF = re.compile(r"\bSections?\s+((?:\d+(?:\.\d+)*)(?:(?:\s*,\s*|\s+and\s+|\s+to\s+|"
+                         r"\s*-\s*)\d+(?:\.\d+)*)*)")
+
+
+def check_section_refs(report: dict, body: str, abstract: str = ""):
+    """Every "Section X.Y" (also "Sections X and Y", "X to Y") must name a heading of the
+    manuscript; references to missing sections are listed with their context."""
+    heads = set(re.findall(r"^#{2,4}\s+(\d+(?:\.\d+)*)\.?\s", body, re.M))
+    issues, refs = [], 0
+    flat = " ".join(CODE_SPAN.sub(" ", abstract + "\n" + body).split())
+    for m in SECTION_REF.finditer(flat):
+        nums = re.findall(r"\d+(?:\.\d+)*", m.group(1))
+        if " to " in m.group(1) and len(nums) == 2 and "." in nums[0]:
+            a, b = nums[0].rsplit(".", 1), nums[1].rsplit(".", 1)
+            if a[0] == b[0]:
+                nums = [f"{a[0]}.{i}" for i in range(int(a[1]), int(b[1]) + 1)]
+        for n in nums:
+            refs += 1
+            if n not in heads:
+                ctx = flat[max(0, m.start() - 60):m.end() + 20]
+                issues.append(f"Section {n} does not exist: ...{ctx}...")
+    report["section_refs"] = refs
+    report["section_issues"] = issues
 
 
 def unknown_chars(text: str):
@@ -653,6 +796,7 @@ def compile_tex(tex: Path, use_bibtex: bool, report: dict):
     """pdflatex twice, or pdflatex, bibtex, pdflatex twice."""
     if not use_bibtex:
         return pdflatex(tex)
+    tex.with_suffix(".bbl").unlink(missing_ok=True)   # a stale .bbl can break the first pass
     pdflatex(tex, runs=1)
     p = run([find_tool("bibtex"), tex.stem], cwd=tex.parent, check=False)
     blg = tex.with_suffix(".blg")
@@ -666,8 +810,9 @@ def compile_tex(tex: Path, use_bibtex: bool, report: dict):
 
 # --------------------------------------------------------------------- main
 
-def build(draft: bool, make_pdf: bool, bibmode: str = "natbib", supplement: bool = True):
-    text = MANUSCRIPT.read_text(encoding="utf-8")
+def build(draft: bool, make_pdf: bool, bibmode: str = "natbib", supplement: bool = True,
+          manuscript: Path = MANUSCRIPT):
+    text = manuscript.read_text(encoding="utf-8")
     draftnote, title, abstract, body, refs_md = split_manuscript(text)
     report = {"missing_figures": []}
     supp = SUPPLEMENT.read_text(encoding="utf-8") if supplement and SUPPLEMENT.exists() else ""
@@ -675,7 +820,14 @@ def build(draft: bool, make_pdf: bool, bibmode: str = "natbib", supplement: bool
     SEP = "\n\n<!-- supplement -->\n\n"
 
     refs = parse_references(refs_md)
-    citation_report(body + SEP + supp, refs, report)
+    derived = not refs
+    if derived:                          # no reference list: build it from the citations
+        if bibmode != "natbib":
+            raise SystemExit("the manuscript has no reference list; option (a) needs one")
+        bib0 = parse_bib(BIBFILE.read_text(encoding="utf-8"))
+        refs = refs_from_citations(abstract + "\n" + body + SEP + supp, bib0, report)
+        report["bib"] = bib0
+    citation_report(body + SEP + supp, refs, report, derived)
     if bibmode == "natbib" and report["bib_unmapped"]:
         print("natbib needs every reference in references.bib; missing: "
               + ", ".join(report["bib_unmapped"]) + ". Falling back to option (a).")
@@ -683,6 +835,10 @@ def build(draft: bool, make_pdf: bool, bibmode: str = "natbib", supplement: bool
     report["bibmode"] = bibmode
     if bibmode == "natbib":
         body, supp = natbib_body(body + SEP + supp, refs, report["bib"], report).split(SEP)
+        abstract = natbib_body(abstract, refs, report["bib"], dict(report))
+        if derived:
+            refs = [{"bibkey": k, "surname": "", "year": "", "entry": ""}
+                    for k in report["used_keys"]]
         write_main_bib(refs, report["bib"], HERE / "main.bib")
         bibliography = "```{=latex}\n\\bibliographystyle{plainnat}\n\\bibliography{main}\n```\n"
     else:
@@ -690,6 +846,7 @@ def build(draft: bool, make_pdf: bool, bibmode: str = "natbib", supplement: bool
     finish_citation_report(refs, report)
     body = restructure(body, report)
     check_numbering(report, body)
+    check_section_refs(report, body, abstract)
     body = rewrite_math(body)
     appendix = ""
     if supp:
@@ -715,6 +872,8 @@ def build(draft: bool, make_pdf: bool, bibmode: str = "natbib", supplement: bool
          "--lua-filter", str(HERE / "filters.lua"), "--shift-heading-level-by=-1",
          "--wrap=preserve", "-o", str(HERE / "main.tex")])
     src.unlink()
+    if report["missing_figures"]:
+        placeholder_figures(HERE / "main.tex", report["missing_figures"])
     if bibmode != "natbib":
         for stale in ("main.bib", "main.bbl", "main.blg"):
             (HERE / stale).unlink(missing_ok=True)
@@ -724,8 +883,27 @@ def build(draft: bool, make_pdf: bool, bibmode: str = "natbib", supplement: bool
         pages, log = compile_tex(HERE / "main.tex", bibmode == "natbib", report)
         warnings = latex_warnings(log)
         bundle_arxiv(report)
+        bundle_overleaf(report)
 
     print_report(report, pages, warnings, len(refs))
+
+
+def placeholder_figures(tex_path: Path, missing: list):
+    """A figure whose file is not in paper/figures_manuscript/ is printed as a framed
+    box naming the file, so the PDF still builds and the gap is visible."""
+    tex = tex_path.read_text(encoding="utf-8")
+    for name in missing:
+        box = (r"\fbox{\parbox[c][0.25\textheight][c]{0.9\linewidth}{\centering\small "
+               r"Figure file not in the repository:\\ \nolinkurl{paper/figures_manuscript/"
+               + name + "}}}")
+        tex = re.sub(r"\\includegraphics(\[[^\]]*\])?\{" + re.escape(name) + r"\}",
+                     lambda m: box, tex)
+    tex_path.write_text(tex, encoding="utf-8")
+
+
+def copy_figures(tex: str, dest: Path):
+    for name in re.findall(r"\\includegraphics(?:\[[^\]]*\])?\{([^}]+)\}", tex):
+        shutil.copy(FIGDIR / name, dest / name)
 
 
 def bundle_arxiv(report: dict):
@@ -736,8 +914,7 @@ def bundle_arxiv(report: dict):
     shutil.copy(HERE / "main.tex", ARXIV / "main.tex")
     if report.get("bibmode") == "natbib":
         shutil.copy(HERE / "main.bbl", ARXIV / "main.bbl")  # arXiv does not run bibtex
-    for name in re.findall(r"\\includegraphics(?:\[[^\]]*\])?\{([^}]+)\}", tex):
-        shutil.copy(FIGDIR / name, ARXIV / "figures" / name)
+    copy_figures(tex, ARXIV / "figures")
     pages, log = pdflatex(ARXIV / "main.tex")
     report["arxiv_pages"] = pages
     report["arxiv_missing"] = re.findall(r"File `([^']+)' not found", log)
@@ -746,6 +923,27 @@ def bundle_arxiv(report: dict):
             f.unlink()
     zip_base = HERE / "arxiv"
     shutil.make_archive(str(zip_base), "zip", ARXIV)
+
+
+def bundle_overleaf(report: dict):
+    """paper/latex/overleaf/ and overleaf.zip: main.tex, main.bib and the figures, for
+    an Overleaf project (Overleaf runs pdflatex and bibtex itself). Checked by compiling
+    the folder on its own with pdflatex, bibtex and pdflatex twice."""
+    if OVERLEAF.exists():
+        shutil.rmtree(OVERLEAF)
+    (OVERLEAF / "figures").mkdir(parents=True)
+    tex = (HERE / "main.tex").read_text(encoding="utf-8")
+    shutil.copy(HERE / "main.tex", OVERLEAF / "main.tex")
+    if report.get("bibmode") == "natbib":
+        shutil.copy(HERE / "main.bib", OVERLEAF / "main.bib")
+    copy_figures(tex, OVERLEAF / "figures")
+    pages, log = compile_tex(OVERLEAF / "main.tex", report.get("bibmode") == "natbib", {})
+    report["overleaf_pages"] = pages
+    report["overleaf_missing"] = re.findall(r"File `([^']+)' not found", log)
+    for f in OVERLEAF.iterdir():
+        if f.suffix in (".aux", ".log", ".out", ".pdf", ".blg", ".bbl"):
+            f.unlink()
+    shutil.make_archive(str(HERE / "overleaf"), "zip", OVERLEAF)
 
 
 def print_report(r: dict, pages: int, w, nrefs: int):
@@ -758,6 +956,10 @@ def print_report(r: dict, pages: int, w, nrefs: int):
                             f"{', '.join(f'S{n}' for n in r.get('supp_tables', []))}"
                             if r.get("supplement") else "not included"))
     print("numbering: " + ("ok" if not r["numbering"] else "; ".join(r["numbering"])))
+    print(f"section references: {r.get('section_refs', 0)}, to missing sections: "
+          f"{len(r.get('section_issues', []))}")
+    for i in r.get("section_issues", []):
+        print(f"  {i}")
     print("missing figures: " + (", ".join(r["missing_figures"]) or "none"))
     if r["unknown_chars"]:
         print("non-ASCII characters not mapped (check rendering): " + " ".join(r["unknown_chars"]))
@@ -785,6 +987,12 @@ def print_report(r: dict, pages: int, w, nrefs: int):
     else:
         print(f"bibliography: reference list as written (option a); not in references.bib: "
               f"{len(r['bib_unmapped'])} (see citation_report.md)")
+    if r.get("ambiguous"):
+        print("ambiguous citations left as text: " + "; ".join(r["ambiguous"]))
+    if "overleaf_pages" in r:
+        print(f"overleaf/: compiles on its own (pdflatex + bibtex), {r['overleaf_pages']} pages; "
+              "missing files: " + (", ".join(r["overleaf_missing"]) or "none")
+              + "; zipped to overleaf.zip")
     if "arxiv_pages" in r:
         print(f"arxiv/: compiles on its own, {r['arxiv_pages']} pages; missing files: "
               + (", ".join(r["arxiv_missing"]) or "none") + "; zipped to arxiv.zip")
@@ -799,8 +1007,10 @@ def main():
                          "manuscript's list as written (option a)")
     ap.add_argument("--no-supplementary", action="store_true",
                     help="leave out paper/supplementary.md (appended by default)")
+    ap.add_argument("--manuscript", default=str(MANUSCRIPT),
+                    help="Markdown source (default paper/manuscript_v2.md)")
     a = ap.parse_args()
-    build(a.draft, not a.no_pdf, a.bib, not a.no_supplementary)
+    build(a.draft, not a.no_pdf, a.bib, not a.no_supplementary, Path(a.manuscript))
 
 
 if __name__ == "__main__":
