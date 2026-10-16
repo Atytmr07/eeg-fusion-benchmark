@@ -1,0 +1,41 @@
+{
+  "definition": "docs/EVENTS.md",
+  "threshold": 0.5,
+  "window_s": 10.0,
+  "scoring": "timescoring EventScoring defaults (SzCORE)",
+  "mode": "cross-dataset: trained on CHB-MIT (one training), tested on every Siena recording",
+  "pipeline": {
+    "name": "P2",
+    "band": [
+      0.5,
+      70.0
+    ],
+    "notch_hz": "mains",
+    "ica": null,
+    "reject": false,
+    "norm": "window",
+    "signal_tag": "bp0.5-70_nmains"
+  },
+  "score_blend_w": 0.675,
+  "baselines": "fitted on all CHB-MIT training persons, as in cross_dataset",
+  "patients": [
+    "PN00",
+    "PN01",
+    "PN03",
+    "PN05",
+    "PN06",
+    "PN07",
+    "PN09",
+    "PN10",
+    "PN11",
+    "PN12",
+    "PN13",
+    "PN14",
+    "PN16",
+    "PN17"
+  ],
+  "elapsed_s": 624.9,
+  "dataset": "siena",
+  "reported": "seizure-level sensitivity only",
+  "false_alarms_per_hour": "not representative for Siena, not compared (recordings are cut around the seizures; docs/EVENTS.md)"
+}

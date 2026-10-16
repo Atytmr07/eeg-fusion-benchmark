@@ -85,7 +85,7 @@ Complete runs (45, 23 folds each): P0/seed 0, P0/seed 1, P0/seed 2, P0/seed 3, P
 | P5 | 5 | **0.827 ± 0.067** | 0.712 ± 0.052 | 0.707 ± 0.048 | 0.753 ± 0.028 | 0.725 ± 0.036 |
 | P6a | 5 | **0.750 ± 0.032** | 0.696 ± 0.032 | 0.691 ± 0.020 | 0.688 ± 0.034 | 0.662 ± 0.024 |
 | P6b | 5 | **0.797 ± 0.032** | 0.712 ± 0.048 | 0.730 ± 0.032 | 0.749 ± 0.048 | 0.710 ± 0.039 |
-| P6c | 3 | **0.743 ± 0.042** | 0.683 ± 0.027 | 0.693 ± 0.025 | 0.684 ± 0.023 | 0.667 ± 0.036 |
+| P6c | 5 | **0.758 ± 0.037** | 0.702 ± 0.033 | 0.691 ± 0.033 | 0.703 ± 0.030 | 0.667 ± 0.026 |
 
 **Table R6. CHB-MIT, false alarms per hour (pooled over persons, true recording time) by pipeline and fusion operator, mean ± SD over seed sets.** Lower is better; no bold. Source: as Table R5.
 
@@ -99,9 +99,7 @@ Complete runs (45, 23 folds each): P0/seed 0, P0/seed 1, P0/seed 2, P0/seed 3, P
 | P5 | 5 | 8.376 ± 0.489 | 5.624 ± 0.427 | 5.207 ± 0.387 | 5.716 ± 0.347 | 5.867 ± 0.503 |
 | P6a | 5 | 7.148 ± 0.735 | 5.182 ± 0.235 | 4.856 ± 0.681 | 5.282 ± 0.730 | 5.476 ± 0.377 |
 | P6b | 5 | 8.737 ± 0.371 | 5.886 ± 0.442 | 5.717 ± 0.230 | 5.453 ± 0.408 | 6.410 ± 0.704 |
-| P6c | 3 | 6.500 ± 0.611 | 4.952 ± 0.504 | 4.854 ± 0.186 | 5.590 ± 0.500 | 5.667 ± 0.306 |
-
-Event metrics not yet computed for: loso_P6c_r3_cuda, loso_P6c_r4_cuda.
+| P6c | 5 | 6.694 ± 0.539 | 4.973 ± 0.385 | 4.758 ± 0.188 | 5.349 ± 0.565 | 5.661 ± 0.217 |
 
 **Figure R (CHB-MIT).** Rank of each fusion operator (1 = best macro F1) in each of the 45 pipeline x seed runs: counts per rank (left) and the rank of every run (right). `paper/figures_manuscript/results_rank_distribution_chbmit.png`
 
@@ -735,3 +733,23 @@ Siena: only seizure-level sensitivity is reported. Its recordings are cut around
 | PN16 | 5 | 0.591 ± 0.124 | **0.689 ± 0.073** | 0.682 ± 0.061 | 0.585 ± 0.059 | 0.554 ± 0.054 |
 | PN17 | 5 | 0.696 ± 0.077 | **0.793 ± 0.081** | 0.729 ± 0.092 | 0.790 ± 0.045 | 0.762 ± 0.064 |
 | mean over patients | 5 | 0.598 ± 0.044 | **0.652 ± 0.052** | 0.645 ± 0.023 | 0.599 ± 0.067 | 0.603 ± 0.023 |
+
+**Table R38. Trained on CHB-MIT, tested on Siena (P6c): detected seizures per patient (mean over seed sets) out of the annotated ones.** SzCORE event scoring; sensitivity over all patients: early 0.89, late 0.85, gated 0.86, attention 0.88, score 0.85. False alarms are not reported for Siena. Source: `events/perperson.csv`.
+
+| patient | seizures | early | late | gated | attention | score |
+|---|---|---|---|---|---|---|
+| PN00 | 5 | 5.00 | 5.00 | 5.00 | 5.00 | 5.00 |
+| PN01 | 2 | 2.00 | 2.00 | 2.00 | 2.00 | 2.00 |
+| PN03 | 2 | 2.00 | 2.00 | 2.00 | 2.00 | 2.00 |
+| PN05 | 3 | 2.80 | 3.00 | 3.00 | 3.00 | 3.00 |
+| PN06 | 5 | 5.00 | 4.20 | 3.60 | 4.80 | 5.00 |
+| PN07 | 1 | 0.80 | 1.00 | 1.00 | 0.80 | 0.20 |
+| PN09 | 3 | 3.00 | 3.00 | 3.00 | 2.80 | 2.80 |
+| PN10 | 10 | 5.20 | 3.60 | 4.60 | 4.80 | 4.40 |
+| PN11 | 1 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 |
+| PN12 | 4 | 4.00 | 4.00 | 4.00 | 4.00 | 4.00 |
+| PN13 | 3 | 3.00 | 3.00 | 3.00 | 3.00 | 2.40 |
+| PN14 | 4 | 4.00 | 4.00 | 4.00 | 4.00 | 4.00 |
+| PN16 | 2 | 2.00 | 2.00 | 2.00 | 2.00 | 2.00 |
+| PN17 | 2 | 2.00 | 2.00 | 2.00 | 2.00 | 2.00 |
+| all patients | 47 | 41.80 | 39.80 | 40.20 | 41.20 | 39.80 |

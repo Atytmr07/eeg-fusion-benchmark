@@ -30,3 +30,6 @@ Thumbs.db
 .venv-gpu/
 results_v2/ica_repro/*/*.npz
 results_v2/_events_partial/
+
+# trained models of the multiverse runs (4.6 GB); results, predictions and event metrics are tracked
+results_v2/**/models/
