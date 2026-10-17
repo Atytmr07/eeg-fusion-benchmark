@@ -12,7 +12,7 @@
 
 # Do Fusion Operators Matter, and Does the Answer Survive Preprocessing? A Parameter-Matched Multiverse Comparison of Multimodal CNN Fusion for EEG Seizure Detection
 
-Emre Atay Tümer, Hasan Berk Berber, Sevgi Şengül Ayan (order to be agreed)
+Emre Atay Tümer, Hasan Berk Berber, Sevgi Şengül Ayan
 Antalya Bilim University
 
 ## Abstract
