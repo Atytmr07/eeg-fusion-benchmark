@@ -61,7 +61,7 @@ ATOM = {"a": "http://www.w3.org/2005/Atom", "o": "http://a9.com/-/spec/opensearc
         "x": "http://arxiv.org/schemas/atom"}
 UA = "eeg-fusion-benchmark literature screen (mailto:hasanberkberber@hotmail.com)"
 
-csv.field_size_limit(sys.maxsize)
+csv.field_size_limit(min(sys.maxsize, 2**31 - 1))   # C long is 32-bit on Windows
 
 
 def records_path(part: str) -> Path:
