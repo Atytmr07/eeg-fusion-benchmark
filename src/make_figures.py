@@ -71,7 +71,9 @@ def _plt():
 def save(fig, name: str) -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     for ext in ("png", "pdf"):
-        fig.savefig(OUT / f"{name}.{ext}", bbox_inches="tight")
+        # no creation date in the PDF, so a rerun gives identical files
+        meta = {"CreationDate": None} if ext == "pdf" else None
+        fig.savefig(OUT / f"{name}.{ext}", bbox_inches="tight", metadata=meta)
     print(f"written: {OUT / name}.png/.pdf")
 
 
