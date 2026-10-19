@@ -1,5 +1,13 @@
 # Pipeline and Methodology
 
+> **Scope.** This document was written for the first draft (`paper/manuscript.md`: Bonn
+> and CHB-MIT, one pipeline). The current study (`paper/manuscript_v2.md`) adds Siena,
+> the nine-pipeline multiverse, five GPU seed sets and the seizure-level metrics; those are
+> documented in the manuscript's Methods and in `docs/RESULTS.md`, `docs/EVENTS.md`,
+> `docs/SIENA.md` and `docs/ICA_REPRO.md`. For data, models, parameter matching, training
+> and the statistical tests this document remains the detailed reference; where it and
+> the current manuscript differ, the manuscript and the code are authoritative.
+
 This document describes, end to end, how every number in `paper/manuscript.md` is
 produced: data, preprocessing, models, training, evaluation, and statistical analysis.
 Every setting below is taken from the code, not from memory, and each section names the
