@@ -859,10 +859,12 @@ produced differences of the same kind, which suggests that no machine gives the
 correct result and that choosing a different machine would not avoid them. The window-level results of this study rest on one
 cleaning and are unaffected; but a study that cleans its training data on one machine
 and its test data on another, or that compares its numbers with another group's, can
-see differences of the size of the effect it studies. We are not aware that this has been reported for EEG artefact
-removal [ref]: algorithms that take threshold decisions near floating-point precision
-can be deterministic within a machine (GEDAI) or even within one execution context
-(Infomax) and still not reproducible across machines. We recommend that studies using
+see differences of the size of the effect it studies. Neuroimaging pipelines, including ICA decompositions of fMRI
+data, are known to give different results on different operating systems (Glatard et
+al. 2015); we are not aware of a comparable report for EEG artefact removal, where
+algorithms that take threshold decisions near floating-point precision can be
+deterministic within a machine (GEDAI) or even within one execution context (Infomax)
+and still not reproducible across machines. We recommend that studies using
 artefact removal store the cleaned signals, or at least the decomposition and the
 removed components, alongside the code.
 
@@ -910,20 +912,23 @@ considered irrelevant before looking at the results.
 
 ### 4.9 What do the results mean clinically?
 
-*(Draft. All nine pipelines on CHB-MIT, five seed sets each. Statements
-marked [ref] need a source from the literature review.)*
+*(Draft. All nine pipelines on CHB-MIT, five seed sets each.)*
 
 None of the systems studied here is close to clinical use, and the study was not
 designed to produce one: the threshold was fixed at 0.5, there was no post-processing,
 and the models were trained on other people's seizures only. At that operating point
 the operators detected 68 to 79 percent of CHB-MIT's seizures with 5.2 to 7.7 false
 alarms per hour, that is 125 to 185 false alarms per day of monitoring, and about 2
-percent of all detections were seizures. Clinically acceptable systems are usually
-described with false alarm rates below about one per hour, often far lower, at a high
-sensitivity [ref]; no person in CHB-MIT reached a mean below one false alarm per hour.
-Post-processing (smoothing consecutive windows, a minimum event duration) and a
-threshold chosen per patient typically trade a little sensitivity for far fewer false
-alarms [ref]; we left both out on purpose, so that the operators are compared on their
+percent of all detections were seizures. Generic scalp EEG detectors evaluated for
+clinical use have reported 0.1 to 5 false alarms per hour, most about 0.2 to 0.3, and
+patient-specific detectors fewer, and a low false alarm rate is regarded as essential
+for clinical acceptance, and validation standards require it to be reported
+(Baumgartner et al. 2018; Beniczky and Ryvlin 2018); no person in CHB-MIT reached a mean below one false alarm per hour.
+The detection threshold trades sensitivity against false alarms, and training or
+adjusting the detector per patient lowers the false alarm rate (Baumgartner et al.
+2018): patient-specific classifiers detected 96 percent of the CHB-MIT seizures with a
+median of two false detections per day (Shoeb and Guttag 2010). We left per-patient
+thresholds and post-processing of consecutive windows out on purpose, so that the operators are compared on their
 raw output, and the absolute numbers should be read in that light. The criteria were
 fixed before the runs; choosing a threshold or a post-processing rule after seeing the
 results would select the criterion on the outcome.
@@ -932,13 +937,14 @@ Three results nevertheless bear on clinical use. First, the operators that diffe
 a few hundredths of macro F1 at the window level differed by little more at the seizure
 level, except early fusion, which detected the most seizures (0.79) at the most false
 alarms (7.7 per hour); which of these is preferable is a clinical choice between missed
-seizures and alarm fatigue [ref], not a property that window-level metrics reveal.
+seizures and alarm fatigue (Sendelbach and Funk 2013), not a property that window-level
+metrics reveal.
 Second, the person mattered more than any modelling choice: mean sensitivity ranged
 from 0.24 (chb06) to 1.00 across persons and the false alarm rate from 1.3 to 12.3 per
 hour, while the operators' means spanned 0.68 to 0.79 and 5.2 to 7.7. For a patient,
 whether the detector works depends far more on who they are than on the fusion
 operator, which supports patient-specific adaptation over the search for a better
-generic operator [ref]. Third, an artefact removal step that does not reproduce across
+generic operator (Shoeb and Guttag 2010; Baumgartner et al. 2018). Third, an artefact removal step that does not reproduce across
 machines (Section 4.5) is a clinical risk as much as a scientific one: the same model
 could detect a different set of a patient's seizures depending on where the recording
 is cleaned.
