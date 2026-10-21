@@ -150,10 +150,9 @@ In option (a) no `.bbl` is needed, because the bibliography is inline. Upload
 
 ## Open points
 
-- **Authors and order.** The current list is "Emre Atay Tümer, Hasan Berk Berber,
-  Sevgi Şengül Ayan", Antalya Bilim University. It is provisional: the order and
-  final form will be settled with the advisor. Change them in `template.tex`
-  (`\author{...}` and `pdfauthor`).
+- **Authors and order.** "Emre Atay Tümer, Hasan Berk Berber, Sevgi Şengül Ayan",
+  Antalya Bilim University, in this order (agreed 17 October 2026). If an author is
+  added, change both `\author{...}` and `pdfauthor` in `template.tex`.
 - **Manuscript text vs natbib.** Five author-name differences and two reference
   list entries with incomplete author lists are listed in `citation_report.md`.
   They can be fixed in `manuscript.md`; the PDF already prints the names from
