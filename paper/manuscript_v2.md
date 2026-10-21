@@ -539,226 +539,353 @@ by recording.
 
 ## 3. Results
 
-All numbers below come from the 45 runs per dataset (nine pipelines by five seed sets;
-23 folds on CHB-MIT, 14 on Siena; `results_v2/multiverse/chbmit_cuda`,
-`results_v2/multiverse/siena_cuda`) and the 45 cross-dataset runs
-(`results_v2/cross`). Means over runs are given with the standard deviation over runs.
+The evaluation comprised nine preprocessing pipelines, five seed sets and five fusion
+operators, together with single-branch neural-network and classical controls. Each
+pipeline-seed configuration was evaluated with leave-one-subject-out (LOSO)
+cross-validation on CHB-MIT (23 subjects) and Siena (14 subjects), giving 45 runs per
+dataset; 45 further runs evaluated transfer from CHB-MIT to Siena
+(`results_v2/multiverse/chbmit_cuda`, `results_v2/multiverse/siena_cuda`,
+`results_v2/cross`). Means over runs are given with the standard deviation over runs.
 
-### 3.1 Performance across preprocessing pipelines (RQ1)
+The results are presented in seven stages. We first examine whether fusion operators
+offer a meaningful performance advantage and whether it justifies their architectural
+complexity. We then distinguish statistical significance from practical equivalence,
+assess the stability of the operators' ranking across pipelines and seeds, and identify
+the principal sources of performance variability. Finally, we examine the effects and
+the reproducibility of artefact removal, the seizure-level detection, and whether the
+performance patterns generalise across datasets.
 
-**Table 2. Window-level performance of the fusion operators**, mean and SD over the 45
-runs of each dataset (fold means within a run). Per pipeline: Figure 2 and
-Supplementary Table S6.
+### 3.1 Fusion complexity does not consistently translate into superior performance
 
-| Operator | CHB-MIT macro F1 | CHB-MIT AUPRC | CHB-MIT bal. acc. | Siena macro F1 | Siena AUPRC | Siena bal. acc. |
+The five fusion operators reached broadly comparable window-level performance across
+the preprocessing multiverse, although their relative behaviour differed between
+datasets (Table 2, Figure 2).
+
+On CHB-MIT, mean macro F1 over the 45 runs ranged from 0.673 ± 0.017 for score fusion to
+0.686 ± 0.016 for gated fusion; early, late and attention fusion reached 0.677 ± 0.013,
+0.681 ± 0.015 and 0.683 ± 0.014. Within a pipeline, the best and the worst operator
+differed by 0.013 to 0.035 macro F1 (median 0.021), and each operator's mean varied
+little across pipelines (SD 0.007 to 0.008).
+
+On Siena, the operators differed more. Score fusion reached the highest mean macro F1
+(0.670 ± 0.024), followed by late (0.640 ± 0.025), gated (0.631 ± 0.031), attention
+(0.625 ± 0.023) and early fusion (0.617 ± 0.021). Within a pipeline the best and the worst
+operator differed by 0.042 to 0.070 (median 0.053), and the variation across pipelines
+was larger than on CHB-MIT (SD 0.011 to 0.024). The separation between operators was
+therefore dataset-dependent, and its size has to be weighed against its uncertainty
+(Section 3.2) rather than read as superiority from mean performance alone.
+
+Increasing architectural complexity did not consistently improve performance. The
+spectrogram network widened to the fusion budget reached a mean macro F1 of 0.683 on
+CHB-MIT, within the range of the jointly trained operators (0.677 to 0.686), and 0.663
+on Siena, above every jointly trained operator (0.617 to 0.640) and below only score
+fusion (0.670); it exceeded the best operator of a run in 9 (CHB-MIT) and 16 (Siena) of
+45 runs. The waveform network was weaker (0.662 and 0.612 at the fusion budget, 0.663 and
+0.609 at default width), and widening either branch to the fusion budget changed little
+(Supplementary Table S7). The shallow classifier, a logistic regression with 127
+parameters on seven hand-crafted features per channel, was equally competitive: its
+mean macro F1 was 0.690 on CHB-MIT, above the best operator of a run in 12 of 45 runs,
+and 0.720 on Siena, above the best operator in 43 of 45 runs and in all nine pipelines.
+
+These descriptive advantages did not amount to statistically significant superiority.
+Tested like the operator pairs (corrected test, Holm across the 30 control-operator
+comparisons of a pipeline; `src/controls_stats.py`), no control differed significantly
+from any operator in any pipeline of either dataset, in macro F1 or AUPRC; the smallest
+corrected p was 0.12 (shallow against early fusion on Siena), and equivalence within
+0.05 macro F1 could be shown in 34 of 270 comparisons on CHB-MIT and 13 of 270 on Siena
+(Figure 2c, f). The controls therefore stood to the operators as the operators stood to
+each other, and the additional complexity of multimodal fusion was not accompanied by a
+reliable improvement in macro F1 under the conditions evaluated.
+
+Classification at a threshold and the ranking of windows by probability behaved
+differently. On CHB-MIT gated fusion had the highest mean AUPRC (0.666 ± 0.018) and early
+fusion the lowest (0.613 ± 0.024); on Siena early fusion reached 0.496 ± 0.035 against
+0.631 ± 0.033 for score fusion. Early fusion had the lowest AUPRC in all nine pipelines
+of both datasets (0.564 to 0.632 on CHB-MIT against at least 0.631 for every other
+operator, 0.453 to 0.540 on Siena against at least 0.522), although its macro F1 at the
+0.5 threshold differed much less. On CHB-MIT the fused models ranked windows better on
+average than a single branch (late, gated, attention and score fusion 0.655 to 0.666
+against at most 0.618); on Siena the difference from the best single branch (0.581) was
+inconsistent, from -0.085 (early fusion) to +0.050 (score fusion). Score fusion, which
+blends the two default-width single-branch networks, had the lowest Brier score of all
+models (0.265 and 0.304), and early fusion the highest among the operators on CHB-MIT
+(0.330 against 0.294 to 0.300). Fusion complexity, thresholded classification and
+probability ranking are therefore distinct properties: an operator can reach a
+competitive macro F1 without discriminating equally well across thresholds.
+
+**Table 2. Window-level performance of the fusion operators and the main controls**,
+mean and SD over the 45 runs of each dataset (fold means within a run). Per pipeline:
+Figure 2 and Supplementary Table S6; all six controls with their parameter counts:
+Supplementary Table S7.
+
+| Model | CHB-MIT macro F1 | CHB-MIT AUPRC | CHB-MIT bal. acc. | Siena macro F1 | Siena AUPRC | Siena bal. acc. |
 |---|---|---|---|---|---|---|
 | early | 0.677 ± 0.013 | 0.613 ± 0.024 | 0.682 ± 0.011 | 0.617 ± 0.021 | 0.496 ± 0.035 | 0.642 ± 0.022 |
 | late | 0.681 ± 0.015 | 0.656 ± 0.019 | 0.679 ± 0.012 | 0.640 ± 0.025 | 0.599 ± 0.040 | 0.679 ± 0.018 |
 | gated | 0.686 ± 0.016 | 0.666 ± 0.018 | 0.683 ± 0.013 | 0.631 ± 0.031 | 0.591 ± 0.034 | 0.674 ± 0.022 |
 | attention | 0.683 ± 0.014 | 0.655 ± 0.020 | 0.682 ± 0.013 | 0.625 ± 0.023 | 0.580 ± 0.034 | 0.667 ± 0.020 |
 | score | 0.673 ± 0.017 | 0.655 ± 0.017 | 0.678 ± 0.015 | 0.670 ± 0.024 | 0.631 ± 0.033 | 0.689 ± 0.022 |
+| raw1d_wide (control) | 0.662 ± 0.012 | 0.605 ± 0.017 | 0.673 ± 0.010 | 0.612 ± 0.028 | 0.577 ± 0.033 | 0.657 ± 0.019 |
+| spec2d_wide (control) | 0.683 ± 0.014 | 0.618 ± 0.016 | 0.680 ± 0.013 | 0.663 ± 0.026 | 0.581 ± 0.027 | 0.681 ± 0.021 |
+| shallow (control) | 0.690 ± 0.008 | 0.640 ± 0.008 | 0.739 ± 0.007 | 0.720 ± 0.019 | 0.667 ± 0.015 | 0.770 ± 0.017 |
 
-The operators performed within a narrow band. On CHB-MIT the best and worst operator of
-a pipeline differed by 0.013 to 0.035 macro F1 (median 0.021), and each operator's mean
-varied across the nine pipelines with an SD of 0.007 to 0.008. On Siena the spread was
-larger, 0.042 to 0.070 within a pipeline (median 0.053) and an SD of 0.011 to 0.024
-across pipelines. Preprocessing had no detectable main effect: in the repeated-measures
-ANOVA the pipeline effect was F = 0.29 on CHB-MIT (Greenhouse-Geisser p = 0.83, partial
-eta squared 0.013) and F = 1.09 on Siena (p = 0.36, 0.077), and its variance component
-was estimated below zero on CHB-MIT (-2.7e-5) and at 0.06 percent of the variance on
-Siena (SD 0.003 macro F1).
+![Operators against the controls](figures_manuscript/figure2_performance.png)
 
-One pattern held in every pipeline of both datasets: early fusion had the lowest AUPRC,
-in 9 of 9 pipelines on CHB-MIT (0.564 to 0.632 against at least 0.631 for every other
-operator) and in 9 of 9 on Siena (0.453 to 0.540 against at least 0.522), although its
-macro F1 at the 0.5 threshold was close to the others on CHB-MIT. Its ranking of
-windows by ictal probability is therefore consistently the weakest, while its
-thresholded decisions are not.
+**Figure 2.** Fusion operators against the controls. **a, b, d, e**, Macro F1 and AUPRC of
+each operator and of two controls (the spectrogram network of the fusion budget,
+spec2d_wide, and the shallow logistic regression) in each preprocessing pipeline, on
+CHB-MIT (a, b; 23 LOSO folds) and Siena (d, e; 14 folds); mean and SD over five seed
+sets, each run averaged over its folds. **c, f**, Paired difference in macro F1 between
+each operator and each control, one point per pipeline (fold values averaged over seed
+sets), with the mean as a bar; none of the 270 control-operator comparisons per dataset
+was significant after Holm correction.
 
-**Fusion against the controls.** Table 3 gives the controls over the same runs.
-Combining the two representations did not improve macro F1 over the spectrogram branch
-alone: the spectrogram network widened to the fusion budget reached 0.683 on CHB-MIT,
-within the range of the jointly trained operators (0.677 to 0.686), and 0.663 on Siena,
-above every jointly trained operator (0.617 to 0.640) and below only score fusion
-(0.670); it exceeded the best operator of a run in 9 (CHB-MIT) and 16 (Siena) of 45
-runs. The waveform branch was weaker (0.663 and 0.609 at default width, 0.662 and
-0.612 widened). On CHB-MIT the fused models ranked windows better on average: late,
-gated, attention and score fusion reached a mean AUPRC of 0.655 to 0.666 against at
-most 0.618 for a single branch; on Siena the difference from the best single branch (0.581) was
-inconsistent, from -0.085 (early fusion, 0.496) to +0.050 (score fusion, 0.631). Tested like
-the operator pairs (corrected test, Holm across the 30 control-operator comparisons of
-a pipeline; `src/controls_stats.py`), no control differed significantly from any
-operator in any pipeline of either dataset, in macro F1 or AUPRC; the smallest
-corrected p was 0.12 (shallow against early fusion on Siena, macro F1). Equivalence
-within 0.05 macro F1 could be shown in 34 of the 270 control-operator comparisons on
-CHB-MIT and 13 on Siena.
-Widening a single branch to the fusion budget changed little (on CHB-MIT, raw1d 0.663
-and 0.662, spec2d 0.679 and 0.683 macro F1), so the comparison is not limited by the
-smaller size of the default-width branches. The classical shallow model, a logistic
-regression with 127 parameters on seven hand-crafted features per channel, had the
-highest mean macro F1 and balanced accuracy on both datasets: on CHB-MIT 0.690, above
-the best operator of a run in 12 of 45 runs and above every operator's seed mean in 5
-of 9 pipelines, although its AUPRC (0.640) was below that of four operators; on Siena
-0.720 with an AUPRC of 0.667, above the best operator in 43 of 45 runs and in all nine
-pipelines. Score fusion, which blends the two default-width single-branch networks, had
-the lowest Brier score of all models (0.265 and 0.304), and early fusion the highest
-among the operators on CHB-MIT (0.330 against 0.294 to 0.300), in line with its weaker
-ranking of windows.
+### 3.2 Small performance differences do not establish practical equivalence
 
-**Table 3. Controls**, mean and SD over the same 45 runs per dataset as Table 2
-(`results_v2/results/controls_*.csv`). Parameters with 18 input channels; the classical
-models are logistic regressions (18 log variances; seven features per channel), with
-an intercept.
+The narrow differences between operators called for a formal distinction between
+statistical significance and practical equivalence (Figure 3).
 
-| Control | Parameters | CHB-MIT macro F1 | CHB-MIT AUPRC | CHB-MIT bal. acc. | Siena macro F1 | Siena AUPRC | Siena bal. acc. |
-|---|---|---|---|---|---|---|---|
-| raw1d | 28,850 | 0.663 ± 0.014 | 0.604 ± 0.019 | 0.678 ± 0.013 | 0.609 ± 0.034 | 0.565 ± 0.040 | 0.659 ± 0.024 |
-| spec2d | 34,546 | 0.679 ± 0.010 | 0.598 ± 0.017 | 0.676 ± 0.010 | 0.660 ± 0.022 | 0.576 ± 0.031 | 0.680 ± 0.019 |
-| raw1d_wide | 103,712 | 0.662 ± 0.012 | 0.605 ± 0.017 | 0.673 ± 0.010 | 0.612 ± 0.028 | 0.577 ± 0.033 | 0.657 ± 0.019 |
-| spec2d_wide | 102,236 | 0.683 ± 0.014 | 0.618 ± 0.016 | 0.680 ± 0.013 | 0.663 ± 0.026 | 0.581 ± 0.027 | 0.681 ± 0.021 |
-| logvar | 19 | 0.631 ± 0.009 | 0.577 ± 0.016 | 0.708 ± 0.006 | 0.630 ± 0.034 | 0.572 ± 0.036 | 0.705 ± 0.027 |
-| shallow | 127 | 0.690 ± 0.008 | 0.640 ± 0.008 | 0.739 ± 0.007 | 0.720 ± 0.019 | 0.667 ± 0.015 | 0.770 ± 0.017 |
+In both datasets, none of the 90 pairwise operator comparisons (10 pairs in each of nine
+pipelines) was significant after Holm correction; the smallest corrected p was 0.19 on
+CHB-MIT and 0.095 on Siena. The absence of a significant difference, however, did not
+mean that the operators were practically equivalent.
 
-![Performance per pipeline and operator](figures_manuscript/figure2_performance.png)
+At the margin of ±0.05 macro F1 fixed in advance, 73 of the 90 comparisons on CHB-MIT
+were equivalent, and two pairs, late-attention and gated-attention, were equivalent in
+all nine pipelines. At the stricter margin of ±0.02 only one comparison was. On Siena the
+evidence for equivalence was much weaker: 21 of 90 comparisons were equivalent within
+±0.05, no pair in every pipeline, and none within ±0.02. The smallest margin at which
+equivalence could be shown had a median of 0.040 on CHB-MIT (0.020 to 0.066) and 0.081
+on Siena (0.021 to 0.148).
 
-**Figure 2.** Window-level performance of each fusion operator in each preprocessing pipeline: macro F1 (left) and AUPRC (right) on CHB-MIT (top, 23 LOSO folds) and Siena (bottom, 14 folds); mean and SD over five seed sets, each run averaged over its folds. Early fusion has the lowest AUPRC in every pipeline of both datasets.
+The two datasets therefore supported different inferences. CHB-MIT showed that many
+operators differ by less than a moderate margin, whereas Siena often lacked the precision
+to establish either a difference or equivalence. The results thus fall into three kinds:
+statistically detectable differences (none here), demonstrated practical equivalence,
+and inconclusive comparisons; treating every non-significant result as equivalence would
+have hidden this distinction. Supplementary Table S8 gives every paired difference with
+its confidence interval, corrected p and equivalence margin.
 
-### 3.2 Statistical significance and practical equivalence
+![Equivalence matrix](figures_manuscript/figure3_equivalence.png)
 
-No pair of operators differed significantly in any pipeline of either dataset: 0 of 90
-pipeline-pair comparisons per dataset after Holm correction (smallest corrected p 0.19
-on CHB-MIT, 0.095 on Siena). The absence of a difference is not equivalence. On
-CHB-MIT, 73 of the 90 comparisons were equivalent within 0.05 macro F1 and two pairs,
-late-attention and gated-attention, were equivalent in every pipeline; within the
-strict 0.02 margin only 1 of 90 was. On Siena, with fourteen subjects, 21 of 90 were
-equivalent within 0.05, none in every pipeline, and none within 0.02. The smallest
-margin at which equivalence could be shown had a median of 0.040 on CHB-MIT (0.020 to
-0.066) and 0.081 on Siena (0.021 to 0.148): the data can exclude large differences
-between operators on CHB-MIT, but not differences of 0.02, and on Siena not even many of
-0.05.
+**Figure 3.** Equivalence matrix. For every operator pair (rows) in every preprocessing
+pipeline (columns): the mean paired difference in macro F1 (first minus second operator,
+fold values averaged over five seed sets) and the half-width of its 90 percent
+confidence interval with the corrected variance; the colour gives the outcome of the
+two one-sided tests at the margins of ±0.05 and ±0.02 and of the Holm-corrected test of
+a difference. **a**, CHB-MIT. **b**, Siena.
 
-### 3.3 Ranking stability (RQ2)
+### 3.3 Operator rankings are sensitive to the seed and to preprocessing decisions
 
-Figure 3 shows the rank of every operator in every run. On CHB-MIT no operator held its
-place: gated fusion ranked first in 38 percent of runs, attention in 24, late in 20,
-early in 11 and score in 7, and every operator was last in at least 13 percent of runs.
-Changing only the seed reordered the operators almost completely: Kendall's W across the
-five seed sets of one pipeline had a median of 0.22 (0.14 to 0.62 over pipelines), and
-two rankings from different seeds of the same pipeline agreed with a mean Kendall tau of
-0.10. Rankings from different pipelines agreed with a mean tau of 0.03; the difference,
-0.07, did not exceed what permuting the pipeline labels produces (p = 0.073), so
-preprocessing did not change the ranking more than the seed did. The same held among
-the three artefact removal pipelines alone (difference -0.07, p = 0.88).
+Although the mean differences were modest, which operator ranked first varied
+substantially between runs (Figure 4).
 
-On Siena the ranking was more stable. Score fusion ranked first in 82 percent of runs
-and never last (mean rank 1.29); Kendall's W had a median of 0.58 (0.40 to 0.78), seed
-rankings agreed with a mean tau of 0.37 and pipeline rankings with 0.34 (p = 0.074).
-Among the three artefact removal pipelines, however, the ranking changed more between
-algorithms than between seeds (difference 0.18, p = 0.029). Score fusion's consistent
-first place did not amount to a significant difference (Section 3.2): its advantage over
-the next operator, 0.030 macro F1 on average, lies within the range that fourteen
-subjects can neither confirm nor exclude, and the operator main effect was F = 2.87
-(uncorrected p = 0.032, Greenhouse-Geisser p = 0.092, partial eta squared 0.18).
+On CHB-MIT gated fusion ranked first in 38 percent of runs, followed by attention (24),
+late (20), early (11) and score fusion (7), and every operator ranked last in at least 13
+percent of runs; no operator kept a consistently superior position. Changing only the
+seed reordered the operators almost completely: Kendall's W across the five seed sets of
+one pipeline had a median of 0.22 (0.14 to 0.62 over pipelines), and rankings from
+different seeds of the same pipeline agreed with a mean Kendall tau of 0.10. Rankings
+from different pipelines agreed with a mean tau of 0.03; the difference did not exceed
+what permuting the pipeline labels produces (p = 0.073), and among the three artefact
+removal pipelines alone there was no indication that changing the algorithm reordered
+the operators more than changing the seed (difference -0.07, p = 0.88). The window-level
+predictions changed about as much between pipelines as between seeds (Cohen's kappa
+0.56 and 0.58).
 
-**Fusion x Preprocessing.** On CHB-MIT the interaction was F = 1.73 with an uncorrected
-p = 0.008 but strong non-sphericity (Greenhouse-Geisser epsilon 0.34), which gives
-p = 0.069; partial eta squared was 0.073 and the interaction's variance component 0.09
-percent (SD 0.004 macro F1). With three seed sets the same test had given p = 0.034; the
-evidence for an interaction did not survive the extension to five. On Siena there was
-no interaction (F = 1.05, p = 0.39). The window-level predictions themselves changed
-about as much between pipelines as between seeds: Cohen's kappa 0.56 between pipelines
-and 0.58 between seeds on CHB-MIT, 0.44 and 0.50 on Siena.
+On Siena the rankings were more consistent. Score fusion ranked first in 82 percent of
+runs and never last (mean rank 1.29); Kendall's W had a median of 0.58 (0.40 to 0.78),
+and rankings agreed with a mean tau of 0.37 between seeds and 0.34 between pipelines
+(p = 0.074). This consistency did not establish significant superiority: score fusion's
+advantage over the next operator, 0.030 macro F1 on average, lies within the range that
+fourteen subjects can neither confirm nor exclude, and the operator main effect was
+F = 2.87 (uncorrected p = 0.032, Greenhouse-Geisser p = 0.092, partial eta squared
+0.18). An exception emerged among the three artefact removal pipelines: on Siena,
+changing the cleaning algorithm reordered the operators more than changing the seed
+(difference in mean Kendall tau 0.18, p = 0.029). The relative importance of
+preprocessing and of stochastic training therefore depends on the dataset and on the
+preprocessing decision compared.
 
-![Rank of every operator in every run](figures_manuscript/figure3_rank_stability.png)
+The sensitivity of statistical inference to the number of seeds is illustrated by the
+Fusion × Preprocessing interaction on CHB-MIT. With three seed sets the
+Greenhouse-Geisser-corrected test gave p = 0.034; with five it gave p = 0.069
+(F = 1.73, uncorrected p = 0.008, epsilon 0.34; partial eta squared 0.073). This change
+should not be read as an interaction that disappeared, but as a demonstration that
+conclusions drawn from a few training runs can depend on which seeds were included. On
+Siena there was no interaction with either number of seed sets (p = 0.36 and 0.39).
 
-**Figure 3.** Ranking stability. Left, rank of each operator by macro F1 in every run (within each pipeline, one column per seed set; darker is better). Right, share of the 45 runs of each dataset in which the operator ranked first. On CHB-MIT the first place changes with the seed; on Siena score fusion ranks first in 82 percent of runs without a significant advantage (Section 3.2).
+![Ranking stability](figures_manuscript/figure4_rank_stability.png)
 
-### 3.4 Sources of variance
+**Figure 4.** Ranking stability. **a, b**, Rank of each operator by macro F1 in every run
+(within each pipeline, one column per seed set; darker is better), and the share of the
+45 runs of each dataset in which the operator ranked first. **c, d**, Agreement of the
+operator rankings across seed sets within each pipeline (Kendall's W) with three and with
+five seed sets, and the Greenhouse-Geisser-corrected p of the Fusion × Preprocessing
+interaction with each.
 
-Figure 4 decomposes the variance of each metric. On CHB-MIT the held-out subject
-accounted for 74.2 percent of the variance of macro F1 (SD 0.126), the interaction of
-subject with pipeline and operator for 7.2 percent and the residual for 17.3 percent;
-all seed terms together accounted for 1.1 percent (SD 0.015), the Fusion x
-Preprocessing interaction for 0.09 percent, and the estimates for pipeline and operator
-were negative (-2.7e-5 and -2.4e-5), that is, below their error terms. AUPRC (subject
-76.8 percent, operator 0.8, seed 1.5) and balanced accuracy (72.9, 0, 1.4) showed the
-same structure. On Siena the subject accounted for 32.5 percent and its interactions with
-pipeline and operator for 26.9 percent; the operator held 1.5 percent of the variance of
-macro F1 (SD 0.016) and 5.5 percent of AUPRC, the seed 4.2 percent and preprocessing 0.06
-percent. In both datasets the seed accounted for more variance than preprocessing, and
-on CHB-MIT more than the operator.
+### 3.4 Subject heterogeneity dominates the variability due to model and preprocessing choices
 
-![Variance decomposition](figures_manuscript/figure4_variance.png)
+To identify the factors behind the variability, each metric was decomposed into
+subject, operator, preprocessing, seed and interaction components (Figure 5a, b).
 
-**Figure 4.** Sources of variance of macro F1, AUPRC and balanced accuracy, as percentages of the total (method-of-moments estimates for a fully crossed random-effects model of subject, preprocessing, operator and seed; negative estimates shown as 0; seed: all seed terms together). The held-out subject dominates on both datasets; preprocessing, operator and their interaction explain almost nothing.
+On CHB-MIT the held-out subject accounted for 74.2 percent of the variance of macro F1
+(SD 0.126), its interactions with pipeline and operator for 7.2 percent and the residual
+for 17.3 percent. All seed terms together accounted for 1.1 percent (SD 0.015), more
+than the operator and preprocessing, whose estimates were below zero (-2.4e-5 and
+-2.7e-5), that is, below their error terms; the Fusion × Preprocessing component was
+0.09 percent, consistent with the small practical size of the interaction despite its
+sensitivity to the number of seeds. AUPRC (subject 76.8 percent, operator 0.8, seed 1.5)
+and balanced accuracy (72.9, 0, 1.4) showed the same structure. Preprocessing had no
+detectable main effect in the repeated-measures ANOVA either (F = 0.29, Greenhouse-Geisser
+p = 0.83, partial eta squared 0.013).
 
-### 3.5 Artefact removal
+On Siena the variability was more distributed. The subject accounted for 32.5 percent and
+its interactions with pipeline and operator for a further 26.9 percent; the operator
+held 1.5 percent of the variance of macro F1 (SD 0.016) and 5.5 percent of AUPRC, the seed
+4.2 percent and preprocessing 0.06 percent (main effect F = 1.09, p = 0.36).
 
-Figure 5 summarises the three artefact removal pipelines. Infomax and AMICA removed a
-median of one component per recording and kept a median of 78 percent of the signal's
-power; GEDAI kept 99.9 percent in most recordings but removed more than half of the
-power in 21 percent of them. AMICA cost 73 CPU hours on the 670 CHB-MIT recordings,
-Infomax 8.5 and GEDAI 4.7. Against P1, the same signal without artefact removal, the
-change in macro F1 was small and depended on the operator: on CHB-MIT late fusion gained
-0.014 to 0.022 under all three algorithms and early fusion lost 0.012 to 0.022; on Siena
-GEDAI raised late and gated fusion by 0.045 and 0.061. AUPRC fell under every algorithm
-for most operators, by up to 0.060 (early fusion under GEDAI, CHB-MIT).
+The effects of fusion and preprocessing therefore cannot be characterised by their
+dataset-level averages alone. Mean macro F1 per held-out subject ranged from 0.46
+(chb05) to 0.87 (chb22) on CHB-MIT and from 0.51 (PN07) to 0.78 (PN00) on Siena
+(Figure 5c, d). Within a subject the operators differed by a median of 0.063 macro F1 on
+CHB-MIT and 0.10 on Siena, three and two times the median difference within a pipeline,
+and the best operator changed from subject to subject: on CHB-MIT each of the five
+operators was the best for at least two subjects. An operator that suits one subject
+often does not suit another. This heterogeneity also explains why small differences in
+mean macro F1 were difficult to establish statistically: with 23 subjects on CHB-MIT and
+14 on Siena, the uncertainty of every comparison is dominated by the variation between
+held-out subjects. The variance decomposition thus identifies subject heterogeneity as a
+central feature of the benchmark rather than as residual noise.
 
-What the methods remove (Supplementary Table S5): Infomax and AMICA removed mostly delta
-power (a median of 15 to 18 percent of it on CHB-MIT) and, within a recording, slightly
-less from ictal than from non-ictal windows (a median difference of 0.010 and 0.017 of
-the power kept, Wilcoxon p < 0.001); GEDAI's conservative preset removed almost nothing
-on CHB-MIT and showed no difference between the classes within recordings. Over the
-whole corpus, however, GEDAI's default preset kept a median of 63 percent of the power
-of CHB-MIT's ictal windows against 93 percent of the non-ictal ones, removing mainly
-delta and theta power, because the recordings it cleaned heavily held many of the
-seizures; within recordings it showed no difference. On Siena the conservative preset
-behaved the same way over the corpus (68 against 99.7 percent) without a difference
-within recordings (p = 0.68). A cleaning step that treats the classes alike within each
-recording can still remove ictal signal selectively from the corpus as a whole.
+![Variance decomposition and subject-level performance](figures_manuscript/figure5_variance.png)
 
-Artefact removal was not reproducible across machines (Section 2.7, `docs/ICA_REPRO.md`):
-GEDAI cleaned 27 percent of recordings differently on the second machine, Infomax
-changed its component decision in 2.5 percent, AMICA in none. On the recordings that
-differed, a rounding-level perturbation of the input on one machine changed the result
-in the same way, and a third machine often gave a third result. Scoring the same models on
-recordings cleaned on the two machines changed seizure-level sensitivity by up to 0.054
-and the operators' order by sensitivity (Kendall tau 0.60 to 1.00) for GEDAI, by at most
-0.005 for Infomax, and not at all for AMICA.
+**Figure 5.** Sources of variability. **a, b**, Shares of the variance of macro F1, AUPRC
+and balanced accuracy (method-of-moments estimates for a fully crossed random-effects
+model of subject, preprocessing, operator and seed; negative estimates shown as 0; seed:
+all seed terms together). **c, d**, Macro F1 per held-out subject and model, mean over
+the nine pipelines and five seed sets; subjects sorted by their mean over the models.
 
-![Artefact removal](figures_manuscript/figure5_artefact_removal.png)
+### 3.5 Artefact removal involves trade-offs between signal preservation, performance, cost and reproducibility
 
-**Figure 5.** Artefact removal in P6 (CHB-MIT). **a**, Share of each recording's power kept after cleaning (670 recordings). **b**, CPU hours for the 670 recordings on a laptop CPU. **c**, Change in macro F1 against P1, the same 0.5 to 40 Hz signal without artefact removal, paired by seed set; mean and SD over five seed sets. **d**, Share of recordings cleaned differently (different components removed, or retained power differing by more than 0.001) on a second machine and in a second run on the same machine, with the same code, package versions and seeds (Section 2.7).
+The three artefact removal procedures (Extended Infomax, GEDAI and AMICA) were evaluated
+for their effect on classification and also for signal preservation, computational cost
+and reproducibility (Figure 6).
 
-### 3.6 Seizure-level detection
+Infomax and AMICA removed a median of one component per recording and kept a median of
+78 percent of the signal's power; GEDAI kept 99.9 percent in most recordings but removed
+more than half of the power in 21 percent of them. They differed strongly in cost:
+cleaning the 670 CHB-MIT recordings took 8.5 CPU hours with Infomax, 4.7 with GEDAI and
+73 with AMICA. Infomax and AMICA removed mostly delta power and, within a recording,
+slightly less from ictal than from non-ictal windows (a median difference of 0.010 and
+0.017 of the power kept, Wilcoxon p < 0.001). Over the whole corpus, GEDAI's default
+preset kept a median of 63 percent of the power of CHB-MIT's ictal windows against 93
+percent of the non-ictal ones, because the recordings it cleaned heavily held many of the
+seizures; within recordings it showed no difference (Supplementary Table S5).
 
-*(All nine pipelines, five seed sets each.)* On CHB-MIT the operators detected 68 to 79 percent of seizures
-on average, with 5.2 to 7.7 false alarms per hour at the 0.5 threshold without
-post-processing (`results_v2/results/events_chbmit.csv`). Early fusion detected the
-most seizures (mean 0.79, the highest in 82 percent of runs) but also raised the most
-false alarms in every run (7.7 per hour against 5.2 to 5.7 for the others): at the
-common threshold it labels more windows ictal, consistent with its weaker probability
-ranking (Section 3.1). Artefact removal did not change this picture: under Infomax and
-AMICA the operators detected 66 to 76 percent of seizures with 4.8 to 7.2 false alarms
-per hour, under GEDAI 71 to 80 percent with 5.5 to 8.7. On Siena the operators detected
-84 to 87 percent of seizures, with no consistent order.
+The effect on classification was not uniform across operators or datasets. Against P1,
+the same signal without artefact removal, late fusion gained 0.014 to 0.022 macro F1 on
+CHB-MIT under all three algorithms and early fusion lost 0.012 to 0.022; on Siena GEDAI
+raised late and gated fusion by 0.045 and 0.061. AUPRC fell under every algorithm for most
+operators, by up to 0.060 (early fusion under GEDAI, CHB-MIT). No algorithm was better
+than the others for every operator and setting.
 
-### 3.7 Cross-dataset generalisation (RQ3)
+A separate analysis showed that the procedures differed in reproducibility (Section 2.7).
+With the same code, package versions and seeds, GEDAI cleaned about 27 percent of
+recordings differently on a second machine. Extended Infomax removed different
+components in about 2.5 percent of recordings between machines and in about 1.2 percent
+between two runs on the same machine with different process parallelism. AMICA removed
+the same components in every recording on both machines, and its retained power differed
+by at most 0.003. Experiments with a third machine of another architecture and with
+rounding-level perturbations of the input suggest that some cleaning decisions are
+sensitive to floating-point variation near the algorithms' decision thresholds.
 
-Models trained on all of CHB-MIT and tested on Siena reached a macro F1 of 0.641
-(attention) to 0.677 (late) on average over pipelines and seeds (Figure 6a), higher than
-the same operators trained on Siena itself for early, late, gated and attention fusion,
-and lower for score fusion (0.652 against 0.670). The ranking did not transfer. Score
-fusion, first in 82 percent of Siena's own runs, was first in 11 percent of the transfer
-runs, where late fusion led (38 percent) and attention was most often last (40 percent).
-Between the seed-averaged rankings of the same pipeline, Kendall tau was -0.11 on average
-between CHB-MIT and Siena, 0.07 between CHB-MIT and the transfer, and -0.11 between Siena
-and the transfer (Figure 6b): neither dataset's ranking predicted the other's, nor the
-ranking after transfer.
+These differences were not confined to intermediate signals. Scoring the same trained
+models on recordings cleaned on two machines changed seizure-level sensitivity by up to
+0.054 under GEDAI and changed the order of the operators by sensitivity (Kendall tau 0.60
+to 1.00); the change was at most 0.005 under Infomax and absent under AMICA.
+Reproducibility at the level of code, package versions and seeds therefore did not
+guarantee reproducible cleaned signals or downstream predictions. The results identify a
+trade-off: an inexpensive cleaning method can introduce more variation between machines,
+whereas a costlier one can give more stable outputs, and the reproducibility of
+preprocessing can affect the conclusions of a model comparison.
 
-![Cross-dataset comparison](figures_manuscript/figure6_cross_dataset.png)
+![Artefact removal](figures_manuscript/figure6_artefact_removal.png)
 
-**Figure 6.** Cross-dataset comparison. **a**, Macro F1 of each operator on CHB-MIT (LOSO), on Siena (LOSO), and trained on CHB-MIT and tested on Siena; mean and SD over the runs of all nine pipelines and five seed sets. **b**, Kendall tau between the seed-averaged operator rankings of the same pipeline in two settings; one point per pipeline (points can overlap), bar: mean.
+**Figure 6.** Artefact removal in P6 (CHB-MIT). **a**, Share of each recording's power
+kept after cleaning (670 recordings). **b**, CPU hours for the 670 recordings on a laptop
+CPU. **c**, Change in macro F1 against P1, the same 0.5 to 40 Hz signal without artefact
+removal, paired by seed set; mean and SD over five seed sets. **d**, Share of recordings
+cleaned differently (different components removed, or retained power differing by more
+than 0.001) on a second machine and in a second run on the same machine, with the same
+code, package versions and seeds.
+
+### 3.6 Window-level differences translate into different seizure-level operating points
+
+The window-level analysis was complemented by seizure-level evaluation on the complete
+recordings, with the probability threshold of 0.5 fixed in advance and without
+post-processing (Figure 7).
+
+On CHB-MIT the operators detected 68 to 79 percent of the annotated seizures, with 5.2 to
+7.7 false alarms per hour (`results_v2/results/events_chbmit.csv`). Early fusion had a
+distinct operating point: it reached the highest mean seizure-level sensitivity (0.79)
+and ranked first in sensitivity in 82 percent of runs, but it also raised the most false
+alarms in every run (7.7 per hour against 5.2 to 5.7 for the other operators). Taken
+together with the window-level results, in which early fusion had the lowest AUPRC in
+every pipeline of both datasets, this shows that a higher sensitivity at a given
+threshold does not imply better discrimination: early fusion labels more windows ictal,
+which detects more seizures at the price of more false alarms.
+
+Artefact removal did not remove this trade-off. Under Infomax and AMICA the operators
+detected 66 to 76 percent of seizures with 4.8 to 7.2 false alarms per hour; under GEDAI,
+71 to 80 percent with 5.5 to 8.7. On Siena the operators detected 84 to 87 percent of
+seizures, without a consistent order; false alarms per hour are not reported for Siena
+because its recordings are cut around the seizures and do not represent continuous
+monitoring.
+
+Small differences in window-level macro F1 can therefore coexist with clearly different
+balances between seizure sensitivity and false-alarm burden, and window-level
+classification metrics alone do not characterise how a seizure detector would operate.
+
+![Seizure-level operating points](figures_manuscript/figure7_seizure_level.png)
+
+**Figure 7.** Seizure-level detection at the fixed threshold of 0.5 without
+post-processing. **a**, CHB-MIT: sensitivity against false alarms per hour, one point per
+run (nine pipelines × five seed sets) and the operator's mean and SD. **b**, Siena:
+seizure-level sensitivity per operator, one point per run, with the mean as a bar; false
+alarms per hour are not reported for Siena.
+
+### 3.7 Predictive performance transfers across datasets, but operator rankings do not
+
+Finally, we examined whether the patterns observed in subject-independent evaluation
+generalise across datasets (Figure 8).
+
+Models trained on all of CHB-MIT and tested on Siena reached a mean macro F1 of 0.641
+(attention) to 0.677 (late) over pipelines and seed sets. For early, late, gated and
+attention fusion this was higher than the mean obtained by training and testing on Siena
+(LOSO); score fusion was the exception, with 0.652 after transfer against 0.670 within
+Siena.
+
+Comparable aggregate performance did not mean that the order of the operators carried
+over. Score fusion, first in 82 percent of Siena's own runs, was first in 11 percent of
+the transfer runs; there, late fusion ranked first most often (38 percent) and attention
+fusion was most often last (40 percent). Kendall tau between the seed-averaged operator
+rankings of the same pipeline was -0.11 on average between CHB-MIT and Siena, 0.07
+between CHB-MIT and the transfer, and -0.11 between Siena and the transfer.
+
+These results distinguish two forms of generalisation: whether a trained model keeps
+useful performance on an independent dataset, and whether the advantage of one fusion
+operator over another is preserved. The former was observed at the level of aggregate
+macro F1, the latter was not; an operator that ranked highly when trained and evaluated
+on one dataset did not necessarily keep that position under external evaluation.
+
+![Cross-dataset generalisation](figures_manuscript/figure8_cross_dataset.png)
+
+**Figure 8.** Cross-dataset generalisation. **a**, Macro F1 of each operator on CHB-MIT
+(LOSO), on Siena (LOSO), and trained on CHB-MIT and tested on Siena; mean and SD over the
+runs of all nine pipelines and five seed sets. **b**, Share of runs in which each
+operator ranks first in each setting. **c**, Kendall tau between the seed-averaged
+operator rankings of the same pipeline in two settings; one point per pipeline (points
+can overlap), bar: mean.
 
 ## 4. Discussion
 
@@ -787,7 +914,7 @@ none, and on Siena few were equivalent even within 0.05. The data therefore rule
 large differences between operators on CHB-MIT, but not differences of the size that
 published comparisons typically report as improvements.
 
-The controls put these differences in proportion (Section 3.1, Table 3). A
+The controls put these differences in proportion (Section 3.1, Table 2, Figure 2). A
 single-branch spectrogram network of the same size had a mean macro F1 similar to
 that of the jointly trained operators on CHB-MIT and higher on Siena, and a logistic
 regression on seven hand-crafted features had a mean macro F1 as high as or higher than

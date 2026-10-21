@@ -183,6 +183,59 @@ def table_s6() -> str:
     return "\n".join(out)
 
 
+PARAMS = {"raw1d": 28850, "spec2d": 34546, "raw1d_wide": 103712, "spec2d_wide": 102236,
+          "logvar": 19, "shallow": 127}   # python -m src.models (logistic regressions with intercept)
+
+
+def table_s7() -> str:
+    """All six controls next to each other: mean and SD over the 45 runs per dataset."""
+    res = RESULTS_ROOT / "results"
+    out = None
+    for ds, name in (("chbmit", "CHB-MIT"), ("siena", "Siena")):
+        f = res / f"controls_{ds}.csv"
+        if not f.exists():
+            return "(controls tables missing; run python -m src.make_results)"
+        t = pd.read_csv(f)
+        t = t[t.kind == "control"].set_index("model")
+        cols = {}
+        for m, lab in (("f1_macro", "macro F1"), ("auprc", "AUPRC"),
+                       ("balanced_accuracy", "bal. acc."), ("brier", "Brier")):
+            cols[f"{name} {lab}"] = [f"{a:.3f} ± {b:.3f}" for a, b in
+                                     zip(t[f"{m}_mean"], t[f"{m}_sd"])]
+        part = pd.DataFrame(cols, index=t.index)
+        out = part if out is None else out.join(part)
+    out.insert(0, "parameters", [f"{PARAMS[m]:,}" for m in out.index])
+    return md(out.reset_index().rename(columns={"model": "control"}))
+
+
+def table_s8() -> str:
+    """Every operator pair in every pipeline: paired difference, 90% CI, p, delta_min."""
+    mv = RESULTS_ROOT / "multiverse"
+    out = []
+    for ds, name in (("chbmit", "CHB-MIT"), ("siena", "Siena")):
+        f, fs = mv / f"{ds}_cuda" / "equivalence.csv", mv / f"{ds}_cuda" / "equivalence_strict.csv"
+        if not f.exists():
+            continue
+        e = pd.read_csv(f)
+        strict = pd.read_csv(fs).set_index(["pipeline", "pair"]).equivalent if fs.exists() else None
+        hw = e.delta_min - e.mean_diff.abs()           # half-width of the 90% CI
+        t = pd.DataFrame({
+            "pipeline": e.pipeline, "pair": e.pair,
+            "difference": [f"{d:+.3f}" for d in e.mean_diff],
+            "90% CI": [f"[{d - h:+.3f}, {d + h:+.3f}]" for d, h in zip(e.mean_diff, hw)],
+            "p corrected": [f"{p:.3f}" for p in e.p_corrected],
+            "p Holm": [f"{p:.3f}" for p in e.p_holm],
+            "delta_min": [f"{x:.3f}" for x in e.delta_min],
+            "equivalent ±0.05": ["yes" if x else "no" for x in e.equivalent],
+            "equivalent ±0.02": (["yes" if strict.loc[(p, q)] else "no"
+                                  for p, q in zip(e.pipeline, e.pair)]
+                                 if strict is not None else ""),
+        })
+        out += [f"**{name}** (difference: first minus second operator, macro F1; fold "
+                f"values averaged over the seed sets)", "", md(t), ""]
+    return "\n".join(out)
+
+
 def main() -> None:
     text = f"""# Supplementary Material
 
@@ -249,6 +302,26 @@ Mean and SD over the five seed sets of each run's fold mean, for every pipeline 
 fusion operator (`python -m src.make_results`, `results_v2/results/main_*.csv`).
 
 {table_s6()}
+
+## Table S7. All controls
+
+The six controls over the same complete runs as Table 2 (mean and SD over the 45 runs of
+each dataset, fold means within a run; Brier: lower is better). Parameters with 18 input
+channels; the classical models are logistic regressions on 18 log variances (logvar) and
+on seven features per channel (shallow), with an intercept
+(`results_v2/results/controls_*.csv`).
+
+{table_s7()}
+
+## Table S8. Paired differences between operators, with confidence intervals and equivalence
+
+For every operator pair in every pipeline: the mean paired difference in macro F1, its
+90 percent confidence interval with the corrected variance (the interval used by the two
+one-sided tests), the corrected and the Holm-adjusted p of a difference, the smallest
+equivalence margin the data can establish (delta_min), and the outcome at the margins of
+±0.05 and ±0.02 (`results_v2/multiverse/*_cuda/equivalence*.csv`; Figure 3).
+
+{table_s8()}
 
 ## Supplementary Note 1. The Bonn corpus (earlier stage)
 

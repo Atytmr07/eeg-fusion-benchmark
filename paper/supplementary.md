@@ -229,6 +229,222 @@ fusion operator (`python -m src.make_results`, `results_v2/results/main_*.csv`).
 | P6c | 0.654 ± 0.019 | 0.676 ± 0.006 | 0.660 ± 0.019 | 0.663 ± 0.020 | **0.697 ± 0.018** |
 
 
+## Table S7. All controls
+
+The six controls over the same complete runs as Table 2 (mean and SD over the 45 runs of
+each dataset, fold means within a run; Brier: lower is better). Parameters with 18 input
+channels; the classical models are logistic regressions on 18 log variances (logvar) and
+on seven features per channel (shallow), with an intercept
+(`results_v2/results/controls_*.csv`).
+
+| control | parameters | CHB-MIT macro F1 | CHB-MIT AUPRC | CHB-MIT bal. acc. | CHB-MIT Brier | Siena macro F1 | Siena AUPRC | Siena bal. acc. | Siena Brier |
+|---|---|---|---|---|---|---|---|---|---|
+| raw1d | 28,850 | 0.663 ± 0.014 | 0.604 ± 0.019 | 0.678 ± 0.013 | 0.332 ± 0.018 | 0.609 ± 0.034 | 0.565 ± 0.040 | 0.659 ± 0.024 | 0.443 ± 0.061 |
+| spec2d | 34,546 | 0.679 ± 0.010 | 0.598 ± 0.017 | 0.676 ± 0.010 | 0.309 ± 0.011 | 0.660 ± 0.022 | 0.576 ± 0.031 | 0.680 ± 0.019 | 0.350 ± 0.030 |
+| raw1d_wide | 103,712 | 0.662 ± 0.012 | 0.605 ± 0.017 | 0.673 ± 0.010 | 0.328 ± 0.016 | 0.612 ± 0.028 | 0.577 ± 0.033 | 0.657 ± 0.019 | 0.440 ± 0.056 |
+| spec2d_wide | 102,236 | 0.683 ± 0.014 | 0.618 ± 0.016 | 0.680 ± 0.013 | 0.302 ± 0.014 | 0.663 ± 0.026 | 0.581 ± 0.027 | 0.681 ± 0.021 | 0.352 ± 0.038 |
+| logvar | 19 | 0.631 ± 0.009 | 0.577 ± 0.016 | 0.708 ± 0.006 | 0.402 ± 0.009 | 0.630 ± 0.034 | 0.572 ± 0.036 | 0.705 ± 0.027 | 0.455 ± 0.036 |
+| shallow | 127 | 0.690 ± 0.008 | 0.640 ± 0.008 | 0.739 ± 0.007 | 0.339 ± 0.014 | 0.720 ± 0.019 | 0.667 ± 0.015 | 0.770 ± 0.017 | 0.338 ± 0.020 |
+
+## Table S8. Paired differences between operators, with confidence intervals and equivalence
+
+For every operator pair in every pipeline: the mean paired difference in macro F1, its
+90 percent confidence interval with the corrected variance (the interval used by the two
+one-sided tests), the corrected and the Holm-adjusted p of a difference, the smallest
+equivalence margin the data can establish (delta_min), and the outcome at the margins of
+±0.05 and ±0.02 (`results_v2/multiverse/*_cuda/equivalence*.csv`; Figure 3).
+
+**CHB-MIT** (difference: first minus second operator, macro F1; fold values averaged over the seed sets)
+
+| pipeline | pair | difference | 90% CI | p corrected | p Holm | delta_min | equivalent ±0.05 | equivalent ±0.02 |
+|---|---|---|---|---|---|---|---|---|
+| P0 | early-late | -0.001 | [-0.034, +0.033] | 0.973 | 1.000 | 0.034 | yes | no |
+| P0 | early-gated | +0.007 | [-0.023, +0.037] | 0.678 | 1.000 | 0.037 | yes | no |
+| P0 | early-attention | -0.004 | [-0.039, +0.030] | 0.827 | 1.000 | 0.039 | yes | no |
+| P0 | early-score | +0.018 | [-0.014, +0.050] | 0.353 | 1.000 | 0.050 | yes | no |
+| P0 | late-gated | +0.008 | [-0.012, +0.028] | 0.491 | 1.000 | 0.028 | yes | no |
+| P0 | late-attention | -0.004 | [-0.020, +0.012] | 0.692 | 1.000 | 0.020 | yes | yes |
+| P0 | late-score | +0.018 | [-0.009, +0.046] | 0.266 | 1.000 | 0.046 | yes | no |
+| P0 | gated-attention | -0.012 | [-0.038, +0.015] | 0.458 | 1.000 | 0.038 | yes | no |
+| P0 | gated-score | +0.010 | [-0.020, +0.041] | 0.561 | 1.000 | 0.041 | yes | no |
+| P0 | attention-score | +0.022 | [-0.006, +0.050] | 0.194 | 1.000 | 0.050 | no | no |
+| P1 | early-late | +0.018 | [-0.022, +0.059] | 0.442 | 1.000 | 0.059 | no | no |
+| P1 | early-gated | -0.008 | [-0.041, +0.026] | 0.701 | 1.000 | 0.041 | yes | no |
+| P1 | early-attention | -0.004 | [-0.041, +0.034] | 0.866 | 1.000 | 0.041 | yes | no |
+| P1 | early-score | +0.011 | [-0.023, +0.046] | 0.577 | 1.000 | 0.046 | yes | no |
+| P1 | late-gated | -0.026 | [-0.052, -0.000] | 0.097 | 0.896 | 0.052 | no | no |
+| P1 | late-attention | -0.022 | [-0.043, -0.001] | 0.090 | 0.896 | 0.043 | yes | no |
+| P1 | late-score | -0.007 | [-0.037, +0.023] | 0.692 | 1.000 | 0.037 | yes | no |
+| P1 | gated-attention | +0.004 | [-0.017, +0.025] | 0.752 | 1.000 | 0.025 | yes | no |
+| P1 | gated-score | +0.019 | [-0.013, +0.051] | 0.326 | 1.000 | 0.051 | no | no |
+| P1 | attention-score | +0.015 | [-0.015, +0.045] | 0.398 | 1.000 | 0.045 | yes | no |
+| P2 | early-late | -0.009 | [-0.046, +0.029] | 0.689 | 1.000 | 0.046 | yes | no |
+| P2 | early-gated | -0.000 | [-0.034, +0.033] | 0.982 | 1.000 | 0.034 | yes | no |
+| P2 | early-attention | -0.007 | [-0.041, +0.026] | 0.705 | 1.000 | 0.041 | yes | no |
+| P2 | early-score | +0.004 | [-0.027, +0.035] | 0.813 | 1.000 | 0.035 | yes | no |
+| P2 | late-gated | +0.008 | [-0.017, +0.034] | 0.572 | 1.000 | 0.034 | yes | no |
+| P2 | late-attention | +0.001 | [-0.020, +0.023] | 0.911 | 1.000 | 0.023 | yes | no |
+| P2 | late-score | +0.013 | [-0.018, +0.045] | 0.478 | 1.000 | 0.045 | yes | no |
+| P2 | gated-attention | -0.007 | [-0.038, +0.024] | 0.702 | 1.000 | 0.038 | yes | no |
+| P2 | gated-score | +0.005 | [-0.024, +0.034] | 0.779 | 1.000 | 0.034 | yes | no |
+| P2 | attention-score | +0.012 | [-0.020, +0.044] | 0.532 | 1.000 | 0.044 | yes | no |
+| P3 | early-late | +0.002 | [-0.035, +0.039] | 0.919 | 1.000 | 0.039 | yes | no |
+| P3 | early-gated | +0.003 | [-0.036, +0.042] | 0.889 | 1.000 | 0.042 | yes | no |
+| P3 | early-attention | -0.010 | [-0.050, +0.031] | 0.684 | 1.000 | 0.050 | yes | no |
+| P3 | early-score | +0.001 | [-0.032, +0.035] | 0.954 | 1.000 | 0.035 | yes | no |
+| P3 | late-gated | +0.001 | [-0.021, +0.023] | 0.938 | 1.000 | 0.023 | yes | no |
+| P3 | late-attention | -0.012 | [-0.032, +0.008] | 0.326 | 1.000 | 0.032 | yes | no |
+| P3 | late-score | -0.001 | [-0.029, +0.027] | 0.948 | 1.000 | 0.029 | yes | no |
+| P3 | gated-attention | -0.013 | [-0.038, +0.012] | 0.387 | 1.000 | 0.038 | yes | no |
+| P3 | gated-score | -0.002 | [-0.033, +0.028] | 0.907 | 1.000 | 0.033 | yes | no |
+| P3 | attention-score | +0.011 | [-0.019, +0.041] | 0.546 | 1.000 | 0.041 | yes | no |
+| P4 | early-late | +0.010 | [-0.018, +0.038] | 0.554 | 1.000 | 0.038 | yes | no |
+| P4 | early-gated | -0.006 | [-0.042, +0.030] | 0.781 | 1.000 | 0.042 | yes | no |
+| P4 | early-attention | +0.018 | [-0.010, +0.046] | 0.277 | 1.000 | 0.046 | yes | no |
+| P4 | early-score | +0.029 | [-0.007, +0.065] | 0.182 | 1.000 | 0.065 | no | no |
+| P4 | late-gated | -0.016 | [-0.035, +0.003] | 0.160 | 1.000 | 0.035 | yes | no |
+| P4 | late-attention | +0.008 | [-0.005, +0.022] | 0.305 | 1.000 | 0.022 | yes | no |
+| P4 | late-score | +0.019 | [-0.013, +0.051] | 0.316 | 1.000 | 0.051 | no | no |
+| P4 | gated-attention | +0.024 | [+0.008, +0.041] | 0.019 | 0.192 | 0.041 | yes | no |
+| P4 | gated-score | +0.035 | [+0.006, +0.064] | 0.052 | 0.469 | 0.064 | no | no |
+| P4 | attention-score | +0.011 | [-0.013, +0.035] | 0.456 | 1.000 | 0.035 | yes | no |
+| P5 | early-late | -0.006 | [-0.048, +0.037] | 0.817 | 1.000 | 0.048 | yes | no |
+| P5 | early-gated | -0.012 | [-0.056, +0.032] | 0.640 | 1.000 | 0.056 | no | no |
+| P5 | early-attention | -0.015 | [-0.062, +0.032] | 0.595 | 1.000 | 0.062 | no | no |
+| P5 | early-score | -0.003 | [-0.045, +0.038] | 0.897 | 1.000 | 0.045 | yes | no |
+| P5 | late-gated | -0.006 | [-0.028, +0.016] | 0.623 | 1.000 | 0.028 | yes | no |
+| P5 | late-attention | -0.009 | [-0.027, +0.009] | 0.398 | 1.000 | 0.027 | yes | no |
+| P5 | late-score | +0.003 | [-0.029, +0.035] | 0.890 | 1.000 | 0.035 | yes | no |
+| P5 | gated-attention | -0.003 | [-0.027, +0.021] | 0.849 | 1.000 | 0.027 | yes | no |
+| P5 | gated-score | +0.009 | [-0.025, +0.043] | 0.655 | 1.000 | 0.043 | yes | no |
+| P5 | attention-score | +0.012 | [-0.018, +0.042] | 0.511 | 1.000 | 0.042 | yes | no |
+| P6a | early-late | -0.008 | [-0.041, +0.025] | 0.680 | 1.000 | 0.041 | yes | no |
+| P6a | early-gated | -0.021 | [-0.052, +0.010] | 0.254 | 1.000 | 0.052 | no | no |
+| P6a | early-attention | -0.006 | [-0.040, +0.029] | 0.775 | 1.000 | 0.040 | yes | no |
+| P6a | early-score | -0.003 | [-0.032, +0.025] | 0.856 | 1.000 | 0.032 | yes | no |
+| P6a | late-gated | -0.013 | [-0.025, -0.001] | 0.077 | 0.768 | 0.025 | yes | no |
+| P6a | late-attention | +0.002 | [-0.017, +0.021] | 0.851 | 1.000 | 0.021 | yes | no |
+| P6a | late-score | +0.005 | [-0.025, +0.035] | 0.782 | 1.000 | 0.035 | yes | no |
+| P6a | gated-attention | +0.015 | [-0.004, +0.034] | 0.191 | 1.000 | 0.034 | yes | no |
+| P6a | gated-score | +0.018 | [-0.005, +0.041] | 0.194 | 1.000 | 0.041 | yes | no |
+| P6a | attention-score | +0.003 | [-0.027, +0.032] | 0.875 | 1.000 | 0.032 | yes | no |
+| P6b | early-late | -0.025 | [-0.064, +0.015] | 0.291 | 1.000 | 0.064 | no | no |
+| P6b | early-gated | -0.029 | [-0.066, +0.008] | 0.187 | 1.000 | 0.066 | no | no |
+| P6b | early-attention | -0.019 | [-0.059, +0.020] | 0.403 | 1.000 | 0.059 | no | no |
+| P6b | early-score | -0.020 | [-0.054, +0.014] | 0.314 | 1.000 | 0.054 | no | no |
+| P6b | late-gated | -0.004 | [-0.026, +0.017] | 0.726 | 1.000 | 0.026 | yes | no |
+| P6b | late-attention | +0.005 | [-0.021, +0.032] | 0.730 | 1.000 | 0.032 | yes | no |
+| P6b | late-score | +0.005 | [-0.030, +0.039] | 0.826 | 1.000 | 0.039 | yes | no |
+| P6b | gated-attention | +0.010 | [-0.017, +0.036] | 0.531 | 1.000 | 0.036 | yes | no |
+| P6b | gated-score | +0.009 | [-0.028, +0.046] | 0.683 | 1.000 | 0.046 | yes | no |
+| P6b | attention-score | -0.001 | [-0.030, +0.028] | 0.960 | 1.000 | 0.030 | yes | no |
+| P6c | early-late | -0.017 | [-0.063, +0.029] | 0.532 | 1.000 | 0.063 | no | no |
+| P6c | early-gated | -0.017 | [-0.051, +0.016] | 0.378 | 1.000 | 0.051 | no | no |
+| P6c | early-attention | -0.008 | [-0.042, +0.025] | 0.676 | 1.000 | 0.042 | yes | no |
+| P6c | early-score | -0.003 | [-0.035, +0.029] | 0.872 | 1.000 | 0.035 | yes | no |
+| P6c | late-gated | -0.000 | [-0.021, +0.020] | 0.976 | 1.000 | 0.021 | yes | no |
+| P6c | late-attention | +0.009 | [-0.012, +0.029] | 0.470 | 1.000 | 0.029 | yes | no |
+| P6c | late-score | +0.014 | [-0.026, +0.054] | 0.555 | 1.000 | 0.054 | no | no |
+| P6c | gated-attention | +0.009 | [-0.008, +0.026] | 0.374 | 1.000 | 0.026 | yes | no |
+| P6c | gated-score | +0.014 | [-0.019, +0.048] | 0.469 | 1.000 | 0.048 | yes | no |
+| P6c | attention-score | +0.005 | [-0.026, +0.037] | 0.776 | 1.000 | 0.037 | yes | no |
+
+**Siena** (difference: first minus second operator, macro F1; fold values averaged over the seed sets)
+
+| pipeline | pair | difference | 90% CI | p corrected | p Holm | delta_min | equivalent ±0.05 | equivalent ±0.02 |
+|---|---|---|---|---|---|---|---|---|
+| P0 | early-late | -0.015 | [-0.056, +0.025] | 0.513 | 1.000 | 0.056 | no | no |
+| P0 | early-gated | -0.007 | [-0.062, +0.048] | 0.820 | 1.000 | 0.062 | no | no |
+| P0 | early-attention | +0.003 | [-0.048, +0.055] | 0.910 | 1.000 | 0.055 | no | no |
+| P0 | early-score | -0.038 | [-0.081, +0.004] | 0.132 | 1.000 | 0.081 | no | no |
+| P0 | late-gated | +0.008 | [-0.025, +0.041] | 0.666 | 1.000 | 0.041 | yes | no |
+| P0 | late-attention | +0.019 | [-0.016, +0.053] | 0.355 | 1.000 | 0.053 | no | no |
+| P0 | late-score | -0.023 | [-0.058, +0.012] | 0.269 | 1.000 | 0.058 | no | no |
+| P0 | gated-attention | +0.011 | [-0.007, +0.028] | 0.316 | 1.000 | 0.028 | yes | no |
+| P0 | gated-score | -0.031 | [-0.054, -0.009] | 0.029 | 0.257 | 0.054 | no | no |
+| P0 | attention-score | -0.042 | [-0.066, -0.017] | 0.009 | 0.095 | 0.066 | no | no |
+| P1 | early-late | -0.020 | [-0.095, +0.055] | 0.643 | 1.000 | 0.095 | no | no |
+| P1 | early-gated | -0.007 | [-0.104, +0.091] | 0.905 | 1.000 | 0.104 | no | no |
+| P1 | early-attention | -0.012 | [-0.106, +0.083] | 0.833 | 1.000 | 0.106 | no | no |
+| P1 | early-score | -0.049 | [-0.106, +0.008] | 0.149 | 1.000 | 0.106 | no | no |
+| P1 | late-gated | +0.013 | [-0.029, +0.056] | 0.580 | 1.000 | 0.056 | no | no |
+| P1 | late-attention | +0.009 | [-0.028, +0.045] | 0.685 | 1.000 | 0.045 | yes | no |
+| P1 | late-score | -0.029 | [-0.083, +0.026] | 0.367 | 1.000 | 0.083 | no | no |
+| P1 | gated-attention | -0.005 | [-0.039, +0.030] | 0.806 | 1.000 | 0.039 | yes | no |
+| P1 | gated-score | -0.042 | [-0.110, +0.026] | 0.291 | 1.000 | 0.110 | no | no |
+| P1 | attention-score | -0.037 | [-0.098, +0.024] | 0.297 | 1.000 | 0.098 | no | no |
+| P2 | early-late | -0.029 | [-0.100, +0.042] | 0.485 | 1.000 | 0.100 | no | no |
+| P2 | early-gated | -0.026 | [-0.107, +0.055] | 0.581 | 1.000 | 0.107 | no | no |
+| P2 | early-attention | -0.015 | [-0.100, +0.071] | 0.766 | 1.000 | 0.100 | no | no |
+| P2 | early-score | -0.064 | [-0.112, -0.016] | 0.034 | 0.339 | 0.112 | no | no |
+| P2 | late-gated | +0.003 | [-0.023, +0.029] | 0.844 | 1.000 | 0.029 | yes | no |
+| P2 | late-attention | +0.014 | [-0.013, +0.042] | 0.379 | 1.000 | 0.042 | yes | no |
+| P2 | late-score | -0.035 | [-0.097, +0.026] | 0.327 | 1.000 | 0.097 | no | no |
+| P2 | gated-attention | +0.011 | [-0.017, +0.040] | 0.494 | 1.000 | 0.040 | yes | no |
+| P2 | gated-score | -0.038 | [-0.106, +0.029] | 0.335 | 1.000 | 0.106 | no | no |
+| P2 | attention-score | -0.050 | [-0.127, +0.027] | 0.274 | 1.000 | 0.127 | no | no |
+| P3 | early-late | -0.038 | [-0.110, +0.034] | 0.362 | 1.000 | 0.110 | no | no |
+| P3 | early-gated | -0.007 | [-0.115, +0.102] | 0.917 | 1.000 | 0.115 | no | no |
+| P3 | early-attention | +0.000 | [-0.093, +0.094] | 0.994 | 1.000 | 0.094 | no | no |
+| P3 | early-score | -0.050 | [-0.127, +0.026] | 0.261 | 1.000 | 0.127 | no | no |
+| P3 | late-gated | +0.032 | [-0.024, +0.088] | 0.331 | 1.000 | 0.088 | no | no |
+| P3 | late-attention | +0.039 | [-0.011, +0.088] | 0.189 | 1.000 | 0.088 | no | no |
+| P3 | late-score | -0.012 | [-0.042, +0.018] | 0.483 | 1.000 | 0.042 | yes | no |
+| P3 | gated-attention | +0.007 | [-0.035, +0.048] | 0.773 | 1.000 | 0.048 | yes | no |
+| P3 | gated-score | -0.044 | [-0.103, +0.015] | 0.207 | 1.000 | 0.103 | no | no |
+| P3 | attention-score | -0.051 | [-0.100, -0.002] | 0.089 | 0.893 | 0.100 | no | no |
+| P4 | early-late | -0.022 | [-0.096, +0.052] | 0.607 | 1.000 | 0.096 | no | no |
+| P4 | early-gated | -0.007 | [-0.101, +0.087] | 0.901 | 1.000 | 0.101 | no | no |
+| P4 | early-attention | -0.012 | [-0.106, +0.081] | 0.817 | 1.000 | 0.106 | no | no |
+| P4 | early-score | -0.051 | [-0.108, +0.005] | 0.130 | 1.000 | 0.108 | no | no |
+| P4 | late-gated | +0.015 | [-0.026, +0.056] | 0.521 | 1.000 | 0.056 | no | no |
+| P4 | late-attention | +0.010 | [-0.027, +0.046] | 0.650 | 1.000 | 0.046 | yes | no |
+| P4 | late-score | -0.029 | [-0.082, +0.023] | 0.341 | 1.000 | 0.082 | no | no |
+| P4 | gated-attention | -0.006 | [-0.040, +0.028] | 0.771 | 1.000 | 0.040 | yes | no |
+| P4 | gated-score | -0.045 | [-0.111, +0.022] | 0.254 | 1.000 | 0.111 | no | no |
+| P4 | attention-score | -0.039 | [-0.099, +0.021] | 0.269 | 1.000 | 0.099 | no | no |
+| P5 | early-late | -0.005 | [-0.071, +0.061] | 0.895 | 1.000 | 0.071 | no | no |
+| P5 | early-gated | -0.013 | [-0.086, +0.061] | 0.767 | 1.000 | 0.086 | no | no |
+| P5 | early-attention | -0.015 | [-0.080, +0.051] | 0.700 | 1.000 | 0.080 | no | no |
+| P5 | early-score | -0.053 | [-0.112, +0.007] | 0.142 | 1.000 | 0.112 | no | no |
+| P5 | late-gated | -0.008 | [-0.040, +0.025] | 0.691 | 1.000 | 0.040 | yes | no |
+| P5 | late-attention | -0.010 | [-0.058, +0.038] | 0.727 | 1.000 | 0.058 | no | no |
+| P5 | late-score | -0.048 | [-0.097, +0.002] | 0.111 | 1.000 | 0.097 | no | no |
+| P5 | gated-attention | -0.002 | [-0.045, +0.040] | 0.931 | 1.000 | 0.045 | yes | no |
+| P5 | gated-score | -0.040 | [-0.084, +0.004] | 0.132 | 1.000 | 0.084 | no | no |
+| P5 | attention-score | -0.038 | [-0.084, +0.008] | 0.167 | 1.000 | 0.084 | no | no |
+| P6a | early-late | -0.003 | [-0.074, +0.067] | 0.933 | 1.000 | 0.074 | no | no |
+| P6a | early-gated | -0.002 | [-0.049, +0.044] | 0.936 | 1.000 | 0.049 | yes | no |
+| P6a | early-attention | +0.008 | [-0.052, +0.067] | 0.824 | 1.000 | 0.067 | no | no |
+| P6a | early-score | -0.053 | [-0.113, +0.007] | 0.139 | 1.000 | 0.113 | no | no |
+| P6a | late-gated | +0.001 | [-0.044, +0.046] | 0.960 | 1.000 | 0.046 | yes | no |
+| P6a | late-attention | +0.011 | [-0.019, +0.041] | 0.524 | 1.000 | 0.041 | yes | no |
+| P6a | late-score | -0.050 | [-0.148, +0.048] | 0.385 | 1.000 | 0.148 | no | no |
+| P6a | gated-attention | +0.010 | [-0.025, +0.044] | 0.625 | 1.000 | 0.044 | yes | no |
+| P6a | gated-score | -0.051 | [-0.132, +0.030] | 0.282 | 1.000 | 0.132 | no | no |
+| P6a | attention-score | -0.061 | [-0.144, +0.022] | 0.218 | 1.000 | 0.144 | no | no |
+| P6b | early-late | -0.067 | [-0.110, -0.023] | 0.018 | 0.178 | 0.110 | no | no |
+| P6b | early-gated | -0.070 | [-0.124, -0.015] | 0.042 | 0.338 | 0.124 | no | no |
+| P6b | early-attention | -0.038 | [-0.077, +0.001] | 0.106 | 0.745 | 0.077 | no | no |
+| P6b | early-score | -0.062 | [-0.105, -0.019] | 0.024 | 0.219 | 0.105 | no | no |
+| P6b | late-gated | -0.003 | [-0.021, +0.015] | 0.786 | 1.000 | 0.021 | yes | no |
+| P6b | late-attention | +0.029 | [-0.006, +0.064] | 0.170 | 1.000 | 0.064 | no | no |
+| P6b | late-score | +0.005 | [-0.033, +0.043] | 0.819 | 1.000 | 0.043 | yes | no |
+| P6b | gated-attention | +0.031 | [-0.015, +0.078] | 0.255 | 1.000 | 0.078 | no | no |
+| P6b | gated-score | +0.008 | [-0.040, +0.056] | 0.779 | 1.000 | 0.056 | no | no |
+| P6b | attention-score | -0.024 | [-0.062, +0.015] | 0.293 | 1.000 | 0.062 | no | no |
+| P6c | early-late | -0.009 | [-0.057, +0.038] | 0.738 | 1.000 | 0.057 | no | no |
+| P6c | early-gated | +0.016 | [-0.045, +0.077] | 0.656 | 1.000 | 0.077 | no | no |
+| P6c | early-attention | +0.007 | [-0.048, +0.063] | 0.817 | 1.000 | 0.063 | no | no |
+| P6c | early-score | -0.054 | [-0.114, +0.006] | 0.133 | 1.000 | 0.114 | no | no |
+| P6c | late-gated | +0.025 | [-0.016, +0.066] | 0.304 | 1.000 | 0.066 | no | no |
+| P6c | late-attention | +0.017 | [-0.010, +0.044] | 0.297 | 1.000 | 0.044 | yes | no |
+| P6c | late-score | -0.045 | [-0.111, +0.022] | 0.254 | 1.000 | 0.111 | no | no |
+| P6c | gated-attention | -0.008 | [-0.039, +0.022] | 0.636 | 1.000 | 0.039 | yes | no |
+| P6c | gated-score | -0.070 | [-0.146, +0.007] | 0.131 | 1.000 | 0.146 | no | no |
+| P6c | attention-score | -0.061 | [-0.129, +0.006] | 0.131 | 1.000 | 0.129 | no | no |
+
+
 ## Supplementary Note 1. The Bonn corpus (earlier stage)
 
 An earlier stage of this project compared the same operators and controls on the Bonn

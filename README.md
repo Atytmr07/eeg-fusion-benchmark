@@ -92,8 +92,8 @@ browser:
 | Event metrics of one pipeline | `python -m src.events --dataset chbmit --pipeline P1` |
 | Multiverse statistics (variance components, rankings, equivalence) | `python -m src.multiverse --dataset chbmit --device cuda` (and `--dataset siena`) |
 | Main tables (Table 2, event tables, cross-dataset tables) | `python -m src.make_results` |
-| Figures 2 to 6 | `python -m src.make_figures --device cuda` |
-| Supplementary Tables S1 to S6 | `python -m src.make_supplementary` |
+| Figures 2 to 8 | `python -m src.make_figures --device cuda` |
+| Supplementary Tables S1 to S8 | `python -m src.make_supplementary` |
 | What artefact removal removes (Table S5) | `python -m src.p6_signal_effects` |
 | Reproducibility of artefact removal across machines | `python -m src.ica_repro`, `python -m src.ica_sensitivity`, `python -m src.ica_repro_impact` (`docs/ICA_REPRO.md`) |
 | PDF and Overleaf bundle | `python paper/latex/build.py` |
