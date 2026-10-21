@@ -94,6 +94,14 @@ with plain `pdflatex`, which is what arXiv uses.
 - **Wide tables.** Column widths are kept proportional to the cell lengths, but no
   column is narrower than its longest word. If the longest words do not fit at
   `\small`, the table is set in `\footnotesize` (Table S1, nine columns).
+  - If they do not fit there either, the gaps between the columns shrink from 6 to
+    3 pt and the words are measured in points (Tables S1, S5 and S8).
+  - A table that still does not fit is set on a landscape page (Table S7, ten
+    columns of mean ± SD). `pdflscape` also turns that page in the PDF viewer;
+    without it, `lscape` only rotates the content.
+  - A mean ± SD ("0.663 ±0.014") and an interval ("[-0.034, +0.033]") are never
+    split across lines.
+- **Float pages.** A page that holds only figures starts them at the top.
 - **Inline code** (paths, identifiers) is set with `\nolinkurl` (`filters.lua`),
   so long paths break instead of running into the margin.
 - **References.** By default the build uses option (b): natbib with plainnat, from

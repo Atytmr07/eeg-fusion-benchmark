@@ -159,6 +159,7 @@ def cells(row: str):
 
 
 TEXT_PT = 455.0                              # \linewidth of template.tex (A4, 2.5 cm)
+LANDSCAPE_PT = 702.0                         # \linewidth on a landscape page (\textheight)
 CHAR_PT = {"small": 4.9, "footnotesize": 4.3}   # mean character width (lmodern), with margin
 FONT_PT = {"small": 10.0, "footnotesize": 9.0}  # \small and \footnotesize of an 11pt article
 # Widths in em of Latin Modern characters that differ much from the mean (lowercase 0.5).
@@ -173,7 +174,7 @@ def word_em(w: str) -> float:
     return sum(EM.get(c, 0.73 if c.isupper() else 0.5) for c in w)
 
 
-def widen_table(par: str) -> tuple[str, str | None]:
+def widen_table(par: str) -> tuple[str, str | None, bool]:
     r"""Proportional column widths for tables pandoc would wrap anyway, and the font
     size to set them in (None: leave the table as it is).
 
@@ -183,13 +184,15 @@ def widen_table(par: str) -> tuple[str, str | None]:
     alone do not fit at \small, the table is set in \footnotesize. If they do not fit
     there either (Table 3: eight columns of mean ± SD), the gaps between the columns are
     narrowed from 6 to 3 pt on each side and the words are measured in points, since
-    digits are narrower than the mean character. Returns the LaTeX that sets the font
-    (and the gap) for the table."""
+    digits are narrower than the mean character. A table that does not fit even so
+    (Table S7: ten columns of mean ± SD) is set on a landscape page. Returns the table,
+    the LaTeX that sets the font (and the gap), and whether the page is landscape."""
     rows = par.strip().splitlines()
     if max(len(r) for r in rows) <= 72:
-        return par, None
+        return par, None, False
     def printed(c: str) -> str:       # measure a citation as about what natbib prints
         c = re.sub(r"`\\cite\w*\{[^}]*\}`\{=latex\}", "Author et al. (2000)", c)
+        c = re.sub(r"delta_min|δmin", "δm", c)        # set as \delta_{\min} (MATH_REWRITES)
         return re.sub(r"[*`]", "", c)
     data = [[printed(c) for c in cells(r)] for i, r in enumerate(rows) if i != 1]
     ncol = len(data[0])
@@ -202,7 +205,7 @@ def widen_table(par: str) -> tuple[str, str | None]:
         longest.append(max((len(w) + w.count("±") for w in words),
                            default=1))            # ± is set in math, about two characters wide
         longest_em.append(max((word_em(w) for w in words), default=0.5))
-    setting = None
+    setting, landscape = None, False
     sizes = list(CHAR_PT)[1:] if ncol >= 8 else list(CHAR_PT)   # 8+ columns: footnotesize
     for size in sizes:
         avail = (TEXT_PT - 12.0 * ncol) / CHAR_PT[size]       # characters, minus tabcolsep
@@ -210,13 +213,17 @@ def widen_table(par: str) -> tuple[str, str | None]:
         if sum(need) <= 1:
             setting = "\\" + size
             break
-    else:                             # not even at \footnotesize: narrow gaps, measure in pt
-        sep = 3.0
-        avail_pt = TEXT_PT - 2 * sep * ncol
-        need = [(FONT_PT[size] * w + 4) / avail_pt for w in longest_em]
-        if sum(need) > 1:             # still too wide: share by the longest words
+    else:                             # not even at \footnotesize: narrow gaps, measure in pt;
+        for landscape, sep in ((False, 3.0), (True, 6.0), (True, 3.0)):   # then landscape
+            avail_pt = (LANDSCAPE_PT if landscape else TEXT_PT) - 2 * sep * ncol
+            need = [(FONT_PT[size] * w + 3) / avail_pt for w in longest_em]
+            if sum(need) <= 1:
+                break
+        else:                         # still too wide: share by the longest words
             need = [x / sum(need) for x in need]
-        setting = f"\\{size}\\setlength{{\\tabcolsep}}{{{sep:g}pt}}"
+        setting = f"\\{size}"
+        if sep != 6.0:
+            setting += f"\\setlength{{\\tabcolsep}}{{{sep:g}pt}}"
     share = [l / sum(lens) for l in lens]
     fixed: set[int] = set()
     while True:                       # raise columns below their minimum, rescale the rest
@@ -229,7 +236,23 @@ def widen_table(par: str) -> tuple[str, str | None]:
             break
         fixed |= low
     rows[1] = "|" + "|".join("-" * max(3, round(200 * x)) for x in w) + "|"
-    return "\n".join(rows), setting
+    return "\n".join(rows), setting, landscape
+
+
+def keep_together(table: str) -> str:
+    """No-break spaces where a line break would split one value: "0.663 ±0.014" (mean
+    ± SD) and "[-0.034, +0.033]" (an interval). Headers such as "equivalent ±0.05" may
+    still wrap."""
+    table = re.sub(r"(?<=\d) (?=±)", "\u00a0", table)
+    return re.sub(r"(\[[-+]?\d[\d.]*,) (?=[-+]?\d[\d.]*\])", "\\1\u00a0", table)
+
+
+def latex_group(block: str, size: str, landscape: bool) -> str:
+    """Wrap a table in its font setting and, if it needs one, a landscape page."""
+    begin, end = f"\\begingroup{size}", "\\endgroup"
+    if landscape:
+        begin, end = "\\begin{landscape}" + begin, end + "\\end{landscape}"
+    return f"```{{=latex}}\n{begin}\n```\n\n{block}\n\n```{{=latex}}\n{end}\n```"
 
 
 TABLE_CAP = re.compile(r"^\*\*Table (\d+)\.\s*(.+?)\*\*\s*(.*)$", re.S)
@@ -265,14 +288,13 @@ def restructure(body: str, report: dict) -> str:
             i += 1
             continue
         if is_table(p):
-            table, size = widen_table(re.sub(r" (?=±)", "\u00a0", p))
+            table, size, landscape = widen_table(keep_together(p))
             block = table
             if pending_caption:
                 block += f"\n\n: {pending_caption}"
                 pending_caption = None
             if size:
-                block = f"```{{=latex}}\n\\begingroup{size}\n```\n\n" + block + \
-                        "\n\n```{=latex}\n\\endgroup\n```"
+                block = latex_group(block, size, landscape)
             out.append(block)
             i += 1
             continue
@@ -332,7 +354,7 @@ def supplement_markdown(text: str, report: dict) -> str:
             pending = {"title": m.group(2).strip(), "text": []}
             continue
         if is_table(p):
-            table, size = widen_table(re.sub(r" (?=±)", "\u00a0", p))
+            table, size, landscape = widen_table(keep_together(p))
             block = table
             if pending:
                 title = pending["title"]
@@ -341,8 +363,7 @@ def supplement_markdown(text: str, report: dict) -> str:
                                                    if pending["text"] else "")
                 pending = None
             if size:
-                block = f"```{{=latex}}\n\\begingroup{size}\n```\n\n" + block + \
-                        "\n\n```{=latex}\n\\endgroup\n```"
+                block = latex_group(block, size, landscape)
             out.append(block)
             continue
         if pending is not None:

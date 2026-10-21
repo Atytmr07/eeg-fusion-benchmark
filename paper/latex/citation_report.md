@@ -12,6 +12,8 @@ decides. Nothing is added to references.bib by the build.
 | Andrzejak et al. 2001) | Andrzejak_2001 |
 | Banerjee et al. 2025) | Banerjee_2025 |
 | Basheer and Mishra 2026) | Basheer_2026 |
+| Baumgartner et al. 2018 | Baumgartner_2018 |
+| Beniczky and Ryvlin 2018) | Beniczky_2018 |
 | Bouckaert and Frank 2004) | Bouckaert_2004 |
 | Camastra et al. 2026) | Camastra_2026 |
 | Chatzichristos et al. (2020) | Chatzichristos_2020 |
@@ -25,6 +27,7 @@ decides. Nothing is added to references.bib by the build.
 | Del Pup et al. 2025) | Del_Pup_2025 |
 | Detti et al. 2020) | Detti_2020 |
 | Einizade et al. 2023) | Einizade_2023 |
+| Glatard et al. 2015) | Glatard_2015 |
 | Goldberger et al. 2000) | Goldberger_2000 |
 | Gramfort et al. 2013) | Gramfort_2013 |
 | Huang et al. (2024) | Huang_2024 |
@@ -45,8 +48,10 @@ decides. Nothing is added to references.bib by the build.
 | Picard 2021) | Picard2021arxiv |
 | Rheude et al. 2025) | Rheude_2025 |
 | Ros et al. 2025) | Ros_2025 |
+| Sendelbach and Funk 2013) | Sendelbach_2013 |
 | Shanmugavelu et al. 2024) | Shanmugavelu_2024 |
 | Shoeb 2009 | Shoeb_2009 |
+| Shoeb and Guttag 2010) | Shoeb_2010 |
 | Šoškić et al. 2024) | Soskic_2024 |
 | Steegen et al. 2016 | Steegen_2016 |
 | Summers and Dinneen 2021) | Summers2021arxiv |
