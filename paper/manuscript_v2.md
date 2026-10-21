@@ -386,6 +386,9 @@ every split and which was itself validated on a deliberately leaky split
 1e-4, batch size 32, class-weighted cross-entropy; early stopping on validation macro
 F1 with patience 12 after a minimum of 20 epochs, at most 60 epochs. The minimum guards
 against a model stopping in a trivial single-class solution, found in an early audit.
+These settings were fixed before the multiverse runs and not tuned: there was no
+hyperparameter search, the same values were used for every model, pipeline and dataset,
+and the validation subjects served only early stopping and the score fusion weight.
 
 **Seeds.** Every pipeline is run with five seed sets. A run's seed for each fold and
 model is derived from the seed set, fold and model (`src/config.py: fold_seed`), so it
