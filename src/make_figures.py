@@ -1,25 +1,32 @@
-"""Results figures 2 to 6 of the manuscript (paper/manuscript_v2.md), from stored runs.
+"""Results figures 2 to 8 of the manuscript (paper/manuscript_v2.md), from stored runs.
 
-  Figure 2  performance of each fusion operator across the pipelines: macro F1 and
-            AUPRC, mean and SD over seed sets, CHB-MIT and Siena
-  Figure 3  ranking stability: the rank of every operator in every pipeline x seed run
-            (heatmap), and the share of runs each operator wins
-  Figure 4  variance decomposition of macro F1, AUPRC and balanced accuracy: subject,
-            preprocessing, operator, their interaction, seed, residual
-  Figure 5  artefact removal (P6a/b/c): signal preservation, compute, performance change
+The order follows the Results (advisor's structure of 21 October 2026):
+
+  Figure 2  fusion operators against the controls: macro F1 and AUPRC per pipeline with
+            the spectrogram network of the fusion budget and the shallow classifier, and
+            the paired difference of every operator from each control
+  Figure 3  equivalence matrix: every operator pair in every pipeline, mean paired
+            difference, 90 percent confidence interval and test outcome (+-0.05, +-0.02)
+  Figure 4  ranking stability: rank of every operator in every run, share of runs won,
+            and Kendall's W across seed sets with three and with five seed sets
+  Figure 5  variance decomposition, and macro F1 per held-out subject and model
+  Figure 6  artefact removal (P6a/b/c): signal preservation, compute, performance change
             against P1, and reproducibility across machines
-  Figure 6  cross-dataset: each operator's macro F1 on CHB-MIT (LOSO), Siena (LOSO) and
-            CHB-MIT -> Siena, and the agreement of their rankings
+  Figure 7  seizure-level operating points: sensitivity against false alarms per hour
+            (CHB-MIT), and seizure-level sensitivity on Siena
+  Figure 8  cross-dataset: macro F1 in three settings, share of runs each operator wins
+            in each setting, and the agreement of the rankings
 
 Only complete runs enter (every LOSO fold of all five operators; make_results). Every
 figure says how many seed sets it uses. Run it at any time; it uses what exists.
 
-Usage:  python -m src.make_figures [--device cuda]
-Output: paper/figures_manuscript/figure{2..6}_*.png and .pdf
+Usage:  python -m src.make_figures [--device cuda] [--figures 2 3 ...]
+Output: paper/figures_manuscript/figure{2..8}_*.png and .pdf
 """
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 from pathlib import Path
 
@@ -48,6 +55,11 @@ MARKER = dict(zip(OPS, ["o", "s", "^", "D", "v"]))
 INK, INK2, GRID = "#1f1f1e", "#5f5e5a", "#e4e3dd"
 # ordinal blue ramp for ranks 1 (best, dark) to 5 (light), steps 650..250
 RANK_RAMP = ["#104281", "#256abf", "#3987e5", "#6da7ec", "#86b6ef"]
+# controls drawn next to the operators: greys and their own markers (not operator hues)
+CTRL = ["spec2d_wide", "shallow"]
+CTRL_STYLE = {"spec2d_wide": ("#5f5e5a", "P"), "shallow": ("#a39f94", "X")}
+CTRL_LABEL = {"spec2d_wide": "spec2d_wide (control)", "shallow": "shallow (control)"}
+MV = RESULTS_ROOT / "multiverse"
 VC_LABEL = {"fold (subject)": "subject", "pipeline": "preprocessing", "fusion": "operator",
             "fusion x pipeline": "operator x preprocessing", "seed (all seed terms)": "seed",
             "fold x (pipeline, fusion)": "subject x (prepr., operator)",
@@ -81,11 +93,14 @@ def ordered(pipes) -> list[str]:
     return [p for p in PIPELINE_ORDER if p in set(pipes)]
 
 
-def op_legend(fig, y: float = 1.02) -> None:
+def op_legend(fig, y: float = 1.02, controls: bool = False) -> None:
     from matplotlib.lines import Line2D
     h = [Line2D([], [], color=COLOR[m], marker=MARKER[m], ls="", ms=6, label=m) for m in OPS]
-    fig.legend(handles=h, loc="upper center", ncol=len(OPS), bbox_to_anchor=(0.5, y),
-               handletextpad=0.3, columnspacing=1.2)
+    if controls:
+        h += [Line2D([], [], color=CTRL_STYLE[c][0], marker=CTRL_STYLE[c][1], ls="", ms=6,
+                     label=CTRL_LABEL[c]) for c in CTRL]
+    fig.legend(handles=h, loc="upper center", ncol=len(h), bbox_to_anchor=(0.5, y),
+               handletextpad=0.3, columnspacing=1.0)
 
 
 # --- data -----------------------------------------------------------------------------------
@@ -100,35 +115,134 @@ def dataset_runs(ds: str, device: str):
 # --- Figure 2 -------------------------------------------------------------------------------
 
 def figure2(data: dict) -> None:
+    """Operators and two controls per pipeline (macro F1, AUPRC), and the paired
+    difference of each operator from each control in every pipeline."""
     plt = _plt()
     dss = [d for d in ("chbmit", "siena") if data.get(d)]
-    fig, axes = plt.subplots(len(dss), 2, figsize=(7.2, 2.6 * len(dss)), squeeze=False)
+    fig, axes = plt.subplots(len(dss), 3, figsize=(7.4, 2.75 * len(dss)), squeeze=False,
+                             gridspec_kw={"width_ratios": [3, 3, 1.9]})
     allp = ordered(set().union(*(data[d][1].pipeline.unique() for d in dss)))
     pos = {p: i for i, p in enumerate(allp)}
+    models = OPS + CTRL
     for r, ds in enumerate(dss):
-        rm = data[ds][1]
+        long = data[ds][0]
+        rm = (long[long.model.isin(models)]
+              .groupby(["pipeline", "seed", "model"])[["f1_macro", "auprc"]].mean()
+              .reset_index())
         pipes = ordered(rm.pipeline.unique())
         nseed = rm.groupby("pipeline").seed.nunique().min()
         for c, (metric, label) in enumerate((("f1_macro", "macro F1"), ("auprc", "AUPRC"))):
             ax = axes[r, c]
             st = rm.groupby(["pipeline", "model"])[metric].agg(["mean", "std"])
-            for k, m in enumerate(OPS):
-                x = np.array([pos[p] for p in pipes]) + (k - 2) * 0.13
-                s = st.xs(m, level="model").reindex(pipes)
-                ax.errorbar(x, s["mean"], yerr=s["std"], fmt=MARKER[m], color=COLOR[m],
-                            ms=4.5, elinewidth=1, capsize=0, mec="white", mew=0.6)
-            ax.set_xticks(range(len(allp)), allp)
+            for k, m in enumerate(models):
+                x = np.array([pos[p] for p in pipes]) + (k - 3) * 0.11
+                sm = st.xs(m, level="model").reindex(pipes)
+                col, mk = (COLOR[m], MARKER[m]) if m in OPS else CTRL_STYLE[m]
+                ax.errorbar(x, sm["mean"], yerr=sm["std"], fmt=mk, color=col, ms=4,
+                            elinewidth=0.9, capsize=0, mec="white", mew=0.5)
+            ax.set_xticks(range(len(allp)), allp, fontsize=7)
             ax.set_xlim(-0.5, len(allp) - 0.5)
             ax.set_ylabel(label)
-            ax.set_title(f"{NAMES[ds]}: {label} (mean and SD over {nseed} seed sets)",
-                         loc="left")
-    op_legend(fig)
+            ax.set_title(f"{'abcdef'[3 * r + c]}  {NAMES[ds]}: {label} ({nseed} seed sets)", loc="left")
+        # paired differences, operator minus control, one point per pipeline
+        ax = axes[r, 2]
+        f = RESULTS_ROOT / "results" / f"controls_tests_{ds}_f1_macro.csv"
+        if f.exists():
+            t = pd.read_csv(f)
+            for j, cn in enumerate(CTRL):
+                for k, m in enumerate(OPS):
+                    d = -t[(t.control == cn) & (t.operator == m)].mean_diff.values
+                    x = k + (j - 0.5) * 0.36
+                    ax.scatter(np.full(len(d), x), d, s=7, color=CTRL_STYLE[cn][0],
+                               marker=CTRL_STYLE[cn][1], linewidths=0, alpha=0.8, zorder=3)
+                    ax.plot([x - 0.13, x + 0.13], [d.mean()] * 2, color=COLOR[m], lw=1.6,
+                            zorder=4)
+            ax.axhline(0, color=INK2, lw=0.8)
+            ax.set_xticks(range(len(OPS)), OPS, rotation=45, ha="right", fontsize=7)
+            ax.set_ylabel("operator minus control, macro F1")
+            ax.set_title(f"{'abcdef'[3 * r + 2]}  Paired difference", loc="left")
+            ax.grid(axis="x", visible=False)
+            sig = int(t.significant.sum())
+            ax.text(0.02, 0.02, f"significant (Holm): {sig} of {len(t)}",
+                    transform=ax.transAxes, fontsize=6.5, color=INK2)
+    op_legend(fig, y=1.03, controls=True)
     fig.tight_layout()
     save(fig, "figure2_performance")
     plt.close(fig)
 
 
 # --- Figure 3 -------------------------------------------------------------------------------
+
+def figure3(data: dict) -> None:
+    """Equivalence matrix: operator pairs x pipelines, per dataset."""
+    plt = _plt()
+    from matplotlib.colors import ListedColormap
+    from matplotlib.patches import Patch
+    dss = [d for d in ("chbmit", "siena") if (MV / f"{d}_cuda" / "equivalence.csv").exists()]
+    if not dss:
+        print("figure 3: no equivalence tables, skipped")
+        return
+    # 0 inconclusive, 1 equivalent within 0.05, 2 within 0.02, 3 significant difference
+    cols = ["#ecebe6", "#a6dcc3", "#1b9e6b", "#eb6834"]
+    labels = ["inconclusive", "equivalent within 0.05", "equivalent within 0.02",
+              "significant difference (Holm)"]
+    fig, axes = plt.subplots(len(dss), 1, figsize=(7.2, 3.35 * len(dss)), squeeze=False)
+    for r, ds in enumerate(dss):
+        eq = pd.read_csv(MV / f"{ds}_cuda" / "equivalence.csv")
+        strict_f = MV / f"{ds}_cuda" / "equivalence_strict.csv"
+        st = pd.read_csv(strict_f) if strict_f.exists() else None
+        pipes = ordered(eq.pipeline.unique())
+        pairs = list(dict.fromkeys(eq.pair))
+        z = np.zeros((len(pairs), len(pipes)))
+        ax = axes[r, 0]
+        for _, row in eq.iterrows():
+            i, j = pairs.index(row.pair), pipes.index(row.pipeline)
+            strict = (st is not None and bool(st[(st.pair == row.pair)
+                                                 & (st.pipeline == row.pipeline)].equivalent.iloc[0]))
+            z[i, j] = 3 if row.significant else (2 if strict else (1 if row.equivalent else 0))
+            hw = row.delta_min - abs(row.mean_diff)          # half-width of the 90% CI
+            ax.text(j, i, f"{row.mean_diff:+.3f}\n±{hw:.3f}", ha="center", va="center",
+                    fontsize=5.4, color="white" if z[i, j] >= 2 else INK)
+        ax.imshow(z, cmap=ListedColormap(cols), vmin=-0.5, vmax=3.5, aspect="auto",
+                  interpolation="nearest")
+        ax.set_xticks(range(len(pipes)), pipes)
+        ax.set_yticks(range(len(pairs)), [p.replace("-", " - ") for p in pairs], fontsize=7)
+        ax.tick_params(length=0)
+        ax.grid(False)
+        for sp in ax.spines.values():
+            sp.set_visible(False)
+        ax.set_xticks(np.arange(len(pipes)) - 0.5, minor=True)
+        ax.set_yticks(np.arange(len(pairs)) - 0.5, minor=True)
+        ax.grid(which="minor", color="white", lw=1.5)
+        ax.tick_params(which="minor", length=0)
+        ax.set_title(f"{'ab'[r]}  {NAMES[ds]}: mean paired difference in macro F1 (first "
+                     f"minus second operator) and half-width of its 90% CI", loc="left")
+    fig.legend(handles=[Patch(color=c, label=l) for c, l in zip(cols, labels)],
+               loc="lower center", ncol=4, bbox_to_anchor=(0.5, -0.02), fontsize=7)
+    fig.tight_layout(rect=(0, 0.03, 1, 1))
+    save(fig, "figure3_equivalence")
+    plt.close(fig)
+
+
+# --- Figure 4 -------------------------------------------------------------------------------
+
+def seed_w(ds: str, folder: str) -> dict:
+    """Kendall's W across seed sets per pipeline, from a multiverse summary.md."""
+    f = MV / folder / "summary.md"
+    if not f.exists():
+        return {}
+    pat = re.compile(r"- (P\w+): Kendall's W over (\d+) seeds = ([0-9.]+)")
+    return {m.group(1): float(m.group(3)) for m in pat.finditer(f.read_text(encoding="utf-8"))}
+
+
+def interaction_p(folder: str):
+    f = MV / folder / "summary.md"
+    if not f.exists():
+        return None
+    m = re.search(r"Fusion x Preprocessing: F\([^)]*\) = [0-9.]+, p_GG = ([0-9.]+)",
+                  f.read_text(encoding="utf-8"))
+    return float(m.group(1)) if m else None
+
 
 def run_ranks(rm: pd.DataFrame) -> pd.DataFrame:
     w = rm.pivot_table(index=["pipeline", "seed"], columns="model", values="f1_macro")[OPS]
@@ -138,13 +252,14 @@ def run_ranks(rm: pd.DataFrame) -> pd.DataFrame:
     return r.sort_values(["key", "seed"]).drop(columns="key")
 
 
-def figure3(data: dict) -> None:
+def figure4(data: dict) -> None:
     plt = _plt()
     from matplotlib.colors import BoundaryNorm, ListedColormap
     dss = [d for d in ("chbmit", "siena") if data.get(d)]
-    fig, axes = plt.subplots(len(dss), 2, figsize=(7.2, 2.3 * len(dss) + 0.5), squeeze=False,
-                             gridspec_kw={"width_ratios": [5, 1.4], "wspace": 0.08,
-                                          "hspace": 0.55})
+    fig = plt.figure(figsize=(7.2, 2.3 * len(dss) + 2.6))
+    gs = fig.add_gridspec(len(dss) + 1, 2, width_ratios=[5, 1.4], wspace=0.08, hspace=0.62,
+                          height_ratios=[1] * len(dss) + [1.05])
+    axes = np.array([[fig.add_subplot(gs[r, c]) for c in range(2)] for r in range(len(dss))])
     cmap = ListedColormap(RANK_RAMP)
     norm = BoundaryNorm([0.5, 1.5, 2.5, 3.5, 4.5, 5.5], cmap.N)
     for r, ds in enumerate(dss):
@@ -165,8 +280,8 @@ def figure3(data: dict) -> None:
         for e in edges[:-1]:
             ax.axvline(e, color="white", lw=2)
         nseed = rk.groupby("pipeline").seed.nunique().min()
-        ax.set_title(f"{NAMES[ds]}: rank in every run ({nseed} seed sets per pipeline)",
-                     loc="left")
+        ax.set_title(f"{'ab'[r]}  {NAMES[ds]}: rank in every run ({nseed} seed sets per "
+                     f"pipeline)", loc="left")
         for s in ax.spines.values():
             s.set_visible(False)
         # share of runs won
@@ -182,15 +297,40 @@ def figure3(data: dict) -> None:
             bx.text(v + 0.02, i, f"{v:.0%}", va="center", fontsize=7.5, color=INK)
         bx.grid(axis="y", visible=False)
     from matplotlib.patches import Patch
-    fig.legend(handles=[Patch(color=c, label=str(i + 1)) for i, c in enumerate(RANK_RAMP)],
-               title="rank (1 = best macro F1)", loc="lower center", ncol=5,
-               bbox_to_anchor=(0.42, -0.06), handlelength=1.2, columnspacing=1.0,
-               title_fontsize=8)
-    save(fig, "figure3_rank_stability")
+    axes[-1, 0].legend(handles=[Patch(color=c, label=str(i + 1))
+                                for i, c in enumerate(RANK_RAMP)],
+                       title="rank (1 = best macro F1)", loc="upper center", ncol=5,
+                       bbox_to_anchor=(0.5, -0.14), handlelength=1.2, columnspacing=1.0,
+                       title_fontsize=8, fontsize=7.5)
+    # Kendall's W across seed sets per pipeline: three against five seed sets
+    sub = gs[len(dss), :].subgridspec(1, len(dss), wspace=0.25)
+    for c, ds in enumerate(dss):
+        ax = fig.add_subplot(sub[0, c])
+        w5, w3 = seed_w(ds, f"{ds}_cuda"), seed_w(ds, f"{ds}_cuda_3seeds")
+        pipes = ordered(set(w5) | set(w3))
+        x = np.arange(len(pipes))
+        if w3:
+            ax.scatter(x - 0.12, [w3.get(p, np.nan) for p in pipes], s=22, facecolor="white",
+                       edgecolor=INK2, lw=1, label="3 seed sets", zorder=3)
+        ax.scatter(x + 0.12, [w5.get(p, np.nan) for p in pipes], s=22, color="#256abf",
+                   label="5 seed sets", zorder=3)
+        ax.set_xticks(x, pipes, fontsize=7)
+        ax.set_ylim(0, 1.2)                     # headroom for the note above the points
+        ax.set_yticks([0, 0.2, 0.4, 0.6, 0.8, 1.0])
+        ax.set_ylabel("Kendall's W across seeds")
+        p3, p5 = interaction_p(f"{ds}_cuda_3seeds"), interaction_p(f"{ds}_cuda")
+        note = (f"Fusion x Preprocessing p_GG:\n{p3:.3f} (3 seeds), {p5:.3f} (5 seeds)"
+                if p3 is not None and p5 is not None else "")
+        ax.set_title(f"{'cd'[c]}  {NAMES[ds]}: agreement of seed rankings", loc="left")
+        ax.text(0.02, 0.95, note, transform=ax.transAxes, fontsize=6.3, va="top", color=INK2)
+        ax.grid(axis="x", visible=False)
+        if c == 0:
+            ax.legend(fontsize=7, loc="upper right", bbox_to_anchor=(1.0, 0.84))
+    save(fig, "figure4_rank_stability")
     plt.close(fig)
 
 
-# --- Figure 4 -------------------------------------------------------------------------------
+# --- Figure 5 -------------------------------------------------------------------------------
 
 def variance_shares(long: pd.DataFrame) -> pd.DataFrame:
     models = [m for m in OPS if m in set(long.model)]
@@ -210,11 +350,22 @@ def variance_shares(long: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def figure4(data: dict) -> None:
+def subject_names(ds: str) -> dict:
+    """fold index -> held-out subject(s), from one run's perfold.csv."""
+    runs = sorted((RESULTS_ROOT / ds).glob("loso_P1*_cuda/perfold.csv"))
+    if not runs:
+        return {}
+    pf = pd.read_csv(runs[0])
+    return {int(f): str(s).replace(",", "+") for f, s in
+            pf.groupby("fold").test_subjects.first().items()}
+
+
+def figure5(data: dict) -> None:
     plt = _plt()
     dss = [d for d in ("chbmit", "siena") if data.get(d)]
-    fig, axes = plt.subplots(1, len(dss), figsize=(3.6 * len(dss), 2.9), squeeze=False,
-                             sharey=True)
+    fig = plt.figure(figsize=(3.6 * len(dss), 9.2))
+    gs = fig.add_gridspec(2, len(dss), height_ratios=[1, 2.25], hspace=0.28, wspace=0.42)
+    axes = np.array([[fig.add_subplot(gs[0, c], sharey=None) for c in range(len(dss))]])
     mcol = {"f1_macro": "#2a78d6", "auprc": "#eb6834", "balanced_accuracy": "#1baf7a"}
     mlab = {"f1_macro": "macro F1", "auprc": "AUPRC", "balanced_accuracy": "balanced accuracy"}
     order = list(VC_LABEL.values())
@@ -235,17 +386,44 @@ def figure4(data: dict) -> None:
         ax.set_xlim(0, 100)
         ax.set_xlabel("share of variance (%)")
         ax.grid(axis="y", visible=False)
-        ax.set_title(f"{NAMES[ds]} ({int(vs.n_seeds.iloc[0])} seed sets)", loc="left")
+        ax.set_title(f"{'ab'[c]}  {NAMES[ds]}: sources of variance "
+                     f"({int(vs.n_seeds.iloc[0])} seed sets)", loc="left")
+        if c > 0:
+            ax.set_yticklabels([])
     h, lab = axes[0, 0].get_legend_handles_labels()
-    fig.tight_layout()
-    fig.legend(h, lab, loc="upper center", ncol=3, bbox_to_anchor=(0.6, 1.07))
-    save(fig, "figure4_variance")
+    fig.legend(h, lab, loc="upper center", ncol=3, bbox_to_anchor=(0.55, 0.935))
+    # macro F1 per held-out subject and model, mean over pipelines and seed sets
+    models = OPS + CTRL
+    for c, ds in enumerate(dss):
+        long = data[ds][0]
+        m = (long[long.model.isin(models)].groupby(["fold", "model"]).f1_macro.mean()
+             .unstack()[models])
+        m.index = [subject_names(ds).get(int(f), str(f)) for f in m.index]
+        m = m.loc[m.mean(axis=1).sort_values(ascending=False).index]
+        ax = fig.add_subplot(gs[1, c])
+        ax.grid(False)
+        im = ax.imshow(m.values, cmap="Blues", vmin=0.4, vmax=1.0, aspect="auto",
+                       interpolation="nearest")
+        for i in range(m.shape[0]):
+            for j in range(m.shape[1]):
+                v = m.values[i, j]
+                ax.text(j, i, f"{v:.2f}", ha="center", va="center", fontsize=5,
+                        color="white" if v > 0.78 else INK)
+        ax.set_xticks(range(len(models)), models, fontsize=6.5, rotation=45, ha="right")
+        ax.set_yticks(range(m.shape[0]), m.index, fontsize=6.5)
+        ax.tick_params(length=0)
+        for sp in ax.spines.values():
+            sp.set_visible(False)
+        ax.set_title(f"{'cd'[c]}  {NAMES[ds]}: macro F1 per held-out subject", loc="left")
+    cax = fig.add_axes([0.93, 0.08, 0.012, 0.3])
+    fig.colorbar(im, cax=cax, label="macro F1 (mean over pipelines and seeds)")
+    save(fig, "figure5_variance")
     plt.close(fig)
 
 
-# --- Figure 5 -------------------------------------------------------------------------------
+# --- Figure 6 -------------------------------------------------------------------------------
 
-def figure5(data: dict) -> None:
+def figure6(data: dict) -> None:
     plt = _plt()
     meth = [("P6a", "infomax", "Infomax"), ("P6b", "gedai-conservative", "GEDAI"),
             ("P6c", "amica", "AMICA")]
@@ -327,17 +505,62 @@ def figure5(data: dict) -> None:
     h = [Line2D([], [], color=COLOR[m], marker=MARKER[m], ls="", ms=5, label=m) for m in OPS]
     axes[1, 0].legend(handles=h, fontsize=7, ncol=5, loc="lower center",
                       bbox_to_anchor=(0.5, 1.07), handletextpad=0.2, columnspacing=0.6)
-    save(fig, "figure5_artefact_removal")
+    save(fig, "figure6_artefact_removal")
     plt.close(fig)
 
 
-# --- Figure 6 -------------------------------------------------------------------------------
+# --- Figure 7 -------------------------------------------------------------------------------
 
-def figure6(data: dict, device: str) -> None:
+def figure7(data: dict) -> None:
+    """Seizure-level operating points: CHB-MIT sensitivity against false alarms per hour,
+    one point per run and the operator's mean and SD; Siena sensitivity per operator."""
+    fc = RESULTS_ROOT / "results" / "events_chbmit_per_run.csv"
+    fs = RESULTS_ROOT / "results" / "events_siena_per_run.csv"
+    if not fc.exists():
+        print("figure 7: no event tables, skipped")
+        return
+    plt = _plt()
+    ev = pd.read_csv(fc)
+    fig, axes = plt.subplots(1, 2, figsize=(7.2, 3.1), gridspec_kw={"width_ratios": [2.2, 1]})
+    ax = axes[0]
+    for m in OPS:
+        g = ev[ev.model == m]
+        ax.scatter(g.fa_per_hour, g.sensitivity, s=9, color=COLOR[m], marker=MARKER[m],
+                   alpha=0.35, linewidths=0)
+        ax.errorbar(g.fa_per_hour.mean(), g.sensitivity.mean(), xerr=g.fa_per_hour.std(),
+                    yerr=g.sensitivity.std(), fmt=MARKER[m], color=COLOR[m], ms=7,
+                    mec="white", mew=0.8, elinewidth=1.2, zorder=4)
+    n = ev.groupby("pipeline").seed.nunique().min()
+    ax.set_xlabel("false alarms per hour")
+    ax.set_ylabel("seizure-level sensitivity")
+    ax.set_title(f"a  CHB-MIT: operating point at threshold 0.5 ({ev.pipeline.nunique()} "
+                 f"pipelines x {n} seed sets)", loc="left")
+    ax = axes[1]
+    if fs.exists():
+        es = pd.read_csv(fs)
+        for k, m in enumerate(OPS):
+            g = es[es.model == m].sensitivity
+            jit = (np.arange(len(g)) % 9 - 4) * 0.025
+            ax.scatter(k + jit, g, s=7, color=COLOR[m], marker=MARKER[m], alpha=0.35,
+                       linewidths=0)
+            ax.plot([k - 0.25, k + 0.25], [g.mean()] * 2, color=INK, lw=1.4)
+        ax.set_xticks(range(len(OPS)), OPS, rotation=45, ha="right", fontsize=7)
+        ax.set_ylabel("seizure-level sensitivity")
+        ax.set_title("b  Siena: sensitivity", loc="left")
+        ax.grid(axis="x", visible=False)
+    op_legend(fig, y=1.05)
+    fig.tight_layout()
+    save(fig, "figure7_seizure_level")
+    plt.close(fig)
+
+
+# --- Figure 8 -------------------------------------------------------------------------------
+
+def figure8(data: dict, device: str) -> None:
     from scipy.stats import kendalltau
     cr = cross_runs(RESULTS_ROOT / "cross", device)
     if not cr or not data.get("chbmit") or not data.get("siena"):
-        print("figure 6: cross-dataset or a LOSO dataset missing, skipped")
+        print("figure 8: cross-dataset or a LOSO dataset missing, skipped")
         return
     plt = _plt()
     rows = []
@@ -349,7 +572,8 @@ def figure6(data: dict, device: str) -> None:
     pipes = ordered(cross.pipeline.unique())
     settings = {"CHB-MIT (LOSO)": data["chbmit"][1], "Siena (LOSO)": data["siena"][1],
                 "CHB-MIT -> Siena": cross.rename(columns={"f1": "f1_macro"})}
-    fig, axes = plt.subplots(1, 2, figsize=(7.2, 2.9), gridspec_kw={"width_ratios": [2.2, 1]})
+    fig, axes = plt.subplots(1, 3, figsize=(7.4, 2.9),
+                             gridspec_kw={"width_ratios": [2.0, 1.25, 1]})
     ax = axes[0]
     means = {}
     xt = []
@@ -365,9 +589,22 @@ def figure6(data: dict, device: str) -> None:
     ax.set_xticks(range(len(xt)), xt)
     ax.set_ylabel("macro F1")
     plabel = "all nine pipelines" if len(pipes) == 9 else "pipelines " + ", ".join(pipes)
-    ax.set_title(f"a  Operators in three settings ({plabel})", loc="left")
+    ax.set_title(f"a  macro F1 ({plabel})", loc="left")
+    ax.set_xticks(range(len(xt)), ["CHB-MIT\n(LOSO)", "Siena\n(LOSO)", "CHB-MIT\n-> Siena"])
     ax.grid(axis="x", visible=False)
+    # share of runs in which each operator ranks first, per setting
     ax = axes[1]
+    for j, (lab, rm) in enumerate(settings.items()):
+        w = rm[rm.pipeline.isin(pipes)].pivot_table(index=["pipeline", "seed"],
+                                                    columns="model", values="f1_macro")[OPS]
+        won = (w.rank(axis=1, ascending=False, method="average") == 1).mean()
+        for k, m in enumerate(OPS):
+            ax.bar(j + (k - 2) * 0.16, 100 * won[m], width=0.15, color=COLOR[m])
+    ax.set_xticks(range(3), ["CHB-MIT", "Siena", "transfer"])
+    ax.set_ylabel("runs ranked first (%)")
+    ax.set_title("b  Rank reversal", loc="left")
+    ax.grid(axis="x", visible=False)
+    ax = axes[2]
     pairs = [("CHB-MIT (LOSO)", "Siena (LOSO)"), ("CHB-MIT (LOSO)", "CHB-MIT -> Siena"),
              ("Siena (LOSO)", "CHB-MIT -> Siena")]
     plab = ["CHB vs\nSiena", "CHB vs\ntransfer", "Siena vs\ntransfer"]
@@ -380,20 +617,20 @@ def figure6(data: dict, device: str) -> None:
         ax.plot([i - 0.2, i + 0.2], [np.mean(taus)] * 2, color=INK, lw=1.5)
     ax.axhline(0, color=INK2, lw=0.8)
     ax.set_ylim(-1.05, 1.05)
-    ax.set_xticks(range(3), plab)
+    ax.set_xticks(range(3), plab, fontsize=6.5)
     ax.set_ylabel("Kendall tau of operator rankings")
-    ax.set_title("b  Ranking agreement", loc="left")
+    ax.set_title("c  Ranking agreement", loc="left")
     ax.grid(axis="x", visible=False)
     op_legend(fig, y=1.06)
     fig.tight_layout()
-    save(fig, "figure6_cross_dataset")
+    save(fig, "figure8_cross_dataset")
     plt.close(fig)
 
 
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--device", default="cuda", choices=["cpu", "cuda"])
-    ap.add_argument("--figures", nargs="*", type=int, default=[2, 3, 4, 5, 6])
+    ap.add_argument("--figures", nargs="*", type=int, default=[2, 3, 4, 5, 6, 7, 8])
     args = ap.parse_args()
     data = {}
     for ds in ("chbmit", "siena"):
@@ -401,10 +638,10 @@ def main() -> None:
         if long is not None:
             data[ds] = (long, rm)
             print(f"{NAMES[ds]}: {rm.groupby(['pipeline', 'seed']).ngroups} complete runs")
-    fns = {2: figure2, 3: figure3, 4: figure4, 5: figure5}
+    fns = {2: figure2, 3: figure3, 4: figure4, 5: figure5, 6: figure6, 7: figure7}
     for f in args.figures:
-        if f == 6:
-            figure6(data, args.device)
+        if f == 8:
+            figure8(data, args.device)
         else:
             fns[f](data)
 
