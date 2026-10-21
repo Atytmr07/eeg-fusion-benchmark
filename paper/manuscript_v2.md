@@ -166,7 +166,7 @@ test generalisation across patients (Kontras et al. 2026).
 Our contribution is not another fusion operator, nor only a comparison of existing
 ones: it is a test of how far conclusions drawn from such a comparison hold when the
 analytic decisions around it change. We hold the backbone, the training protocol and the
-parameter budget fixed (within 1.3 percent), vary only the fusion operator, and repeat
+parameter budget fixed (the four jointly trained operators within 0.4 percent), vary only the fusion operator, and repeat
 the whole comparison under nine preprocessing pipelines, including three artefact
 removal algorithms, and five seed sets, on two independent corpora and from one to the
 other. We ask three questions.
