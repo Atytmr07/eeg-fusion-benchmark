@@ -186,7 +186,7 @@ def figure3(data: dict) -> None:
     cols = ["#ecebe6", "#a6dcc3", "#1b9e6b", "#eb6834"]
     labels = ["inconclusive", "equivalent within 0.05", "equivalent within 0.02",
               "significant difference (Holm)"]
-    fig, axes = plt.subplots(len(dss), 1, figsize=(7.2, 3.35 * len(dss)), squeeze=False)
+    fig, axes = plt.subplots(len(dss), 1, figsize=(7.2, 3.9 * len(dss)), squeeze=False)
     for r, ds in enumerate(dss):
         eq = pd.read_csv(MV / f"{ds}_cuda" / "equivalence.csv")
         strict_f = MV / f"{ds}_cuda" / "equivalence_strict.csv"
@@ -202,7 +202,7 @@ def figure3(data: dict) -> None:
             z[i, j] = 3 if row.significant else (2 if strict else (1 if row.equivalent else 0))
             hw = row.delta_min - abs(row.mean_diff)          # half-width of the 90% CI
             ax.text(j, i, f"{row.mean_diff:+.3f}\n±{hw:.3f}", ha="center", va="center",
-                    fontsize=5.4, color="white" if z[i, j] >= 2 else INK)
+                    fontsize=7, color="white" if z[i, j] >= 2 else INK)
         ax.imshow(z, cmap=ListedColormap(cols), vmin=-0.5, vmax=3.5, aspect="auto",
                   interpolation="nearest")
         ax.set_xticks(range(len(pipes)), pipes)
@@ -363,7 +363,7 @@ def subject_names(ds: str) -> dict:
 def figure5(data: dict) -> None:
     plt = _plt()
     dss = [d for d in ("chbmit", "siena") if data.get(d)]
-    fig = plt.figure(figsize=(3.6 * len(dss), 9.2))
+    fig = plt.figure(figsize=(3.6 * len(dss), 10.2))
     gs = fig.add_gridspec(2, len(dss), height_ratios=[1, 2.25], hspace=0.28, wspace=0.42)
     axes = np.array([[fig.add_subplot(gs[0, c], sharey=None) for c in range(len(dss))]])
     mcol = {"f1_macro": "#2a78d6", "auprc": "#eb6834", "balanced_accuracy": "#1baf7a"}
@@ -379,7 +379,7 @@ def figure5(data: dict) -> None:
             y = np.arange(len(order)) - (k - (len(mets) - 1) / 2) * h   # first metric drawn on top
             ax.barh(y, 100 * s.values, height=h * 0.9, color=mcol[met], label=mlab[met])
             for yi, v in zip(y, s.values):
-                ax.text(100 * v + 1, yi, f"{100 * v:.1f}", va="center", fontsize=6,
+                ax.text(100 * v + 1, yi, f"{100 * v:.1f}", va="center", fontsize=7,
                         color=INK2)
         ax.set_yticks(range(len(order)), order)
         ax.invert_yaxis()
@@ -407,7 +407,7 @@ def figure5(data: dict) -> None:
         for i in range(m.shape[0]):
             for j in range(m.shape[1]):
                 v = m.values[i, j]
-                ax.text(j, i, f"{v:.2f}", ha="center", va="center", fontsize=5,
+                ax.text(j, i, f"{v:.2f}", ha="center", va="center", fontsize=7.2,
                         color="white" if v > 0.78 else INK)
         ax.set_xticks(range(len(models)), models, fontsize=6.5, rotation=45, ha="right")
         ax.set_yticks(range(m.shape[0]), m.index, fontsize=6.5)
