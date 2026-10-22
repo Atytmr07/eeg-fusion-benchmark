@@ -37,8 +37,12 @@ Usage:  python -m src.events --pipeline P1 --repeats 0 1 2 --threads 16 [--jobs 
         python -m src.events --dataset siena --pipeline P1 --repeats 0 1 2
         python -m src.events --cross chbmit_to_siena_P0
         python -m src.events --dataset siena --oracle
+        python -m src.events --pipeline P1 --runs ... --thresholds 0.3 0.5 0.7
 Output: results_v2/<dataset>/<run>/events/ (perperson.csv, summary.csv, meta.json) for
-        every run; results_v2/cross/<tag>/events/ for --cross
+        every run; results_v2/cross/<tag>/events/ for --cross. With --thresholds
+        other than 0.5 alone (a sensitivity analysis; the primary threshold stays 0.5),
+        every threshold is scored in the same pass and the outputs go to
+        events_thresholds/ instead, with a threshold column.
 """
 from __future__ import annotations
 
@@ -191,10 +195,11 @@ def predict(model, x1: torch.Tensor, x2: torch.Tensor, device: str, batch: int =
 # --- Scoring the recordings of one test set ----------------------------------------------
 
 def score_recordings(recs, pipe, dataset: str, models: dict, blend: dict, clfs: dict,
-                     device: str, jobs: int, pool, check: dict | None = None) -> dict:
+                     device: str, jobs: int, pool, check: dict | None = None,
+                     thresholds=(THRESHOLD,)) -> dict:
     """Apply every run's models and the baselines to every window of the recordings and
-    sum the event counts: (run, model) -> [reference events, detected, false alarms,
-    hours]. blend: run -> score fusion weight (NaN: no score model).
+    sum the event counts: (run, model, threshold) -> [reference events, detected, false
+    alarms, hours]. blend: run -> score fusion weight (NaN: no score model).
 
     check: recording name -> (start times, corpus windows) of the windows the runs were
     trained and tested on. The same windows recomputed here are compared with them, and
@@ -238,18 +243,21 @@ def score_recordings(recs, pipe, dataset: str, models: dict, blend: dict, clfs: 
             probs[tag] = p
         for tag, p in probs.items():
             for m, prob in p.items():
-                ref, hyp = masks_1hz(hours * 3600, zs, t0, prob > THRESHOLD)
-                n_ref, tp, fp = score_events(ref, hyp)
-                acc.setdefault((tag, m), np.zeros(4))
-                acc[(tag, m)] += (n_ref, tp, fp, hours)
+                for t in thresholds:
+                    ref, hyp = masks_1hz(hours * 3600, zs, t0, prob > t)
+                    n_ref, tp, fp = score_events(ref, hyp)
+                    acc.setdefault((tag, m, t), np.zeros(4))
+                    acc[(tag, m, t)] += (n_ref, tp, fp, hours)
     return acc
 
 
 def event_rows(acc: dict, **fields) -> list[dict]:
     rows = []
     acc = {k: v for k, v in acc.items() if k != "_window_diff"}
-    for (tag, m), (n_ref, tp, fp, hours) in acc.items():
-        rows.append({"run": tag, "model": m, **fields, "seizure_events": int(n_ref),
+    multi = len({k[2] for k in acc}) > 1
+    for (tag, m, t), (n_ref, tp, fp, hours) in acc.items():
+        rows.append({"run": tag, "model": m, **({"threshold": t} if multi else {}),
+                     **fields, "seizure_events": int(n_ref),
                      "detected": int(tp), "false_alarms": int(fp), "hours": hours,
                      "sensitivity": tp / n_ref if n_ref else np.nan,
                      "fa_per_hour": fp / hours if hours else np.nan,
@@ -258,7 +266,7 @@ def event_rows(acc: dict, **fields) -> list[dict]:
 
 
 def summarize(part: pd.DataFrame, dataset: str) -> pd.DataFrame:
-    summ = part.groupby("model").agg(
+    summ = part.groupby(["threshold", "model"] if "threshold" in part else "model").agg(
         sensitivity_mean=("sensitivity", "mean"), fa_per_hour_mean=("fa_per_hour", "mean"),
         fa_per_hour_median=("fa_per_hour", "median"), detected=("detected", "sum"),
         seizure_events=("seizure_events", "sum"), false_alarms=("false_alarms", "sum"),
@@ -353,8 +361,11 @@ def run_loso(args, pipe, t_start: float) -> None:
              for tag, pf in perfold.items()}
     decisions = corpus["info"].get("decisions") if args.dataset == "siena" else None
 
+    thresholds = tuple(args.thresholds)
+    sub = "events" if thresholds == (THRESHOLD,) else "events_thresholds"
     rows, window_diff = [], np.nan
-    ck = checkpoint_dir(f"{args.dataset}_{pipe.name}", runs)
+    ck = checkpoint_dir(f"{args.dataset}_{pipe.name}" + ("" if sub == "events" else "_thr"),
+                        runs)
     pool = ProcessPoolExecutor(args.jobs) if args.jobs > 1 else None
     for fi, (key, tr_all, te) in enumerate(splits):
         t_fold = time.time()
@@ -382,7 +393,7 @@ def run_loso(args, pipe, t_start: float) -> None:
                      corpus["X"][te][corpus["record"][te] == r])
                  for r in set(corpus["record"][te])}
         acc = score_recordings(recs, pipe, args.dataset, models, w, clfs, args.device,
-                               args.jobs, pool, check)
+                               args.jobs, pool, check, thresholds)
         diff = acc.get("_window_diff", np.nan)
         window_diff = max(window_diff, diff) if np.isfinite(window_diff) else diff
         person = str(corpus["group"][te][0])
@@ -399,8 +410,9 @@ def run_loso(args, pipe, t_start: float) -> None:
     df = pd.DataFrame(rows)
     for tag, d in runs.items():
         part = df[df.run == tag].drop(columns="run")
-        meta = {"definition": "docs/EVENTS.md", "threshold": THRESHOLD, "window_s": WIN_S,
-                "scoring": "timescoring EventScoring defaults (SzCORE)",
+        meta = {"definition": "docs/EVENTS.md",
+                "threshold": THRESHOLD if sub == "events" else list(thresholds),
+                "window_s": WIN_S, "scoring": "timescoring EventScoring defaults (SzCORE)",
                 "pipeline": pipe.describe(), "folds": len(splits),
                 "elapsed_s": round(time.time() - t_start, 1)}
         meta["window_diff_vs_corpus"] = window_diff
@@ -409,7 +421,7 @@ def run_loso(args, pipe, t_start: float) -> None:
                                 f"{window_diff:.1e} of its amplitude (tolerance {WINDOW_TOL})")
         if decisions is not None:
             meta["decisions"] = decisions
-        summ = write_outputs(d / "events", part, args.dataset, meta)
+        summ = write_outputs(d / sub, part, args.dataset, meta)
         print_summary(tag, summ, args.dataset)
     shutil.rmtree(ck, ignore_errors=True)
 
@@ -542,6 +554,9 @@ def main() -> None:
     ap.add_argument("--skip-baselines", action="store_true",
                     help="with --cross: do not refit the classical baselines (needs no "
                          "CHB-MIT data; for tests only)")
+    ap.add_argument("--thresholds", nargs="+", type=float, default=[THRESHOLD],
+                    help="decision thresholds scored in one pass (sensitivity analysis; "
+                         "outputs to events_thresholds/ unless 0.5 alone)")
     ap.add_argument("--oracle", action="store_true",
                     help="check the scoring: window labels as predictions")
     args = ap.parse_args()
