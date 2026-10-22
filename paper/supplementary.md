@@ -231,7 +231,7 @@ fusion operator (`python -m src.make_results`, `results_v2/results/main_*.csv`).
 
 ## Table S7. All controls
 
-The six controls over the same complete runs as Table 2 (mean and SD over the 45 runs of
+The six controls over the same complete runs as Table 4 (mean and SD over the 45 runs of
 each dataset, fold means within a run; Brier: lower is better). Parameters with 18 input
 channels; the classical models are logistic regressions on 18 log variances (logvar) and
 on seven features per channel (shallow), with an intercept

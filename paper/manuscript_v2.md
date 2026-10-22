@@ -20,17 +20,18 @@ Antalya Bilim University
 Studies of convolutional networks for EEG seizure detection that fuse the raw waveform
 with its spectrogram often report that one fusion operator outperforms the others, on
 one dataset, one preprocessing pipeline and one training run. We tested whether such
-conclusions hold when these choices change. Five fusion operators (early, late, gated,
-attention and score fusion) and single-branch and classical controls were compared
+conclusions hold when these choices change. Five fusion operators (early, late, gated
+and attention fusion, matched in parameter count, and score fusion, an ensemble of the
+two single-branch networks) and single-branch and classical controls were compared
 under nine preprocessing pipelines, including three artefact removal algorithms
 (Extended Infomax, GEDAI, AMICA), and five seed sets, with leave-one-subject-out
 evaluation on CHB-MIT (23 subjects) and Siena (14 subjects) and by training on CHB-MIT
 and testing on Siena. Statistical significance (resampling-corrected tests), practical
 equivalence (margins fixed in advance) and ranking stability were assessed separately.
 The operators differed by a median of 0.021 (CHB-MIT) and 0.053 (Siena) macro F1 within
-a pipeline, and no difference was significant. The held-out subject explained 74
-percent of the variance on CHB-MIT; preprocessing and the operator explained none, and
-the seed more. Rankings changed between seeds (median Kendall's W 0.22 on CHB-MIT), were
+a pipeline, and no difference was significant. Variability associated with the
+held-out subject made up 74 percent of the variance on CHB-MIT; the estimated shares of
+preprocessing and the operator were zero, that of the seed 1 percent. Rankings changed between seeds (median Kendall's W 0.22 on CHB-MIT), were
 more stable on Siena, where score fusion ranked first in 82 percent of runs without a
 significant advantage, and did not transfer between datasets. Early fusion had the
 lowest AUPRC in all 18 pipeline-dataset combinations. The controls stood to the
@@ -166,7 +167,9 @@ test generalisation across patients (Kontras et al. 2026).
 Our contribution is not another fusion operator, nor only a comparison of existing
 ones: it is a test of how far conclusions drawn from such a comparison hold when the
 analytic decisions around it change. We hold the backbone, the training protocol and the
-parameter budget fixed (the four jointly trained operators within 0.4 percent), vary only the fusion operator, and repeat
+parameter budget fixed (the four jointly trained operators within 0.4 percent; score
+fusion, an ensemble of the two branches, is compared alongside them but is not
+parameter-matched), vary only the fusion operator, and repeat
 the whole comparison under nine preprocessing pipelines, including three artefact
 removal algorithms, and five seed sets, on two independent corpora and from one to the
 other. We ask three questions.
@@ -187,8 +190,9 @@ difference is not taken as evidence of equivalence.
 
 The study contributes:
 
-1. a parameter-matched comparison of five fusion operators, with single-branch and
-   classical controls, crossed with nine preprocessing pipelines and five seed sets on
+1. a comparison of five fusion operators, four of them jointly trained and matched in
+   parameter count and the fifth a decision-level ensemble outside that matching, with
+   single-branch and classical controls, crossed with nine preprocessing pipelines and five seed sets on
    CHB-MIT and Siena, and a transfer experiment from one to the other;
 2. an analysis that separates the effects of preprocessing, seed and their interaction
    with the operator, and reports each operator's full rank distribution rather than a
@@ -212,7 +216,7 @@ applied and how leakage between training and test data is prevented.
 
 ![Study design](figures_manuscript/figure1_design.png)
 
-**Figure 1.** Study design. **a**, The multiverse: two datasets harmonised to 18 bipolar channels at 256 Hz and 10 s windows; nine preprocessing pipelines, each trained with five seed sets; a 1D CNN on the raw waveform and a 2D CNN on the log-STFT, combined by five fusion operators under a matched parameter budget, with single-branch and classical controls; evaluation by leave-one-subject-out (LOSO) at the window and the seizure level. **b**, Where each step is applied and how leakage is prevented: whole persons are held out (chb01 and chb21 together), and validation persons serve only early stopping and the score fusion weight; P4 rejects windows from training and validation data only, so every pipeline is tested on the same windows; P6 cleans each recording on its own, without seizure labels.
+**Figure 1.** Study design. **a**, The multiverse: two datasets harmonised to 18 bipolar channels at 256 Hz and 10 s windows; nine preprocessing pipelines, each trained with five seed sets; a 1D CNN on the raw waveform and a 2D CNN on the log-STFT, combined by five fusion operators, four jointly trained under a matched parameter budget and score fusion as a decision-level ensemble of the two branches at their own size, with single-branch and classical controls; evaluation by leave-one-subject-out (LOSO) at the window and the seizure level. **b**, Where each step is applied and how leakage is prevented: whole persons are held out (chb01 and chb21 together), and validation persons serve only early stopping and the score fusion weight; P4 rejects windows from training and validation data only, so every pipeline is tested on the same windows; P6 cleans each recording on its own, without seizure labels.
 
 ### 2.1 Datasets and EEG harmonisation
 
@@ -248,16 +252,31 @@ recordings past midnight).
 is ictal if it overlaps an annotated seizure at all. Non-ictal windows are subsampled
 per subject to four per ictal window of that subject, with a fixed seed, and every
 subject's true recording duration is kept for the event metrics (Section 2.5). This
-gives 6,380 windows (1,276 ictal) for CHB-MIT and 1,640 windows (328 ictal) for Siena.
-The same windows are used by every pipeline, which is checked whenever a pipeline's
-corpus is built, so all comparisons between pipelines are paired window by window.
+gives 6,380 windows (1,276 ictal) for CHB-MIT and 1,640 windows (328 ictal) for Siena,
+exactly four non-ictal windows per ictal window in every subject. The CHB-MIT windows
+come from 670 of the 683 recordings; no window was drawn from the other 13, all of them
+without seizures. The same windows are used by every pipeline, which is checked
+whenever a pipeline's corpus is built, so all comparisons between pipelines are paired
+window by window.
+
+**Class prevalence.** The fixed ratio gives every pipeline, operator and subject the
+same class distribution, so that window-level results are comparable across them.
+Consequently, the window-level evaluation reflects this controlled sampling
+distribution, with 20 percent ictal windows, rather than the natural prevalence of
+seizures in continuous EEG, which is far lower (0.4 percent of all 10 s windows of the
+CHB-MIT recordings, 0.6 percent in Siena's recordings, which are cut around seizures). Window-level metrics, and macro F1 at a fixed threshold in particular, should
+therefore be interpreted within this experimental setting and not as the performance
+expected on continuous recordings. The seizure-level evaluation (Section 2.5) runs on
+the original, complete recording timelines and complements it.
 
 **Differences between the datasets.** The two corpora differ in age (mostly children
 against adults), seizure types, recording length per patient (Siena's
 recordings are cut around seizures for a seizure prediction study), centre,
 equipment and mains frequency (60 Hz in Boston, 50 Hz in Italy). Results are
 compared between them as an independent replication and a transfer test (RQ3), not
-interpreted as an age or population effect.
+interpreted as an age or population effect: because the datasets differ in several of
+these respects at once, no difference between them can be attributed to any single
+one.
 
 ### 2.2 Preprocessing multiverse
 
@@ -277,6 +296,11 @@ spectrogram settings, models, training and evaluation are fixed (`src/preprocess
 | P6a | 0.5 to 40 Hz | none | Extended Infomax ICA | z-score | artefact removal |
 | P6b | 0.5 to 40 Hz | none | GEDAI | z-score | artefact removal |
 | P6c | 0.5 to 40 Hz | none | AMICA | z-score | artefact removal |
+
+**Order of operations.** Each continuous recording is band-pass filtered, notch
+filtered (P2) and cleaned (P6), in that order; it is then cut into the fixed windows,
+P4's rejection rule is applied, and each window is normalised. The spectrogram is
+computed from the normalised window.
 
 **Filters.** Zero-phase Butterworth filters (order 4, forward and backward) are
 applied to each continuous recording before it is windowed, so that no filter
@@ -330,6 +354,12 @@ its own unlabelled signal; seizure annotations are never used, and no decomposit
 threshold or statistic is shared between recordings or persons. A test person's
 recordings are therefore cleaned exactly as they would be without any training data.
 
+**Offline processing.** Filtering and artefact cleaning are applied to complete
+recordings before windows are extracted, so a window's cleaned signal depends on data
+recorded after it. These experiments therefore evaluate the robustness of offline
+preprocessing and do not represent a causal, real-time seizure detection pipeline, in
+which only past signal is available.
+
 ### 2.3 EEG representations and fusion strategies
 
 **Representations.** Each 10 s window enters the network twice: as the 18-channel
@@ -353,7 +383,9 @@ them:
 - **Attention:** a learned attention module weights the branches from both feature
   vectors jointly.
 - **Score:** the two branches are trained as independent classifiers and their
-  probabilities blended with a weight chosen on the validation split only.
+  probabilities blended, p = w p_waveform + (1 - w) p_spectrogram, with the weight w
+  chosen on the validation subjects only, by minimising their log loss over a 41-point
+  grid from 0 to 1.
 
 **Parameter matching.** Every jointly trained model (the four joint operators and two
 widened single-branch controls) is sized to a common budget by solving the fusion
@@ -362,53 +394,92 @@ have 102,236 to 103,712 parameters, the four joint operators within 0.36 percent
 each other. Score fusion, an ensemble of two independently sized classifiers, keeps
 its natural size: it blends the probabilities of the two default-width single-branch
 controls below (28,850 and 34,546 parameters, 63,396 together, about 62 percent of the
-budget).
+budget). Score fusion is retained as a complementary decision-level strategy: because
+its architecture and training differ from those of the jointly trained models, it is
+part of the broader practical comparison of operators but not of the strictly
+parameter-matched architectural comparison, which concerns early, late, gated and
+attention fusion (102,547; 102,768; 102,921 and 102,767 parameters).
 
 **Controls.** The two single-branch networks at their default width (raw1d, spec2d)
 and widened to the fusion budget (raw1d_wide, spec2d_wide), which asks whether fusion
 beats a unimodal model of the same size; and two classical baselines without
 representation learning, a logistic regression on log variance (logvar) and on seven
 hand-crafted features (log variance, line length and relative power in five bands;
-shallow).
+shallow), 19 and 127 parameters with the intercept. The networks see the same windows
+and preprocessing as the operators. The logistic regressions (standardised features,
+class-balanced weights, C = 1, no tuning) need no early stopping, so they are fitted
+on all training subjects, including the four (Siena: three) that the networks set aside
+for validation; this favours the classical baselines, if anything.
 
 ### 2.4 Experimental protocol
 
-**Leave one subject out.** Each subject is held out once as the test set (23 folds on
-CHB-MIT, chb01 and chb21 together; 14 on Siena). From the remaining subjects, whole
-subjects are set aside as an inner validation set (4 of 22 on CHB-MIT, 3 of 13 on
-Siena), chosen deterministically to cover the range of seizure burdens; it serves
-early stopping and the score fusion weight only. No subject's windows and no seizure's
-windows ever appear on both sides of a split, which a leakage checker confirms for
-every split and which was itself validated on a deliberately leaky split
-(`src/chbmit_corpus.py`).
+**Leave one subject out.** All evaluation is subject-independent. Each subject is held
+out once as the test set (23 folds on CHB-MIT, 14 on Siena), and all recordings of one
+individual are assigned to the same partition (chb01 and chb21 are held out together).
+Within each outer fold, validation subjects are selected exclusively from the remaining
+training subjects, and the held-out subject is excluded from all training, early
+stopping and model selection. The selection is deterministic and does not look at
+any result: the remaining subjects are ordered by their number of ictal windows, and
+round(0.2 n) of them (4 of 22 on CHB-MIT, 3 of 13 on Siena) are taken at evenly spaced
+positions of that order, so the validation set spans the range of seizure burdens and
+always contains ictal windows. It serves early stopping and the score fusion weight
+only. No subject's windows and no seizure's windows ever appear in two of the
+training, validation and test partitions; an automatic check of every fold confirms
+this for both datasets and that every stored run held out the same subjects in the
+same folds (`src/audit_methods.py`), and the leakage checker was itself validated on a
+deliberately leaky split (`src/chbmit_corpus.py`).
 
 **Training.** AdamW (Loshchilov and Hutter 2019), learning rate 1e-3, weight decay
 1e-4, batch size 32, class-weighted cross-entropy; early stopping on validation macro
 F1 with patience 12 after a minimum of 20 epochs, at most 60 epochs. The minimum guards
 against a model stopping in a trivial single-class solution, found in an early audit.
-These settings were fixed before the multiverse runs and not tuned: there was no
-hyperparameter search, the same values were used for every model, pipeline and dataset,
-and the validation subjects served only early stopping and the score fusion weight.
+These settings, and the architectures, were fixed before the multiverse runs and not
+tuned: there was no hyperparameter search or optimisation, the same values were used
+for every model, pipeline and dataset, and the validation subjects served only early
+stopping and the score fusion weight. The reported performance is therefore that of a
+fixed, untuned configuration rather than the best each operator could reach.
 
 **Seeds.** Every pipeline is run with five seed sets. A run's seed for each fold and
 model is derived from the seed set, fold and model (`src/config.py: fold_seed`), so it
-does not depend on execution order. The ranking of the operators was unstable across
+does not depend on execution order. It sets the weight initialisation, the order of
+the mini-batches and the dropout masks. It does not change the data: the window
+sampling (one fixed seed), the validation subjects (deterministic) and the artefact
+cleaning (a seed per recording) are the same in every seed set, so differences between
+seed sets reflect stochastic training alone. The ranking of the operators was unstable across
 three seed sets (Kendall's W below 0.5 in seven of nine CHB-MIT pipelines), the
 condition fixed beforehand for extending to five.
 
 **Cross-dataset experiment (RQ3).** Each model is trained once on all CHB-MIT subjects
 (with the same inner validation rule) and tested on every Siena window and recording,
 for every pipeline and seed set (`src/cross_dataset.py`). The pipeline is applied to
-each dataset as defined, including each dataset's own mains notch in P2. Results are
-reported per Siena patient.
+each dataset as defined, including each dataset's own mains notch in P2. Siena is
+used for testing only: the validation subjects are drawn from CHB-MIT, and no Siena
+window enters training, early stopping, the score fusion weight or any other choice.
+Results are reported per Siena patient. The experiment asks whether the relative
+performance of the operators persists when the dataset changes. Because the datasets
+differ in population, acquisition and recording protocol (Section 2.1), it measures
+their combined distribution shift and does not isolate any single source of it.
 
 ### 2.5 Evaluation metrics
 
 **Window level (primary).** Macro F1 and the area under the precision-recall curve
 (AUPRC) are primary; balanced accuracy (the mean of sensitivity and specificity) is
 reported alongside, with AUROC and the Brier score as secondary. A window is
-predicted ictal when its ictal probability exceeds 0.5. Metrics are computed per fold
-on the held-out subject's windows and averaged over folds within a run.
+predicted ictal when its ictal probability exceeds 0.5, for every model and control
+alike. AUPRC is computed as average precision (scikit-learn) from the predicted ictal
+probability, with the ictal class as the positive class; it assesses how well the
+probabilities rank ictal above non-ictal windows across all thresholds, complementing
+the threshold-dependent macro F1. Metrics are computed per fold on the held-out
+subject's windows and averaged over folds within a run, each fold with equal weight.
+The subject is the unit of generalisation and of the statistical tests; pooling
+windows instead would let the subjects with the most seizures dominate the average.
+
+Window-level classification and seizure-level detection are evaluated separately
+because they address different aspects of performance: macro F1 and AUPRC describe
+classification under the controlled window sampling (Section 2.1), whereas
+seizure-level sensitivity and false alarms per hour are assessed on the original
+recording timelines with event-scoring rules fixed in advance. A model can classify
+windows well and still miss seizures or raise many false alarms.
 
 **Seizure level (secondary, clinical).** Every model saved for a fold is applied to
 every 10 s window of every recording of the held-out subject, not only the subsampled
@@ -419,7 +490,11 @@ against the annotated seizures with SzCORE's event scoring (Dan et al. 2024;
 overlap counts, events closer than 90 s merged, events longer than 5 min split).
 Seizure-level sensitivity is the share of seizures detected; the false alarm rate is
 false-positive events per hour on the true recording time. The scored recordings hold
-187 seizures in 979.9 h (CHB-MIT) and 47 seizures in 141.0 h (Siena); scoring the
+187 seizures in 979.9 h (CHB-MIT) and 47 seizures in 141.0 h (Siena). On CHB-MIT these
+are the 185 annotated seizures of the 683 recordings in the target montage (of 198 in
+the dataset, Section 2.1); one of them, in chb11_99, lasts 752 s and is split by the
+5 min rule into three reference events, and in no other recording does merging or
+splitting change the count (`results_v2/audit/methods_audit.md`). Scoring the
 window labels themselves as predictions detects all of them without a false alarm,
 which checks the reference, the windows and the scoring together. On Siena only
 sensitivity is reported: its recordings are cut around seizures, so a false alarm
@@ -435,17 +510,37 @@ standard paired test overstates significance; in a simulation of two equivalent
 classifiers the naive paired Wilcoxon test rejected in 37.6 percent of cases at a
 nominal 5 percent (`src/sim_cv_correlation.py`). On the Bonn corpus, studied in an
 earlier stage of this project, the naive test found 13 to 22 significant pairs among
-55 per task and the corrected test none among the deep models (Supplementary Note 1). Pairs of operators are therefore
-compared with the resampling-corrected paired t test (Nadeau and Bengio 2003; test to
-training ratio 1/22 on CHB-MIT, 1/13 on Siena), with Holm correction over the ten
-operator pairs within each pipeline.
+55 per task and the corrected test none among the deep models (Supplementary Note 1).
+Because LOSO training sets overlap substantially, pairs of operators are compared with
+the resampling-corrected paired t test (Nadeau and Bengio 2003) rather than treating
+the held-out folds as independent observations. The test inflates the variance of the
+mean fold difference from var(d)/k to (1/k + n_test/n_train) var(d), on k - 1 degrees
+of freedom. We count subjects: n_test/n_train = 1/22 on CHB-MIT and 1/13 on Siena, the
+held-out subject against the subjects outside it. Since 4 (Siena: 3) of these serve as
+validation subjects, the networks are fitted on 18 (10); with that conservative ratio,
+1/18 and 1/10, no operator pair becomes significant and the pairs equivalent within
+0.05 fall from 73 to 70 of 90 on CHB-MIT and from 21 to 19 on Siena
+(`results_v2/audit/methods_audit.md`). Subjects contribute different numbers of
+windows, but each fold enters the test as one observation (Section 2.5). Seed sets are
+averaged within each fold before testing, so the five seed sets and nine pipelines
+never inflate the number of independent observations, which is always the number of
+subjects.
+
+Multiplicity is addressed with Holm correction within predefined families: the ten
+operator pairs of one pipeline, for one dataset and metric, form one family (nine
+families per dataset); the 30 comparisons of the six controls with the five operators
+in one pipeline form another.
 
 **Practical equivalence.** For each pair the two one-sided test with the same
 corrected variance gives the smallest margin within which the pair is equivalent at
 alpha = 0.05; a pair is equivalent if that margin is at most 0.05 macro F1 (main
 analysis) and, as a stricter sensitivity analysis, 0.02. Both margins were fixed and
 committed before any multiverse result existed. A pair is robustly equivalent if it is
-equivalent in every pipeline.
+equivalent in every pipeline. Statistical significance and practical equivalence are
+assessed separately: failure to reject equal performance is not interpreted as
+evidence of equivalence. The corrected test, the equivalence bound, the Holm
+adjustment and Kendall's W were checked against independent re-implementations
+(`src/audit_methods.py`).
 
 **Ranking stability.** In every run (pipeline and seed set) the five operators are
 ranked by mean macro F1. We report each operator's full rank distribution (counts per
@@ -470,7 +565,13 @@ mean squares. With one observation per cell the four-way interaction is the resi
 Every component is reported unrounded, as an estimated variance, as a standard
 deviation in the metric's own units (a practical size) and as a share of the total;
 negative estimates, which arise when an effect's mean square is smaller than its error
-term, are reported as such and set to zero in the shares.
+term, are reported as such and set to zero in the shares. The components are
+descriptive estimates of the variability associated with the held-out subject, the
+pipeline, the operator and stochastic training. A share of zero is therefore not proof
+that an effect is absent, and the subject component is read as subject-associated
+variability: it collects everything that differs between held-out subjects, of which
+individual physiology is only one part, together with seizure count and type, recording
+length and recording conditions.
 
 **Prediction stability.** The agreement (Cohen's kappa) of window-level predictions
 between pipelines at the same seed set is compared with the agreement between seed
@@ -484,22 +585,54 @@ were validated on synthetic runs with known effects (39 checks).
 
 ### 2.7 Reproducibility and computational cost
 
-**Software and seeds.** Training used Python 3.12, numpy 1.26.4 and PyTorch 2.8.0
-(CUDA 12.8 build); artefact removal numpy 2.5.3, MNE 1.13.2, GEDAI 0.60 and jamica
-0.3.0, in a separate environment because they need a newer numpy (`requirements.txt`,
-`requirements-ica.txt`). Seeds are fixed per run, fold and model, and per recording for
-artefact removal (from the file name).
+**Software and hardware.** Two environments were used (Table 2); artefact removal
+needs a newer numpy than the training code and runs in its own environment
+(`requirements.txt`, `requirements-ica.txt`). The software versions and the hardware of
+every run are recorded in its `meta.json`.
+
+**Table 2.** Computational environments.
+
+| | Training and window-level evaluation | Artefact removal (P6) and seizure-level evaluation |
+|---|---|---|
+| Used for | all LOSO and cross-dataset runs (135 runs) | the P6 corpora; applying the saved models to every window of every recording |
+| Machine | lab PC: 2 x Intel Xeon (Skylake-SP), 64 logical CPUs; NVIDIA GeForce RTX 5070 | laptop: Intel Core Ultra 7 155U, 14 logical CPUs; no CUDA GPU |
+| Operating system | Windows 10 (build 19045) | Windows 11 (build 26300) |
+| Python | 3.12.10 | 3.12.7 |
+| Numerical libraries | PyTorch 2.8.0 (CUDA 12.8 build), numpy 1.26.4, scipy 1.16.1, scikit-learn 1.7.2 | PyTorch 2.8.0 (CPU build), numpy 2.5.3 (OpenBLAS), scipy 1.16.1, scikit-learn 1.7.2, MNE 1.13.2, GEDAI 0.60, jamica 0.3.0, timescoring 0.0.7 |
+| Threads | 16 CPU threads | 14 (BLAS) |
+| Seeds | per seed set, fold and model (`fold_seed`) | per recording, from its file name (crc32) |
+| Determinism | PyTorch deterministic algorithms on the GPU | CPU only |
 
 **Determinism and device.** All runs of one analysis use one machine, one device and
-16 CPU threads. On the CPU a run was reproduced bit for bit, also with two runs
-sharing the machine. The multiverse ran on one GPU (NVIDIA RTX 5070) with PyTorch's
-deterministic algorithms; adaptive average pooling has no deterministic CUDA backward,
-yet two GPU runs of the same fold were identical. Before switching to the GPU, its
-agreement with the CPU was tested at identical seeds against the difference caused by
-the seed alone: over five folds the mean absolute macro F1 difference between CPU and
-GPU was 0.074, and between two CPU seed sets 0.066, so the GPU behaves as one more seed
-rather than as a systematic shift (`docs/PIPELINE.md`). CPU and GPU runs are never
-mixed in one analysis.
+16 CPU threads, and CPU and GPU runs are never mixed in one analysis. On the CPU a run
+was reproduced bit for bit, also with two runs sharing the machine. The multiverse ran
+on the GPU with PyTorch's deterministic algorithms; adaptive average pooling has no
+deterministic CUDA backward, yet two GPU runs of the same fold were identical. Before
+switching to the GPU, its agreement with the CPU was tested at identical seeds: over
+five folds the mean absolute macro F1 difference between CPU and GPU was 0.074, and
+between two CPU seed sets 0.066 (`docs/PIPELINE.md`). The CPU-GPU difference is thus
+comparable in size to the variation between stochastic training runs; this similarity
+does not establish that hardware-related numerical differences and seed effects arise
+from the same mechanism, and we make no claim about the cause.
+
+**Reproducibility conditions.** Reproducibility was examined at the level of the
+preprocessing and of the downstream predictions (Table 3). Identical preprocessing
+configurations were run in different computational environments, and the differences
+in the cleaned signals were followed into the classification and seizure-level
+metrics.
+
+**Table 3.** What was held fixed and what varied in each reproducibility comparison.
+
+| Comparison | Held fixed | Varied | Measured |
+|---|---|---|---|
+| Training, repeat on CPU | code, data, seeds, machine, threads | nothing (also two runs sharing the machine) | fold metrics: bit-identical |
+| Training, repeat on GPU | code, data, seeds, machine, GPU, deterministic mode | nothing | fold metrics: identical |
+| Training, CPU against GPU | code, data, seeds, machine | device (CPU or GPU) | macro F1 difference, against that between seed sets |
+| Artefact removal, two machines | code, input recordings, package versions, seeds, BLAS kernel | machine (laptop, lab PC), thread count | components removed, power kept, per recording; 670 CHB-MIT recordings |
+| Artefact removal, same machine | code, input, versions, seeds, machine | process parallelism (run alone or in parallel workers) | as above |
+| Artefact removal, third machine | code, input, versions, seeds | architecture (ARM, macOS) | as above, on a subset of recordings |
+| Rounding perturbation | everything | input multiplied by 1 + 1e-7 N(0, 1) | as above |
+| Effect on outcomes | trained models, test recordings | cleaned signals (training-time against event-time cleaning) | seizure-level sensitivity, false alarms, rankings |
 
 **Reproducibility of artefact removal.** Fixing seeds and package versions did not
 make P6 reproducible across machines and execution contexts (`docs/ICA_REPRO.md`).
@@ -512,9 +645,12 @@ A third machine of another architecture (ARM) agreed with the other two on recor
 where they agreed, and often with neither where they differed. Multiplying the input by
 (1 + 1e-7 N(0, 1)), a rounding-level perturbation, changed GEDAI's result on exactly the
 recordings that differed between machines, also on a full-rank montage, and Infomax's
-component decision on recordings where it had differed; AMICA was unchanged. This
-suggests that the differences arise from the methods' sensitivity to rounding near a
-decision threshold on particular recordings rather than from one machine or library.
+component decision on recordings where it had differed; AMICA was unchanged. This is
+consistent with a sensitivity of the methods to rounding near a decision threshold on
+particular recordings rather than with a fault of one machine or library, but it does
+not identify the numerical mechanism, and the differences are reported as an empirical
+reproducibility limitation. All three methods were compared on the same criteria: the
+components removed and the share of signal power kept, per recording.
 Window-level results are unaffected, because every P6 training and test window comes
 from one set of signals, cleaned once. The event metrics, which need every recording
 cleaned again, were computed on the machine that produced those signals; they then
@@ -559,7 +695,7 @@ performance patterns generalise across datasets.
 
 The five fusion operators reached broadly comparable window-level performance across
 the preprocessing multiverse, although their relative behaviour differed between
-datasets (Table 2, Figure 2).
+datasets (Table 4, Figure 2).
 
 On CHB-MIT, mean macro F1 over the 45 runs ranged from 0.673 ± 0.017 for score fusion to
 0.686 ± 0.016 for gated fusion; early, late and attention fusion reached 0.677 ± 0.013,
@@ -613,7 +749,7 @@ models (0.265 and 0.304), and early fusion the highest among the operators on CH
 probability ranking are therefore distinct properties: an operator can reach a
 competitive macro F1 without discriminating equally well across thresholds.
 
-**Table 2. Window-level performance of the fusion operators and the main controls**,
+**Table 4. Window-level performance of the fusion operators and the main controls**,
 mean and SD over the 45 runs of each dataset (fold means within a run). Per pipeline:
 Figure 2 and Supplementary Table S6; all six controls with their parameter counts:
 Supplementary Table S7.
@@ -732,7 +868,8 @@ On CHB-MIT the held-out subject accounted for 74.2 percent of the variance of ma
 (SD 0.126), its interactions with pipeline and operator for 7.2 percent and the residual
 for 17.3 percent. All seed terms together accounted for 1.1 percent (SD 0.015), more
 than the operator and preprocessing, whose estimates were below zero (-2.4e-5 and
--2.7e-5), that is, below their error terms; the Fusion × Preprocessing component was
+-2.7e-5), that is, below their error terms (a zero share means that these effects
+could not be separated from their error terms, not that they are absent); the Fusion × Preprocessing component was
 0.09 percent, consistent with the small practical size of the interaction despite its
 sensitivity to the number of seeds. AUPRC (subject 76.8 percent, operator 0.8, seed 1.5)
 and balanced accuracy (72.9, 0, 1.4) showed the same structure. Preprocessing had no
@@ -914,7 +1051,7 @@ none, and on Siena few were equivalent even within 0.05. The data therefore rule
 large differences between operators on CHB-MIT, but not differences of the size that
 published comparisons typically report as improvements.
 
-The controls put these differences in proportion (Section 3.1, Table 2, Figure 2). A
+The controls put these differences in proportion (Section 3.1, Table 4, Figure 2). A
 single-branch spectrogram network of the same size had a mean macro F1 similar to
 that of the jointly trained operators on CHB-MIT and higher on Siena, and a logistic
 regression on seven hand-crafted features had a mean macro F1 as high as or higher than
@@ -960,8 +1097,8 @@ that report a single run.
 
 ### 4.4 Why does the subject dominate?
 
-The held-out subject explained 74 percent of the variance on CHB-MIT and, together with
-its interactions with pipeline and operator, about 60 percent on Siena. Seizures differ
+Subject-associated variability made up 74 percent of the variance on CHB-MIT and,
+together with its interactions with pipeline and operator, about 60 percent on Siena. Seizures differ
 between people in morphology, location and duration, and the recordings in their
 equipment, montage quality and artefacts; a model trained on the other subjects works
 well or badly on a given person largely for reasons that no fusion operator or
@@ -1118,9 +1255,17 @@ recordings in which seizure detectors are used, and the persons are few (23 and 
   finding of this study (Sections 2.7 and 4.5); for its own results, window-level
   metrics rest on one cleaning, but the seizure-level metrics of P6a
   differ from the training-time cleaning in 8 of 670 recordings.
-- **Device.** All multiverse runs used one GPU; GPU and CPU results differ at the level
-  of a seed change, so absolute numbers are not interchangeable with the CPU results of
-  earlier drafts.
+- **Device.** All multiverse runs used one GPU; GPU and CPU results at the same seeds
+  differ by an amount comparable to the difference between seed sets, so absolute
+  numbers are not interchangeable with the CPU results of earlier drafts.
+- **Offline processing.** Filters and artefact cleaning see the complete recording
+  (Section 2.2), so the results describe offline preprocessing, not a causal, real-time
+  detector.
+- **No tuning.** One fixed training configuration was used for every model; an operator
+  might gain more than another from tuning, which this design does not test.
+- **Two datasets.** CHB-MIT and Siena differ in population, acquisition and recording
+  protocol at once, so the transfer experiment measures their combined shift and cannot
+  attribute a change in performance or ranking to any one of these differences.
 - **Seeds.** Five seed sets bound the seed variance only roughly; the rank analyses
   report it rather than average it away.
 - **Literature.** Title and abstract screening of the systematic search was done by an
