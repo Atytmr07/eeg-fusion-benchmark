@@ -255,7 +255,8 @@ def latex_group(block: str, size: str, landscape: bool) -> str:
     return f"```{{=latex}}\n{begin}\n```\n\n{block}\n\n```{{=latex}}\n{end}\n```"
 
 
-TABLE_CAP = re.compile(r"^\*\*Table (\d+)\.\s*(.+?)\*\*\s*(.*)$", re.S)
+# "**Table N. Title.** Rest" (title in bold) or "**Table N.** Caption" (only the number)
+TABLE_CAP = re.compile(r"^\*\*Table (\d+)\.\s*(.*?)\*\*\s*(.*)$", re.S)
 FIG_CAP = re.compile(r"^\*\*Figure (\d+)\.\*\*\s*(.+)$", re.S)
 IMAGE = re.compile(r"^!\[([^\]]*)\]\(([^)]+)\)(\{[^}]*\})?\s*$")
 # Figures are set at the full text width: every figure is drawn 6.6 to 7.4 in wide,
@@ -284,7 +285,8 @@ def restructure(body: str, report: dict) -> str:
             tables.append(int(tm.group(1)))
             title, extra = tm.group(2).strip(), tm.group(3).strip()
             sep = "" if extra[:1] in ",.;:" else " "
-            pending_caption = f"**{title}**" + (f"{sep}{extra}" if extra else "")
+            pending_caption = (f"**{title}**" + (f"{sep}{extra}" if extra else "")
+                               if title else extra)
             i += 1
             continue
         if is_table(p):
