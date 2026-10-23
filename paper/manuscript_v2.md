@@ -37,7 +37,8 @@ significant advantage, and did not transfer between datasets. Early fusion had t
 lowest AUPRC in all 18 pipeline-dataset combinations. The controls stood to the
 operators as the operators stood to each other: a spectrogram network of the same size
 and a logistic regression on seven hand-crafted features reached similar or higher
-means, the latter above the best operator in 43 of 45 Siena runs, but no difference was
+mean macro F1 at the 0.5 threshold, the latter above the best operator in 43 of 45
+Siena runs and the highest there at every threshold tested, but no difference was
 significant. With fixed seeds and package versions, GEDAI's threshold-based cleaning
 was deterministic on each machine but not across machines: it cleaned 27 percent of
 recordings differently on a second machine, enough to change seizure-level sensitivity
@@ -342,8 +343,9 @@ montage as D C D^T (D the electrode difference matrix), and the channel mean is 
 before and restored after cleaning. GEDAI's threshold preset was fixed before any
 classification run, on signal preservation alone: on six CHB-MIT subjects the default
 removed more than half of the power of 39 percent of recordings, the conservative
-preset of 17 percent, and neither removed more from ictal than from non-ictal windows
-(Supplementary Table S2); P6b uses the conservative preset. The comparison among P6a,
+preset of 17 percent; the conservative preset removed no more from ictal than from
+non-ictal windows, whereas the default kept a lower median share of the ictal power
+(0.78 against 1.00; Supplementary Table S2); P6b uses the conservative preset. The comparison among P6a,
 P6b and P6c is therefore a comparison of whole cleaning procedures: for Infomax and
 AMICA it isolates the decomposition algorithm, while GEDAI differs also in how it
 decides what to remove. Signal retention and compute are in Supplementary Table S1, and the power removed by band
@@ -446,8 +448,9 @@ the mini-batches and the dropout masks. It does not change the data: the window
 sampling (one fixed seed), the validation subjects (deterministic) and the artefact
 cleaning (a seed per recording) are the same in every seed set, so differences between
 seed sets reflect stochastic training alone. The ranking of the operators was unstable across
-three seed sets (Kendall's W below 0.5 in seven of nine CHB-MIT pipelines), the
-condition fixed beforehand for extending to five.
+three seed sets (Kendall's W below 0.5 in seven of nine CHB-MIT pipelines); after these
+three-seed results, the extension to five seed sets was decided,
+to estimate the seed variance more reliably. It was not a rule fixed beforehand.
 
 **Cross-dataset experiment (RQ3).** Each model is trained once on all CHB-MIT subjects
 (with the same inner validation rule) and tested on every Siena window and recording,
@@ -603,15 +606,17 @@ every run are recorded in its `meta.json`.
 | Seeds | per seed set, fold and model (`fold_seed`) | per recording, from its file name (crc32) |
 | Determinism | PyTorch deterministic algorithms on the GPU | CPU only |
 
-**Determinism and device.** All runs of one analysis use one machine, one device and
+**Determinism and device.** All training runs of one analysis use one machine, one device and
 16 CPU threads, and CPU and GPU runs are never mixed in one analysis. On the CPU a run
 was reproduced bit for bit, also with two runs sharing the machine. The multiverse ran
 on the GPU with PyTorch's deterministic algorithms; adaptive average pooling has no
 deterministic CUDA backward, yet two GPU runs of the same fold were identical. Before
 switching to the GPU, its agreement with the CPU was tested at identical seeds: over
-five folds the mean absolute macro F1 difference between CPU and GPU was 0.074, and
-between two CPU seed sets 0.066 (`docs/PIPELINE.md`). The CPU-GPU difference is thus
-comparable in size to the variation between stochastic training runs; this similarity
+five folds the mean absolute macro F1 difference between CPU and GPU was 0.074,
+slightly larger than the 0.066 between two CPU seed sets (`python -m src.compare_runs`;
+`docs/PIPELINE.md`). The criterion fixed beforehand, a CPU-GPU difference no larger than
+the difference between seed sets, was therefore narrowly missed. The CPU-GPU difference
+is comparable in size to the variation between stochastic training runs; this similarity
 does not establish that hardware-related numerical differences and seed effects arise
 from the same mechanism, and we make no claim about the cause.
 
@@ -636,7 +641,9 @@ metrics.
 
 **Reproducibility of artefact removal.** Fixing seeds and package versions did not
 make P6 reproducible across machines and execution contexts (`docs/ICA_REPRO.md`).
-AMICA reproduced up to rounding. Extended Infomax removed different components in
+AMICA removed the same components in every recording on every machine and in every
+execution context; the power it kept differed by at most 0.003 between machines and
+0.0007 between two runs on the same machine. Extended Infomax removed different components in
 recordings whose component lay near the |z| = 3 rule: 2.5 percent of recordings between
 two machines and 1.2 percent between two runs on the same machine with different
 process parallelism. GEDAI was deterministic on each machine but gave a different
@@ -662,7 +669,8 @@ amplitude for AMICA, and differ for Infomax in 8 of 670 CHB-MIT recordings
 windows took 4.7 (GEDAI), 8.5 (Infomax) and 73 (AMICA) CPU hours on a laptop CPU
 (Supplementary Table S1). One CHB-MIT run (23 folds, nine models) took about 1.5 h on
 the GPU, one Siena run about a quarter of an hour, and one cross-dataset run about
-5 min; one fold took 3.7 min on the GPU against 12 min on the CPU.
+5 min; training one fold (all nine models) took 3.5 to 6 min on the GPU against 16 to
+17 min on the CPU (`perfold.csv`).
 
 **Availability.** Code, the per-fold results of every run, and all analyses are in the
 public repository, whose README lists the commands that regenerate each table and figure.
@@ -722,6 +730,10 @@ fusion (0.670); it exceeded the best operator of a run in 9 (CHB-MIT) and 16 (Si
 parameters on seven hand-crafted features per channel, was equally competitive: its
 mean macro F1 was 0.690 on CHB-MIT, above the best operator of a run in 12 of 45 runs,
 and 0.720 on Siena, above the best operator in 43 of 45 runs and in all nine pipelines.
+This advantage depends on the decision threshold on CHB-MIT, where the shallow
+classifier's macro F1 is the lowest of all models at 0.3 (0.642) and the highest at 0.7
+(0.715), but not on Siena, where it is the highest at 0.3, 0.5 and 0.7
+(`results_v2/sensitivity_preds/summary.md`).
 
 These descriptive advantages did not amount to statistically significant superiority.
 Tested like the operator pairs (corrected test, Holm across the 30 control-operator

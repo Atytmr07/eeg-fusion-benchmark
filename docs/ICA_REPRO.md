@@ -105,7 +105,7 @@ same alternatives as a rounding-level change of the input.
 
 ## Conclusions
 
-- **AMICA** reproduces across machines up to rounding: no component decision changed.
+- **AMICA** removes the same components on every machine: no component decision changed; the power kept differs by at most 0.003 between the laptop and the lab PC (CHB-MIT, table above) and 0.0007 between two runs on the laptop (711 recordings).
 - **Extended Infomax** reproduces across machines and execution contexts except where a
   component lies near the rejection threshold (|z| = 3 against the frontal EOG proxies):
   there, rounding-level differences flip the decision. This affected 2.5 % of recordings

@@ -457,6 +457,13 @@ GPU results are not mixed with CPU results: all pipelines and seeds of one analy
 on the same device, including P0. This needs the CUDA build of torch, installed into a separate
 environment so the CPU environment stays as it is.
 
+Result (`python -m src.audit_methods`, Device check; first five folds of P0): two GPU runs
+of the same fold were identical; the mean |macro F1 difference| between the GPU and the CPU
+at the same seeds was 0.074, between two CPU seed sets 0.066. The criterion was therefore
+narrowly missed. The GPU was used all the same, with every pipeline and seed of an analysis
+on the GPU, and the manuscript reports the difference as comparable in size to the seed
+variation without claiming a common cause.
+
 ## 9. Known issues and open items
 
 These are also listed in the manuscript's Limitations section.
