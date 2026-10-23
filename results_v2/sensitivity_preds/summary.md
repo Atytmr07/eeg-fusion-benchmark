@@ -20,7 +20,7 @@ Check: macro F1 at 0.5 recomputed from the stored predictions differs from the s
 |---|---|---|---|---|---|---|
 | 0.300 | 73% | 0.613 | 0/90 | 67/90 | 4/90 | gated 16, late 11, attention 9, score 6, early 3 |
 | 0.500 | 100% | 1.000 | 0/90 | 73/90 | 1/90 | gated 17, attention 11, late 9, early 5, score 3 |
-| 0.700 | 67% | 0.596 | 2/90 | 46/90 | 2/90 | gated 18, early 10, attention 10, late 7 |
+| 0.700 | 67% | 0.596 | 2/90 (P4: gated-attention +0.021; P4: gated-score +0.066) | 46/90 | 2/90 | gated 18, early 10, attention 10, late 7 |
 
 ### CHB-MIT: window-level metrics at the natural prevalence
 
@@ -38,7 +38,7 @@ All 10 s windows of the 683 recordings: 352,742, of which 1,276 ictal (0.36 perc
 
 | metric | same best operator as sampled | mean tau with sampled ranking | Holm-significant pairs |
 |---|---|---|---|
-| macro F1 (natural) | 42% | 0.311 | 3/90 |
+| macro F1 (natural) | 42% | 0.311 | 3/90 (P3: early-late -0.042; P3: early-attention -0.057; P5: early-gated -0.068) |
 | AUPRC (natural) | 51% | 0.573 | 0/90 |
 
 ### CHB-MIT: subject-level bootstrap of the operator differences
@@ -82,7 +82,7 @@ Pairs whose subject-bootstrap 95% CI excludes zero (uncorrected for the 90 compa
 
 ### CHB-MIT: seizure-level threshold (P0, P1, 10 runs)
 
-Check against the stored results at 0.5: 321 of 2530 person results differ, by at most 1 detected seizure and 7 false alarms (most likely windows whose probability lies at the threshold and flips with rounding); pooled false alarms per hour 6.631 against 6.632.
+Check against the stored results at 0.5: 321 of 2530 person results differ, by at most 1 detected seizure and 7 false alarms (the stored results were computed on the lab PC with GPU inference and numpy 1.26, these on the laptop CPU with numpy 2.5.3; windows whose probability lies at the threshold can fall on either side); pooled false alarms per hour 6.631 against 6.632.
 
 Mean over the runs:
 
@@ -178,7 +178,7 @@ Pairs whose subject-bootstrap 95% CI excludes zero (uncorrected for the 90 compa
 
 ### Siena: seizure-level threshold (P0, P1, 10 runs)
 
-Check against the stored results at 0.5: 61 of 1540 person results differ, by at most 0 detected seizure and 2 false alarms (most likely windows whose probability lies at the threshold and flips with rounding); pooled false alarms per hour 8.658 against 8.658.
+Check against the stored results at 0.5: 61 of 1540 person results differ, by at most 0 detected seizure and 2 false alarms (the stored results were computed on the lab PC with GPU inference and numpy 1.26, these on the laptop CPU with numpy 2.5.3; windows whose probability lies at the threshold can fall on either side); pooled false alarms per hour 8.658 against 8.658.
 
 Mean over the runs:
 

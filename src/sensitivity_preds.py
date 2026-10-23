@@ -123,16 +123,20 @@ def arr(fm: pd.DataFrame, col: str, models) -> tuple[np.ndarray, list]:
     return out, pipes
 
 
-def pair_tests(y: np.ndarray, r: float) -> tuple[int, int, int]:
-    """Holm-significant, equivalent within 0.05 and within 0.02, over the operator pairs."""
-    sig = eq5 = eq2 = 0
+def pair_tests(y: np.ndarray, r: float, pipes) -> tuple[list[str], int, int]:
+    """The Holm-significant pairs (pipeline: pair, mean difference), and the numbers of
+    pairs equivalent within 0.05 and within 0.02."""
+    sig, eq5, eq2 = [], 0, 0
+    pairs = list(itertools.combinations(range(len(FUSION)), 2))
     for pi in range(y.shape[1]):
         ps, bs = [], []
         for ia, ib in itertools.combinations(range(len(FUSION)), 2):
             a, b = y[:, pi, ia], y[:, pi, ib]
             ps.append(corrected_ttest(a, b, r)[1])
             bs.append(corrected_equivalence_bound(a, b, r))
-        sig += int((holm(np.array(ps)) < 0.05).sum())
+        sig += [f"{pipes[pi]}: {FUSION[ia]}-{FUSION[ib]} "
+                f"{(y[:, pi, ia] - y[:, pi, ib]).mean():+.3f}"
+                for (ia, ib), h in zip(pairs, holm(np.array(ps))) if h < 0.05]
         eq5 += sum(x <= 0.05 for x in bs)
         eq2 += sum(x <= 0.02 for x in bs)
     return sig, eq5, eq2
@@ -170,13 +174,14 @@ def threshold(ds: str, fm: pd.DataFrame, stored: pd.DataFrame) -> None:
     rows = []
     for t, c in zip(THRESHOLDS, cols):
         same, tau = ranking_agreement(rm, "f1_macro@0.5", c)
-        y, _ = arr(fm, c, FUSION)
-        sig, eq5, eq2 = pair_tests(y, r)
+        y, pipes = arr(fm, c, FUSION)
+        sig, eq5, eq2 = pair_tests(y, r, pipes)
         best = rm[rm.model.isin(FUSION)].loc[
             lambda d: d.groupby(["pipeline", "seed"])[c].idxmax()].model.value_counts()
         rows.append({"threshold": t, "same best operator as at 0.5": f"{100 * same:.0f}%",
                      "mean tau with ranking at 0.5": tau, "Holm-significant pairs":
-                     f"{sig}/90", "equivalent within 0.05": f"{eq5}/90",
+                     f"{len(sig)}/90" + (f" ({'; '.join(sig)})" if sig else ""),
+                     "equivalent within 0.05": f"{eq5}/90",
                      "equivalent within 0.02": f"{eq2}/90",
                      "runs won": ", ".join(f"{k} {v}" for k, v in best.items())})
     say(md(pd.DataFrame(rows)))
@@ -206,11 +211,12 @@ def prevalence(fm: pd.DataFrame, info: pd.DataFrame) -> None:
     for c in ("nat_f1_macro", "nat_auprc"):
         same, tau = ranking_agreement(rm, "f1_macro@0.5" if c == "nat_f1_macro" else "auprc",
                                       c)
-        y, _ = arr(fm, c, FUSION)
-        sig, _, _ = pair_tests(y, r)
+        y, pipes = arr(fm, c, FUSION)
+        sig, _, _ = pair_tests(y, r, pipes)
         rows.append({"metric": cols[c], "same best operator as sampled": f"{100 * same:.0f}%",
                      "mean tau with sampled ranking": tau,
-                     "Holm-significant pairs": f"{sig}/90"})
+                     "Holm-significant pairs": f"{len(sig)}/90"
+                     + (f" ({'; '.join(sig)})" if sig else "")})
     say(md(pd.DataFrame(rows)))
     rm.to_csv(OUT / "prevalence_chbmit.csv", index=False)
 
@@ -305,8 +311,10 @@ def event_threshold(ds: str) -> None:
     nd = int(((m.detected != m.detected_old) | (m.false_alarms != m.false_alarms_old)).sum())
     say(f"Check against the stored results at 0.5: {nd} of {len(m)} person results differ, by "
         f"at most {int((m.detected - m.detected_old).abs().max())} detected seizure and "
-        f"{int((m.false_alarms - m.false_alarms_old).abs().max())} false alarms (most likely "
-        f"windows whose probability lies at the threshold and flips with rounding); pooled "
+        f"{int((m.false_alarms - m.false_alarms_old).abs().max())} false alarms (the stored "
+        f"results were computed on the lab PC with GPU inference and numpy 1.26, these on the "
+        f"laptop CPU with numpy 2.5.3; windows whose probability lies at the threshold can "
+        f"fall on either side); pooled "
         f"false alarms per hour {m.false_alarms.sum() / m.hours.sum():.3f} against "
         f"{m.false_alarms_old.sum() / m.hours_old.sum():.3f}.")
     say("")

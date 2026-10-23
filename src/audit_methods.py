@@ -37,7 +37,7 @@ try:
 except (AttributeError, ValueError):
     pass
 
-from .chbmit_corpus import NON_ICTAL, leave_one_subject_out, subject_groups
+from .chbmit_corpus import NON_ICTAL, check_leakage, leave_one_subject_out, subject_groups
 from .chbmit_run import inner_split
 from .chbmit_stats import FUSION, ratios
 from .config import DATA_ROOT, RESULTS_ROOT
@@ -139,20 +139,26 @@ def event_counts(ds: str) -> dict:
 
 
 def chbmit_source_counts() -> dict:
-    from .chbmit import CHB_ROOT, parse_summary, subject_files
+    from .chbmit import CHB_ROOT, parse_summary, read_edf_header, subject_files
     from .chbmit_corpus import all_subjects
     rec_all = rec_mont = sz_all = sz_mont = 0
+    hours, dropped = 0.0, []
     for c in all_subjects():
         summ = parse_summary(CHB_ROOT / c / f"{c}-summary.txt")
-        files_all = {f.name for f in subject_files(c, require_channels=False)}
+        paths = subject_files(c, require_channels=False)
+        files_all = {f.name for f in paths}
         files = {f.name for f in subject_files(c)}
         rec_all += len(files_all)
         rec_mont += len(files)
         sz_all += sum(len(v) for k, v in summ.items() if k in files_all)
         sz_mont += sum(len(v) for k, v in summ.items() if k in files)
+        hours += sum(read_edf_header(f).duration for f in paths) / 3600
+        dropped += [f"{n} ({len(summ.get(n, []))} seizures)" for n in sorted(files_all - files)]
     say("\n### CHB-MIT: source\n")
-    say(f"  recordings: {rec_all}, with the 18-channel target montage: {rec_mont}")
+    say(f"  recordings: {rec_all} ({hours:.1f} h by the EDF headers), with the 18-channel "
+        f"target montage: {rec_mont}")
     say(f"  annotated seizures: {sz_all}, in recordings with the target montage: {sz_mont}")
+    say(f"  recordings without the target montage: {', '.join(dropped)}")
     return {"recordings": rec_all, "recordings_montage": rec_mont, "seizures": sz_all,
             "seizures_montage": sz_mont}
 
@@ -202,6 +208,11 @@ def partitions(ds: str, d: dict) -> pd.DataFrame:
           f"seizure on two sides, every window in exactly one partition"
           + (f" ({bad[:3]})" if bad else ""))
     check((t.val_ictal > 0).all(), "every validation set holds ictal windows")
+    rng = np.random.default_rng(0)                    # negative control, as in chbmit_corpus
+    idx = rng.permutation(len(y))
+    leak = check_leakage(d, iter([("random", idx[:len(idx) // 2], idx[len(idx) // 2:])]))
+    check(bool(leak), "the leakage checker catches a deliberately leaky split (windows "
+          "shuffled at random into two halves)")
     if ds == "chbmit":
         check(any(r == "chb01,chb21" for r in t.test), "chb01 and chb21 are held out together")
     # the stored runs held out the same persons in the same folds
@@ -315,6 +326,33 @@ def event_parameters() -> None:
 
 # --- 6. reproducibility -----------------------------------------------------------------------
 
+def device_check() -> None:
+    """The CPU-GPU check of docs/PIPELINE.md: training time per fold and the macro F1
+    difference between devices against that between two CPU seed sets."""
+    say("\n### Device check (CHB-MIT, first folds of P0)\n")
+    root = RESULTS_ROOT / "chbmit"
+    runs = ("gpu_a", "gpu_b", "cpu_r1", "loso_grouped", "loso_P0_cuda")
+    if not all((root / r / "perfold.csv").exists() for r in runs):
+        say("- (gpu_a, gpu_b, cpu_r1 or loso_grouped not present)")
+        return
+    pf = {r: pd.read_csv(root / r / "perfold.csv") for r in runs}
+
+    def diff(a: str, b: str) -> float:
+        m = pf[a].merge(pf[b], on=["fold", "model"], suffixes=("_a", "_b"))
+        return float((m.f1_macro_a - m.f1_macro_b).abs().groupby(m.model).mean().mean())
+
+    gg, cg = diff("gpu_a", "gpu_b"), diff("gpu_a", "loso_grouped")
+    cc = diff("cpu_r1", "loso_grouped")
+    say(f"  mean |macro F1 difference|: two GPU runs {gg:.4f}; GPU against CPU, same seeds "
+        f"{cg:.4f}; two CPU seed sets {cc:.4f}")
+    check(gg == 0, "two GPU runs of the same fold are identical")
+    say(f"  criterion (CPU-GPU difference no larger than the seed difference): "
+        f"{'met' if cg <= cc else 'narrowly missed'} ({cg:.3f} against {cc:.3f})")
+    for r, d in pf.items():
+        say(f"  {r}: {d.fold.nunique()} folds, training time per fold "
+            f"{d.groupby('fold').sec.sum().mean() / 60:.1f} min (sum over its models)")
+
+
 def reproducibility() -> None:
     say("\n### Cross-machine numbers quoted in the manuscript\n")
     rp = RESULTS_ROOT / "ica_repro"
@@ -333,10 +371,14 @@ def reproducibility() -> None:
           "differently on the second machine")
     check((~a.same_removed).sum() == 0 and a.abs_dpower.max() < 0.003 + 1e-9,
           "AMICA: same components everywhere, retained power within 0.003")
-    r = pd.read_csv(rp / "logs_cache_vs_laptop_rerun.csv")
-    r = r[r.record.str.startswith("chb") & (r.method == "infomax")]
+    rr = pd.read_csv(rp / "logs_cache_vs_laptop_rerun.csv")
+    r = rr[rr.record.str.startswith("chb") & (rr.method == "infomax")]
     say(f"  CHB-MIT, same laptop, rerun: Infomax different components in "
         f"{(~r.same_removed).sum()} of {len(r)} ({100 * (~r.same_removed).mean():.1f} %)")
+    a2 = rr[rr.method == "amica"]
+    say(f"  same laptop, rerun (CHB-MIT and Siena): AMICA different components in "
+        f"{(~a2.same_removed).sum()} of {len(a2)}, largest power difference "
+        f"{a2.abs_dpower.max():.4f}")
     imp = pd.read_csv(rp / "impact_events_summary.csv")
     say("  seizure-level impact (impact_events_summary.csv):")
     for line in imp.to_string(index=False).splitlines():
@@ -374,6 +416,7 @@ def main() -> None:
     for ds in ("chbmit", "siena"):
         conservative_ratio(ds)
     event_parameters()
+    device_check()
     reproducibility()
     pd.DataFrame(summary).T.to_csv(OUT / "counts.csv")
     say("")
