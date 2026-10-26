@@ -1107,7 +1107,7 @@ predictions.
 
 At the seizure level, the additional evaluation of P0 and P1 on CHB-MIT showed that the
 operator with the highest seizure sensitivity in a run was relatively stable across
-thresholds (the same as at 0.5 in 7 of 10 runs at 0.3 and in 9 of 10 at 0.7), whereas the
+thresholds on CHB-MIT (the same as at 0.5 in 7 of 10 runs at 0.3 and in 9 of 10 at 0.7, but on Siena in only 5 and 7 of 10), whereas the
 false-alarm ranking was more sensitive: the operator with the fewest false alarms was the
 same as at 0.5 in all 10 runs at 0.3 but in only 1 of 10 at 0.7 (Figure 9b; Supplementary
 Table S10a). Score fusion was particularly threshold-dependent, with its sensitivity
@@ -1125,7 +1125,7 @@ evaluation to 0.517 to 0.562 under prevalence adjustment (subject-level aggregat
 Figure 9c; Supplementary Table S10b). The shallow classifier, which had the highest
 sampled macro F1 (0.690), showed the largest decline in both absolute and relative terms
 (to 0.454, a decline of 0.237 or 34 percent, against 0.124 to 0.160 or 18 to 24 percent
-for the operators) and had the lowest prevalence-adjusted macro F1; pooled aggregation
+for the operators) and had the lowest prevalence-adjusted macro F1, although its prevalence-adjusted AUPRC was the highest of all models (0.295 against 0.221 to 0.283), so that its decline reflects the fixed 0.5 threshold, at which it combined a sensitivity of 0.69 with a precision of 0.02, rather than a poorer ranking of windows; pooled aggregation
 gave the same order (operators 0.483 to 0.500, shallow 0.447). Under prevalence
 adjustment, three operator pairs were significant after the Holm correction within a
 pipeline, all with early fusion lower (P3: against late and attention fusion; P5:
@@ -1237,8 +1237,7 @@ as proof that two operators perform equivalently.
 
 Ranking analyses provided another perspective. On CHB-MIT, agreement across seed sets was
 low, with a median Kendall's W of 0.22, indicating that the relative order of operators
-was sensitive to stochastic training; a ranking obtained from one training run is close
-to a random draw at the differences observed here. Rankings from different pipelines
+was sensitive to stochastic training; at the differences observed here, a ranking obtained from one training run says little about the ranking under another seed. Rankings from different pipelines
 agreed about as poorly as rankings from different seeds of one pipeline (mean Kendall
 tau 0.03 against 0.10; permutation p = 0.073), and the Fusion × Preprocessing interaction, significant with three seed sets,
 was no longer significant with five (Greenhouse-Geisser p = 0.069), with a variance
@@ -1297,7 +1296,7 @@ trained on Siena itself, but the ranking of fusion operators was not preserved (
 Kendall tau between -0.11 and 0.07). Score fusion, for example, ranked first in 82
 percent of the within-Siena runs but in only 11 percent of the CHB-MIT-to-Siena transfer
 runs. Part of its advantage on Siena is inherited from its spectrogram branch: the
-spectrogram network alone (0.660 macro F1) already had a higher mean on Siena than every
+default-width spectrogram network alone (0.660 macro F1; 0.663 at the fusion budget) already had a higher mean on Siena than every
 jointly trained operator, and score fusion averages it with the waveform network using a
 weight chosen on Siena's validation subjects. Whether end-to-end training of the joint
 operators overfits Siena's 14 subjects, which training the branches independently would
@@ -1343,7 +1342,7 @@ The class-prevalence analysis identified a separate limitation of balanced or
 artificially sampled evaluation sets. Reweighting the existing CHB-MIT predictions to
 approximate the full non-ictal window distribution reduced the estimated macro F1 of the
 fusion operators from about 0.67 to 0.69 to about 0.52 to 0.56, and that of the shallow
-classifier, the highest under the sampled evaluation, to 0.45, the lowest. Because this
+classifier, the highest under the sampled evaluation, to 0.45, the lowest, although its prevalence-adjusted AUPRC remained the highest of all models, so that its decline reflects the fixed threshold rather than a poorer ranking of windows. Because this
 calculation assumes that the sampled non-ictal windows represent the excluded windows, it
 should be interpreted as a prevalence-adjusted sensitivity estimate rather than a direct
 assessment of continuous-monitoring performance. Nevertheless, it demonstrates that
@@ -1360,11 +1359,10 @@ Generic scalp EEG detectors evaluated for clinical use have reported 0.1 to 5 fa
 per hour, most about 0.2 to 0.3, and patient-specific detectors fewer; a low false alarm
 rate is regarded as essential for clinical acceptance, and validation standards require
 it to be reported (Baumgartner et al. 2018; Beniczky and Ryvlin 2018). The person
-mattered more than any modelling choice: mean sensitivity ranged from 0.24 (chb06) to
+mattered more than the choice of operator: mean sensitivity ranged from 0.24 (chb06) to
 1.00 across persons and the false alarm rate from 1.3 to 12.3 per hour, while the
-operators' means spanned 0.68 to 0.79 and 5.2 to 7.7, which supports patient-specific
-adaptation over the search for a better generic operator; patient-specific classifiers
-detected 96 percent of the CHB-MIT seizures with a median of two false detections per
+operators' means spanned 0.68 to 0.79 and 5.2 to 7.7, which motivates patient-specific adaptation, not tested here, rather than the search for a better generic operator; patient-specific classifiers
+detected 96 percent of 173 test seizures in CHB-MIT with a median of two false detections per
 day (Shoeb and Guttag 2010). Siena cannot answer the question of false alarms, because
 its recordings are cut around seizures, and neither dataset contains the long,
 artefact-rich ambulatory or intensive-care recordings in which detectors are used. The
@@ -1394,9 +1392,8 @@ experiments do not isolate a unique numerical mechanism, and no causal attributi
 particular machine, library or hardware component is warranted. Neuroimaging pipelines,
 including ICA decompositions of fMRI data, are known to give different results on
 different operating systems (Glatard et al. 2015); we are not aware of a comparable report
-for EEG artefact removal, where algorithms can be deterministic within a machine (GEDAI)
-or even within one execution context (Infomax) and still not reproducible across
-machines.
+for EEG artefact removal, where algorithms can be deterministic within a machine
+(GEDAI), or identical within one process but not between two runs with different process parallelism (Infomax), and still not reproducible across machines.
 
 The CPU–GPU comparison similarly showed that identical seeds and nominally identical
 training configurations did not guarantee interchangeable performance estimates. The

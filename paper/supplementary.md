@@ -616,8 +616,9 @@ recordings are cut around seizures).
 | P1 | shallow | 1.00 ± 0.00 | 0.98 ± 0.00 | 0.94 ± 0.00 |
 
 
-**S10b. CHB-MIT prevalence-adjusted macro F1.** Non-ictal test windows are weighted by
-w = N_nonictal,full / N_nonictal,sampled of their case (ictal windows: 1), so true
+**S10b. CHB-MIT prevalence-adjusted macro F1.** Each non-ictal test window is weighted by
+the number of non-ictal windows of its case in the complete recordings divided by the
+number sampled from that case (ictal windows: weight 1), so true
 positives and false negatives keep their counts and false positives and true negatives
 are scaled to the full non-ictal count; macro F1 is computed from this weighted
 confusion matrix at the 0.5 threshold. Subject-level: macro F1 per held-out person, mean
@@ -643,9 +644,9 @@ all windows (`src/posthoc_checks.py`).
 | pooled | spec2d_wide | 0.684 | 0.014 | 0.489 | 0.006 | 0.195 | 28.5% |
 | pooled | shallow | 0.671 | 0.009 | 0.447 | 0.003 | 0.224 | 33.4% |
 
-Weights per case:
+Weights per case (all windows: every 10 s window of the case's target-montage recordings):
 
-| case | windows (all, 10 s) | ictal | non-ictal, full | non-ictal, sampled | weight w |
+| case | all windows | ictal | non-ictal, full | non-ictal, sampled | weight w |
 |---|---|---|---|---|---|
 | chb01 | 14598 | 50 | 14548 | 200 | 72.7 |
 | chb02 | 12695 | 20 | 12675 | 80 | 158.4 |
