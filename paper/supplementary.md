@@ -445,6 +445,267 @@ equivalence margin the data can establish (delta_min), and the outcome at the ma
 | P6c | attention-score | -0.061 | [-0.129, +0.006] | 0.131 | 1.000 | 0.129 | no | no |
 
 
+## Table S9. Post hoc: sensitivity to the decision threshold (window level)
+
+Exploratory, specified after the primary analysis (Section 2.6). Every model's stored test
+predictions were thresholded at 0.3, 0.5 and 0.7; 0.5 is the primary analysis
+(`python -m src.sensitivity_preds`, `src.posthoc_checks`; Figure 9a).
+
+**S9a.** Macro F1 per pipeline and threshold, mean over the five seed sets of each run's
+fold mean.
+
+**CHB-MIT**
+
+| pipeline | threshold | early | late | gated | attention | score | spec2d_wide | shallow |
+|---|---|---|---|---|---|---|---|---|
+| P0 | 0.3 | 0.678 | 0.685 | 0.684 | 0.688 | 0.685 | 0.686 | 0.612 |
+| P0 | 0.5 | 0.678 | 0.679 | 0.671 | 0.683 | 0.661 | 0.680 | 0.671 |
+| P0 | 0.7 | 0.668 | 0.668 | 0.660 | 0.670 | 0.618 | 0.667 | 0.705 |
+| P1 | 0.3 | 0.687 | 0.676 | 0.699 | 0.699 | 0.691 | 0.694 | 0.645 |
+| P1 | 0.5 | 0.684 | 0.665 | 0.691 | 0.687 | 0.672 | 0.691 | 0.695 |
+| P1 | 0.7 | 0.674 | 0.658 | 0.679 | 0.672 | 0.632 | 0.672 | 0.719 |
+| P2 | 0.3 | 0.686 | 0.697 | 0.689 | 0.695 | 0.698 | 0.686 | 0.641 |
+| P2 | 0.5 | 0.680 | 0.688 | 0.680 | 0.687 | 0.675 | 0.682 | 0.687 |
+| P2 | 0.7 | 0.670 | 0.675 | 0.670 | 0.674 | 0.623 | 0.667 | 0.712 |
+| P3 | 0.3 | 0.680 | 0.684 | 0.684 | 0.698 | 0.689 | 0.689 | 0.652 |
+| P3 | 0.5 | 0.679 | 0.677 | 0.676 | 0.689 | 0.678 | 0.686 | 0.695 |
+| P3 | 0.7 | 0.673 | 0.668 | 0.667 | 0.673 | 0.634 | 0.678 | 0.723 |
+| P4 | 0.3 | 0.692 | 0.684 | 0.701 | 0.682 | 0.688 | 0.687 | 0.642 |
+| P4 | 0.5 | 0.688 | 0.678 | 0.694 | 0.670 | 0.660 | 0.679 | 0.692 |
+| P4 | 0.7 | 0.677 | 0.667 | 0.679 | 0.657 | 0.613 | 0.661 | 0.715 |
+| P5 | 0.3 | 0.677 | 0.689 | 0.697 | 0.697 | 0.701 | 0.690 | 0.645 |
+| P5 | 0.5 | 0.678 | 0.684 | 0.690 | 0.693 | 0.681 | 0.687 | 0.695 |
+| P5 | 0.7 | 0.673 | 0.672 | 0.678 | 0.685 | 0.644 | 0.668 | 0.719 |
+| P6a | 0.3 | 0.677 | 0.686 | 0.703 | 0.689 | 0.691 | 0.683 | 0.644 |
+| P6a | 0.5 | 0.672 | 0.679 | 0.692 | 0.677 | 0.675 | 0.685 | 0.687 |
+| P6a | 0.7 | 0.664 | 0.670 | 0.676 | 0.664 | 0.630 | 0.665 | 0.710 |
+| P6b | 0.3 | 0.661 | 0.694 | 0.693 | 0.685 | 0.682 | 0.674 | 0.642 |
+| P6b | 0.5 | 0.662 | 0.686 | 0.691 | 0.681 | 0.682 | 0.670 | 0.702 |
+| P6b | 0.7 | 0.654 | 0.673 | 0.681 | 0.665 | 0.637 | 0.655 | 0.724 |
+| P6c | 0.3 | 0.680 | 0.694 | 0.696 | 0.688 | 0.690 | 0.686 | 0.652 |
+| P6c | 0.5 | 0.671 | 0.688 | 0.688 | 0.679 | 0.674 | 0.689 | 0.688 |
+| P6c | 0.7 | 0.661 | 0.676 | 0.677 | 0.665 | 0.638 | 0.673 | 0.714 |
+
+**Siena**
+
+| pipeline | threshold | early | late | gated | attention | score | spec2d_wide | shallow |
+|---|---|---|---|---|---|---|---|---|
+| P0 | 0.3 | 0.590 | 0.594 | 0.561 | 0.574 | 0.574 | 0.591 | 0.656 |
+| P0 | 0.5 | 0.601 | 0.616 | 0.608 | 0.598 | 0.639 | 0.618 | 0.692 |
+| P0 | 0.7 | 0.600 | 0.622 | 0.599 | 0.603 | 0.642 | 0.631 | 0.692 |
+| P1 | 0.3 | 0.601 | 0.615 | 0.595 | 0.611 | 0.615 | 0.656 | 0.703 |
+| P1 | 0.5 | 0.616 | 0.637 | 0.623 | 0.628 | 0.665 | 0.668 | 0.729 |
+| P1 | 0.7 | 0.619 | 0.648 | 0.633 | 0.636 | 0.670 | 0.668 | 0.728 |
+| P2 | 0.3 | 0.588 | 0.619 | 0.610 | 0.600 | 0.605 | 0.658 | 0.707 |
+| P2 | 0.5 | 0.610 | 0.639 | 0.636 | 0.625 | 0.674 | 0.674 | 0.747 |
+| P2 | 0.7 | 0.620 | 0.650 | 0.640 | 0.640 | 0.658 | 0.669 | 0.750 |
+| P3 | 0.3 | 0.581 | 0.617 | 0.582 | 0.575 | 0.609 | 0.643 | 0.688 |
+| P3 | 0.5 | 0.613 | 0.652 | 0.620 | 0.613 | 0.664 | 0.654 | 0.711 |
+| P3 | 0.7 | 0.608 | 0.653 | 0.630 | 0.629 | 0.667 | 0.655 | 0.725 |
+| P4 | 0.3 | 0.599 | 0.615 | 0.591 | 0.609 | 0.611 | 0.658 | 0.703 |
+| P4 | 0.5 | 0.614 | 0.637 | 0.621 | 0.627 | 0.666 | 0.671 | 0.729 |
+| P4 | 0.7 | 0.618 | 0.648 | 0.632 | 0.635 | 0.670 | 0.670 | 0.728 |
+| P5 | 0.3 | 0.609 | 0.629 | 0.630 | 0.617 | 0.627 | 0.657 | 0.703 |
+| P5 | 0.5 | 0.637 | 0.642 | 0.650 | 0.652 | 0.690 | 0.664 | 0.729 |
+| P5 | 0.7 | 0.636 | 0.652 | 0.650 | 0.653 | 0.669 | 0.669 | 0.728 |
+| P6a | 0.3 | 0.604 | 0.596 | 0.578 | 0.582 | 0.629 | 0.669 | 0.671 |
+| P6a | 0.5 | 0.619 | 0.622 | 0.621 | 0.611 | 0.672 | 0.677 | 0.702 |
+| P6a | 0.7 | 0.619 | 0.617 | 0.624 | 0.607 | 0.649 | 0.657 | 0.705 |
+| P6b | 0.3 | 0.614 | 0.671 | 0.661 | 0.623 | 0.654 | 0.652 | 0.657 |
+| P6b | 0.5 | 0.614 | 0.681 | 0.684 | 0.652 | 0.676 | 0.665 | 0.699 |
+| P6b | 0.7 | 0.612 | 0.669 | 0.676 | 0.647 | 0.645 | 0.673 | 0.716 |
+| P6c | 0.3 | 0.604 | 0.613 | 0.567 | 0.589 | 0.645 | 0.642 | 0.695 |
+| P6c | 0.5 | 0.629 | 0.638 | 0.613 | 0.621 | 0.683 | 0.673 | 0.746 |
+| P6c | 0.7 | 0.625 | 0.636 | 0.620 | 0.612 | 0.662 | 0.672 | 0.747 |
+
+
+**S9b.** Each operator's mean rank (1 = best) over the 45 runs of a dataset and the share
+of runs in which it ranked first (ties share the rank), and the share of runs whose best
+operator differs from the best at 0.5.
+
+| dataset | threshold | early: mean rank / first | late: mean rank / first | gated: mean rank / first | attention: mean rank / first | score: mean rank / first | winner differs from 0.5 |
+|---|---|---|---|---|---|---|---|
+| CHB-MIT | 0.3 | 3.76 / 7% | 3.18 / 24% | 2.69 / 36% | 2.73 / 20% | 2.64 / 13% | 27% |
+| CHB-MIT | 0.5 | 3.20 / 11% | 2.93 / 20% | 2.64 / 38% | 2.64 / 24% | 3.58 / 7% | 0% |
+| CHB-MIT | 0.7 | 2.62 / 22% | 2.69 / 16% | 2.27 / 40% | 2.49 / 22% | 4.93 / 0% | 33% |
+| Siena | 0.3 | 3.42 / 13% | 2.42 / 27% | 3.40 / 11% | 3.31 / 11% | 2.44 / 38% | 53% |
+| Siena | 0.5 | 3.93 / 0% | 2.84 / 7% | 3.24 / 9% | 3.69 / 2% | 1.29 / 82% | 0% |
+| Siena | 0.7 | 4.00 / 2% | 2.53 / 11% | 3.31 / 9% | 3.51 / 11% | 1.64 / 67% | 29% |
+
+**S9c.** Operator pairs with a raw p below 0.05 at any threshold: corrected resampled t
+test on the fold values (seed sets averaged), Holm-adjusted within the ten pairs of one
+dataset, pipeline and threshold (the family of the primary analysis), and across the
+thirty comparisons of one dataset and pipeline (three thresholds x ten pairs), a more
+conservative sensitivity check. Difference: first minus second operator.
+
+| dataset | pipeline | threshold | pair | difference | raw p | Holm within threshold | Holm across thresholds |
+|---|---|---|---|---|---|---|---|
+| CHB-MIT | P4 | 0.5 | gated-attention | +0.024 | 0.0192 | 0.1922 | 0.4997 |
+| CHB-MIT | P0 | 0.7 | late-score | +0.050 | 0.0203 | 0.2034 | 0.6102 |
+| CHB-MIT | P0 | 0.7 | attention-score | +0.052 | 0.0337 | 0.3031 | 0.9766 |
+| CHB-MIT | P2 | 0.7 | late-score | +0.052 | 0.0118 | 0.1179 | 0.3537 |
+| CHB-MIT | P2 | 0.7 | gated-score | +0.047 | 0.0233 | 0.2101 | 0.6770 |
+| CHB-MIT | P2 | 0.7 | attention-score | +0.051 | 0.0390 | 0.3119 | 1.0000 |
+| CHB-MIT | P4 | 0.7 | early-score | +0.064 | 0.0227 | 0.1363 | 0.5679 |
+| CHB-MIT | P4 | 0.7 | late-score | +0.054 | 0.0155 | 0.1237 | 0.4329 |
+| CHB-MIT | P4 | 0.7 | gated-attention | +0.021 | 0.0038 | 0.0344 | 0.1109 |
+| CHB-MIT | P4 | 0.7 | gated-score | +0.066 | 0.0019 | 0.0194 | 0.0583 |
+| CHB-MIT | P4 | 0.7 | attention-score | +0.044 | 0.0155 | 0.1237 | 0.4329 |
+| CHB-MIT | P6a | 0.7 | gated-score | +0.046 | 0.0347 | 0.3469 | 1.0000 |
+| CHB-MIT | P6b | 0.7 | late-score | +0.036 | 0.0369 | 0.3688 | 1.0000 |
+| Siena | P6b | 0.3 | early-late | -0.057 | 0.0316 | 0.2846 | 0.8144 |
+| Siena | P6b | 0.3 | late-attention | +0.048 | 0.0255 | 0.2550 | 0.6885 |
+| Siena | P0 | 0.5 | gated-score | -0.031 | 0.0285 | 0.2568 | 0.8273 |
+| Siena | P0 | 0.5 | attention-score | -0.042 | 0.0095 | 0.0945 | 0.2836 |
+| Siena | P2 | 0.5 | early-score | -0.064 | 0.0339 | 0.3393 | 1.0000 |
+| Siena | P6b | 0.5 | early-late | -0.067 | 0.0178 | 0.1783 | 0.5172 |
+| Siena | P6b | 0.5 | early-gated | -0.070 | 0.0423 | 0.3382 | 1.0000 |
+| Siena | P6b | 0.5 | early-score | -0.062 | 0.0243 | 0.2191 | 0.6816 |
+| Siena | P3 | 0.7 | early-score | -0.059 | 0.0199 | 0.1990 | 0.5971 |
+| Siena | P6b | 0.7 | early-late | -0.057 | 0.0148 | 0.1482 | 0.4446 |
+| Siena | P6b | 0.7 | early-gated | -0.064 | 0.0313 | 0.2819 | 0.8144 |
+
+All 540 comparisons (2 datasets x 9 pipelines x 3 thresholds x 10 pairs) are in `results_v2/sensitivity_preds/posthoc_holm_thresholds.csv`; 2 are significant after the Holm adjustment within a threshold and 0 after the adjustment across thresholds.
+
+## Table S10. Post hoc: seizure-level thresholds, class prevalence and inference
+
+Exploratory, specified after the primary analysis (Section 2.6).
+
+**S10a. Seizure-level metrics at three thresholds**, P0 and P1 only: every recording of
+every held-out person scored again with the saved models (`python -m src.events
+--thresholds 0.3 0.5 0.7`), no post-processing; pooled over the persons of a run, mean ±
+SD over the five seed sets. False alarms per hour are given for CHB-MIT only (Siena's
+recordings are cut around seizures).
+
+**CHB-MIT**
+
+| pipeline | model | sensitivity 0.3 | sensitivity 0.5 | sensitivity 0.7 | false alarms/h 0.3 | false alarms/h 0.5 | false alarms/h 0.7 |
+|---|---|---|---|---|---|---|---|
+| P0 | early | 0.83 ± 0.03 | 0.79 ± 0.04 | 0.70 ± 0.05 | 8.87 ± 0.97 | 7.75 ± 0.79 | 6.73 ± 0.71 |
+| P0 | late | 0.74 ± 0.06 | 0.69 ± 0.06 | 0.64 ± 0.06 | 6.39 ± 0.55 | 5.50 ± 0.50 | 4.66 ± 0.51 |
+| P0 | gated | 0.73 ± 0.05 | 0.67 ± 0.05 | 0.61 ± 0.04 | 6.18 ± 0.53 | 5.32 ± 0.47 | 4.48 ± 0.51 |
+| P0 | attention | 0.73 ± 0.03 | 0.68 ± 0.03 | 0.63 ± 0.03 | 6.34 ± 0.60 | 5.38 ± 0.60 | 4.50 ± 0.60 |
+| P0 | score | 0.80 ± 0.04 | 0.65 ± 0.05 | 0.48 ± 0.06 | 8.15 ± 0.25 | 5.40 ± 0.45 | 3.17 ± 0.33 |
+| P0 | spec2d_wide | 0.87 ± 0.03 | 0.79 ± 0.04 | 0.73 ± 0.04 | 7.76 ± 0.28 | 6.40 ± 0.44 | 5.00 ± 0.47 |
+| P0 | shallow | 0.86 ± 0.00 | 0.82 ± 0.00 | 0.76 ± 0.00 | 9.46 ± 0.00 | 7.93 ± 0.00 | 6.22 ± 0.00 |
+| P1 | early | 0.82 ± 0.04 | 0.77 ± 0.04 | 0.71 ± 0.03 | 8.29 ± 0.43 | 7.01 ± 0.28 | 5.82 ± 0.28 |
+| P1 | late | 0.73 ± 0.07 | 0.68 ± 0.06 | 0.63 ± 0.05 | 6.17 ± 0.49 | 5.31 ± 0.62 | 4.56 ± 0.72 |
+| P1 | gated | 0.76 ± 0.05 | 0.71 ± 0.05 | 0.65 ± 0.04 | 6.04 ± 0.55 | 5.16 ± 0.60 | 4.36 ± 0.65 |
+| P1 | attention | 0.80 ± 0.04 | 0.73 ± 0.04 | 0.66 ± 0.03 | 6.62 ± 0.66 | 5.57 ± 0.64 | 4.68 ± 0.61 |
+| P1 | score | 0.82 ± 0.02 | 0.67 ± 0.04 | 0.53 ± 0.04 | 8.46 ± 0.32 | 5.90 ± 0.37 | 3.35 ± 0.36 |
+| P1 | spec2d_wide | 0.87 ± 0.03 | 0.81 ± 0.03 | 0.75 ± 0.04 | 7.99 ± 0.65 | 6.67 ± 0.46 | 5.39 ± 0.32 |
+| P1 | shallow | 0.90 ± 0.00 | 0.86 ± 0.00 | 0.79 ± 0.00 | 9.70 ± 0.00 | 8.25 ± 0.00 | 6.47 ± 0.00 |
+
+**Siena**
+
+| pipeline | model | sensitivity 0.3 | sensitivity 0.5 | sensitivity 0.7 |
+|---|---|---|---|---|
+| P0 | early | 0.94 ± 0.05 | 0.91 ± 0.02 | 0.85 ± 0.05 |
+| P0 | late | 0.86 ± 0.06 | 0.83 ± 0.08 | 0.77 ± 0.09 |
+| P0 | gated | 0.90 ± 0.04 | 0.85 ± 0.06 | 0.78 ± 0.09 |
+| P0 | attention | 0.92 ± 0.06 | 0.87 ± 0.04 | 0.79 ± 0.05 |
+| P0 | score | 0.99 ± 0.01 | 0.92 ± 0.05 | 0.74 ± 0.07 |
+| P0 | spec2d_wide | 0.89 ± 0.03 | 0.85 ± 0.02 | 0.77 ± 0.05 |
+| P0 | shallow | 0.98 ± 0.00 | 0.96 ± 0.00 | 0.87 ± 0.00 |
+| P1 | early | 0.86 ± 0.06 | 0.82 ± 0.07 | 0.78 ± 0.06 |
+| P1 | late | 0.88 ± 0.02 | 0.86 ± 0.03 | 0.81 ± 0.03 |
+| P1 | gated | 0.86 ± 0.07 | 0.86 ± 0.07 | 0.80 ± 0.08 |
+| P1 | attention | 0.89 ± 0.11 | 0.86 ± 0.12 | 0.81 ± 0.10 |
+| P1 | score | 0.94 ± 0.03 | 0.84 ± 0.04 | 0.71 ± 0.07 |
+| P1 | spec2d_wide | 0.91 ± 0.06 | 0.87 ± 0.05 | 0.83 ± 0.05 |
+| P1 | shallow | 1.00 ± 0.00 | 0.98 ± 0.00 | 0.94 ± 0.00 |
+
+
+**S10b. CHB-MIT prevalence-adjusted macro F1.** Non-ictal test windows are weighted by
+w = N_nonictal,full / N_nonictal,sampled of their case (ictal windows: 1), so true
+positives and false negatives keep their counts and false positives and true negatives
+are scaled to the full non-ictal count; macro F1 is computed from this weighted
+confusion matrix at the 0.5 threshold. Subject-level: macro F1 per held-out person, mean
+over the 23 persons, then mean and SD over the 45 runs; pooled: the weighted confusion
+matrices of a run's persons summed first. The estimate assumes that the sampled
+non-ictal windows have the error rate of those not sampled; it is not a measurement on
+all windows (`src/posthoc_checks.py`).
+
+| aggregation | model | sampled | sampled SD | adjusted | adjusted SD | decline | relative decline |
+|---|---|---|---|---|---|---|---|
+| subject-level | early | 0.677 | 0.013 | 0.517 | 0.016 | 0.160 | 23.7% |
+| subject-level | late | 0.681 | 0.015 | 0.555 | 0.015 | 0.126 | 18.5% |
+| subject-level | gated | 0.686 | 0.016 | 0.562 | 0.015 | 0.124 | 18.1% |
+| subject-level | attention | 0.683 | 0.014 | 0.558 | 0.014 | 0.125 | 18.3% |
+| subject-level | score | 0.673 | 0.017 | 0.545 | 0.014 | 0.128 | 18.9% |
+| subject-level | spec2d_wide | 0.683 | 0.014 | 0.541 | 0.014 | 0.142 | 20.8% |
+| subject-level | shallow | 0.690 | 0.008 | 0.454 | 0.004 | 0.237 | 34.3% |
+| pooled | early | 0.678 | 0.014 | 0.483 | 0.007 | 0.195 | 28.7% |
+| pooled | late | 0.694 | 0.020 | 0.498 | 0.008 | 0.196 | 28.2% |
+| pooled | gated | 0.698 | 0.021 | 0.500 | 0.008 | 0.198 | 28.3% |
+| pooled | attention | 0.701 | 0.018 | 0.496 | 0.008 | 0.205 | 29.3% |
+| pooled | score | 0.690 | 0.018 | 0.492 | 0.008 | 0.198 | 28.7% |
+| pooled | spec2d_wide | 0.684 | 0.014 | 0.489 | 0.006 | 0.195 | 28.5% |
+| pooled | shallow | 0.671 | 0.009 | 0.447 | 0.003 | 0.224 | 33.4% |
+
+Weights per case:
+
+| case | windows (all, 10 s) | ictal | non-ictal, full | non-ictal, sampled | weight w |
+|---|---|---|---|---|---|
+| chb01 | 14598 | 50 | 14548 | 200 | 72.7 |
+| chb02 | 12695 | 20 | 12675 | 80 | 158.4 |
+| chb03 | 13680 | 45 | 13635 | 180 | 75.8 |
+| chb04 | 56176 | 42 | 56134 | 168 | 334.1 |
+| chb05 | 14041 | 62 | 13979 | 248 | 56.4 |
+| chb06 | 24023 | 24 | 23999 | 96 | 250.0 |
+| chb07 | 24138 | 36 | 24102 | 144 | 167.4 |
+| chb08 | 7202 | 97 | 7105 | 388 | 18.3 |
+| chb09 | 24430 | 31 | 24399 | 124 | 196.8 |
+| chb10 | 18007 | 49 | 17958 | 196 | 91.6 |
+| chb11 | 12524 | 83 | 12441 | 332 | 37.5 |
+| chb12 | 7446 | 123 | 7323 | 492 | 14.9 |
+| chb13 | 11880 | 67 | 11813 | 268 | 44.1 |
+| chb14 | 9360 | 24 | 9336 | 96 | 97.2 |
+| chb15 | 14402 | 214 | 14188 | 856 | 16.6 |
+| chb16 | 6840 | 14 | 6826 | 56 | 121.9 |
+| chb17 | 7562 | 32 | 7530 | 128 | 58.8 |
+| chb18 | 12828 | 38 | 12790 | 152 | 84.1 |
+| chb19 | 10774 | 27 | 10747 | 108 | 99.5 |
+| chb20 | 9933 | 36 | 9897 | 144 | 68.7 |
+| chb21 | 11818 | 24 | 11794 | 96 | 122.9 |
+| chb22 | 11161 | 24 | 11137 | 96 | 116.0 |
+| chb23 | 9558 | 49 | 9509 | 196 | 48.5 |
+| chb24 | 7666 | 65 | 7601 | 260 | 29.2 |
+
+**S10c. Corrected paired t test and subject-level bootstrap**, operator pairs pooled over
+the nine pipelines (each subject's difference averaged over pipelines and seed sets).
+Corrected 95% interval: mean ± t(0.975, n-1) SE with the Nadeau-Bengio variance.
+Bootstrap: the held-out subject is the resampling unit, and both operators' results of a
+drawn subject enter together (paired); 10,000 resamples, percentile intervals; the second
+interval also resamples the five seed sets within each drawn subject. Direction
+consistency: share of resampled means with the sign of the observed difference. The
+bootstrap does not model the overlap of the LOSO training sets; the corrected test
+remains the primary analysis. All 90 pairs per dataset in
+`results_v2/sensitivity_preds/posthoc_bootstrap_compare.csv`.
+
+| dataset | pair | mean difference | corrected 95% CI | corrected p | bootstrap 95% CI (subject) | bootstrap 95% CI (subject, then seed set) | direction consistency |
+|---|---|---|---|---|---|---|---|
+| CHB-MIT | early-late | -0.004 | [-0.041, +0.034] | 0.8333 | [-0.028, +0.020] | [-0.029, +0.020] | 62.0% |
+| CHB-MIT | early-gated | -0.009 | [-0.045, +0.027] | 0.5982 | [-0.033, +0.013] | [-0.033, +0.013] | 78.9% |
+| CHB-MIT | early-attention | -0.006 | [-0.045, +0.032] | 0.7440 | [-0.031, +0.018] | [-0.031, +0.019] | 69.0% |
+| CHB-MIT | early-score | +0.004 | [-0.030, +0.037] | 0.8174 | [-0.018, +0.025] | [-0.018, +0.025] | 63.3% |
+| CHB-MIT | late-gated | -0.005 | [-0.016, +0.005] | 0.2921 | [-0.012, +0.001] | [-0.014, +0.003] | 95.0% |
+| CHB-MIT | late-attention | -0.002 | [-0.014, +0.010] | 0.6971 | [-0.010, +0.005] | [-0.012, +0.008] | 70.8% |
+| CHB-MIT | late-score | +0.008 | [-0.022, +0.037] | 0.6007 | [-0.011, +0.028] | [-0.011, +0.028] | 77.7% |
+| CHB-MIT | gated-attention | +0.003 | [-0.011, +0.017] | 0.6534 | [-0.006, +0.012] | [-0.007, +0.014] | 74.5% |
+| CHB-MIT | gated-score | +0.013 | [-0.014, +0.040] | 0.3280 | [-0.003, +0.032] | [-0.004, +0.033] | 93.6% |
+| CHB-MIT | attention-score | +0.010 | [-0.017, +0.037] | 0.4515 | [-0.007, +0.028] | [-0.008, +0.029] | 86.9% |
+| Siena | early-late | -0.023 | [-0.090, +0.043] | 0.4640 | [-0.059, +0.021] | [-0.060, +0.022] | 86.5% |
+| Siena | early-gated | -0.014 | [-0.092, +0.065] | 0.7171 | [-0.057, +0.038] | [-0.058, +0.039] | 71.9% |
+| Siena | early-attention | -0.008 | [-0.086, +0.070] | 0.8276 | [-0.050, +0.044] | [-0.051, +0.045] | 64.8% |
+| Siena | early-score | -0.053 | [-0.101, -0.005] | 0.0337 | [-0.081, -0.024] | [-0.083, -0.022] | 100.0% |
+| Siena | late-gated | +0.010 | [-0.012, +0.031] | 0.3483 | [-0.002, +0.024] | [-0.005, +0.027] | 93.8% |
+| Siena | late-attention | +0.015 | [-0.010, +0.040] | 0.2145 | [+0.002, +0.033] | [-0.000, +0.034] | 99.4% |
+| Siena | late-score | -0.030 | [-0.078, +0.018] | 0.2065 | [-0.060, -0.003] | [-0.062, -0.002] | 98.7% |
+| Siena | gated-attention | +0.005 | [-0.014, +0.025] | 0.5513 | [-0.007, +0.016] | [-0.011, +0.020] | 82.2% |
+| Siena | gated-score | -0.039 | [-0.092, +0.014] | 0.1323 | [-0.073, -0.010] | [-0.075, -0.008] | 99.9% |
+| Siena | attention-score | -0.045 | [-0.095, +0.006] | 0.0768 | [-0.079, -0.019] | [-0.080, -0.017] | 100.0% |
+
 ## Supplementary Note 1. The Bonn corpus (earlier stage)
 
 An earlier stage of this project compared the same operators and controls on the Bonn

@@ -8,7 +8,7 @@ predicted probabilities of all its models for the test windows of every fold
   1. threshold   macro F1 at decision thresholds 0.3, 0.5 and 0.7: operator means,
                  whether the best operator of a run and the operator ranking change,
                  and the corrected tests again at each threshold
-  2. prevalence  CHB-MIT window-level metrics at the natural prevalence of seizures.
+  2. prevalence  CHB-MIT prevalence-adjusted window-level metrics (an estimate).
                  The non-ictal test windows are a random sample, within each case, of
                  all its non-ictal windows; weighting each by (non-ictal windows of the
                  case) / (non-ictal windows sampled) gives the metrics that all windows
@@ -188,20 +188,20 @@ def threshold(ds: str, fm: pd.DataFrame, stored: pd.DataFrame) -> None:
     rm.to_csv(OUT / f"threshold_{ds}.csv", index=False)
 
 
-# --- 2. natural prevalence -------------------------------------------------------------------
+# --- 2. prevalence adjustment -------------------------------------------------------------------
 
 def prevalence(fm: pd.DataFrame, info: pd.DataFrame) -> None:
-    say("\n### CHB-MIT: window-level metrics at the natural prevalence\n")
+    say("\n### CHB-MIT: prevalence-adjusted window-level metrics (estimate)\n")
     n_win, n_ict = int(info.windows.sum()), int(info.ictal.sum())
     say(f"All 10 s windows of the 683 recordings: {n_win:,}, of which {n_ict:,} ictal "
         f"({100 * n_ict / n_win:.2f} percent, against 20 percent in the sampled corpus). "
         f"Non-ictal test windows are weighted by {info.factor.min():.0f} to "
         f"{info.factor.max():.0f} (per case).")
     say("")
-    cols = {"f1_macro@0.5": "macro F1 (sampled)", "nat_f1_macro": "macro F1 (natural)",
-            "nat_f1_ictal": "ictal F1 (natural)", "sensitivity": "sensitivity",
-            "nat_precision": "precision (natural)", "auprc": "AUPRC (sampled)",
-            "nat_auprc": "AUPRC (natural)"}
+    cols = {"f1_macro@0.5": "macro F1 (sampled)", "nat_f1_macro": "macro F1 (adjusted)",
+            "nat_f1_ictal": "ictal F1 (adjusted)", "sensitivity": "sensitivity",
+            "nat_precision": "precision (adjusted)", "auprc": "AUPRC (sampled)",
+            "nat_auprc": "AUPRC (adjusted)"}
     rm = fm.groupby(["pipeline", "seed", "model"])[list(cols)].mean().reset_index()
     tab = rm.groupby("model")[list(cols)].mean().loc[list(MODELS)].rename(columns=cols)
     say(md(tab.reset_index()))

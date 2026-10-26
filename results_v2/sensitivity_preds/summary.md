@@ -22,11 +22,11 @@ Check: macro F1 at 0.5 recomputed from the stored predictions differs from the s
 | 0.500 | 100% | 1.000 | 0/90 | 73/90 | 1/90 | gated 17, attention 11, late 9, early 5, score 3 |
 | 0.700 | 67% | 0.596 | 2/90 (P4: gated-attention +0.021; P4: gated-score +0.066) | 46/90 | 2/90 | gated 18, early 10, attention 10, late 7 |
 
-### CHB-MIT: window-level metrics at the natural prevalence
+### CHB-MIT: prevalence-adjusted window-level metrics (estimate)
 
 All 10 s windows of the 683 recordings: 352,742, of which 1,276 ictal (0.36 percent, against 20 percent in the sampled corpus). Non-ictal test windows are weighted by 15 to 334 (per case).
 
-| model | macro F1 (sampled) | macro F1 (natural) | ictal F1 (natural) | sensitivity | precision (natural) | AUPRC (sampled) | AUPRC (natural) |
+| model | macro F1 (sampled) | macro F1 (adjusted) | ictal F1 (adjusted) | sensitivity | precision (adjusted) | AUPRC (sampled) | AUPRC (adjusted) |
 |---|---|---|---|---|---|---|---|
 | early | 0.677 | 0.517 | 0.105 | 0.474 | 0.113 | 0.613 | 0.227 |
 | late | 0.681 | 0.555 | 0.158 | 0.435 | 0.226 | 0.656 | 0.271 |
@@ -38,8 +38,8 @@ All 10 s windows of the 683 recordings: 352,742, of which 1,276 ictal (0.36 perc
 
 | metric | same best operator as sampled | mean tau with sampled ranking | Holm-significant pairs |
 |---|---|---|---|
-| macro F1 (natural) | 42% | 0.311 | 3/90 (P3: early-late -0.042; P3: early-attention -0.057; P5: early-gated -0.068) |
-| AUPRC (natural) | 51% | 0.573 | 0/90 |
+| macro F1 (adjusted) | 42% | 0.311 | 3/90 (P3: early-late -0.042; P3: early-attention -0.057; P5: early-gated -0.068) |
+| AUPRC (adjusted) | 51% | 0.573 | 0/90 |
 
 ### CHB-MIT: subject-level bootstrap of the operator differences
 

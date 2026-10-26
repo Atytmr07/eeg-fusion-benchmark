@@ -236,6 +236,125 @@ def table_s8() -> str:
     return "\n".join(out)
 
 
+SP = RESULTS_ROOT / "sensitivity_preds"           # post hoc analyses (S9, S10)
+OPS = ["early", "late", "gated", "attention", "score"]
+THR = (0.3, 0.5, 0.7)
+
+
+def table_s9a() -> str:
+    """Macro F1 per dataset, pipeline and threshold (mean over seed sets of the fold means)."""
+    out = []
+    for ds, name in (("chbmit", "CHB-MIT"), ("siena", "Siena")):
+        f = SP / f"threshold_{ds}.csv"
+        if not f.exists():
+            return "(run python -m src.sensitivity_preds)"
+        rm = pd.read_csv(f)
+        pipes = [p for p in ["P0", "P1", "P2", "P3", "P4", "P5", "P6a", "P6b", "P6c"]
+                 if p in set(rm.pipeline)]
+        rows = []
+        for p in pipes:
+            for t in THR:
+                m = rm[rm.pipeline == p].groupby("model")[f"f1_macro@{t}"].mean()
+                rows.append({"pipeline": p, "threshold": f"{t:.1f}",
+                             **{k: f"{m[k]:.3f}" for k in OPS + ["spec2d_wide", "shallow"]}})
+        out += [f"**{name}**", "", md(pd.DataFrame(rows)), ""]
+    return "\n".join(out)
+
+
+def table_s9b() -> str:
+    """Per dataset and threshold: each operator's mean rank and share of runs ranked first."""
+    rows = []
+    for ds, name in (("chbmit", "CHB-MIT"), ("siena", "Siena")):
+        rm = pd.read_csv(SP / f"threshold_{ds}.csv")
+        rm = rm[rm.model.isin(OPS)]
+        win05 = None
+        for t in THR:
+            w = rm.pivot_table(index=["pipeline", "seed"], columns="model",
+                               values=f"f1_macro@{t}")[OPS]
+            rk = w.rank(axis=1, ascending=False, method="average")
+            best = w.idxmax(axis=1)
+            if t == 0.5:
+                win05 = best
+            rows.append({"dataset": name, "threshold": f"{t:.1f}",
+                         **{f"{k}: mean rank / first": f"{rk[k].mean():.2f} / "
+                            f"{100 * (rk[k] == 1).mean():.0f}%" for k in OPS},
+                         "_best": best})
+        for r in rows[-3:]:
+            r["winner differs from 0.5"] = f"{100 * (r.pop('_best') != win05).mean():.0f}%"
+    return md(pd.DataFrame(rows))
+
+
+def table_s9c() -> str:
+    f = SP / "posthoc_holm_thresholds.csv"
+    if not f.exists():
+        return "(run python -m src.posthoc_checks)"
+    d = pd.read_csv(f)
+    show = d[d.p_raw < 0.05].copy()
+    show["dataset"] = show.dataset.map({"chbmit": "CHB-MIT", "siena": "Siena"})
+    show["threshold"] = show.threshold.map("{:.1f}".format)
+    show["difference"] = show.mean_diff.map("{:+.3f}".format)
+    for c in ("p_raw", "p_holm_within", "p_holm_across"):
+        show[c] = show[c].map("{:.4f}".format)
+    show = show[["dataset", "pipeline", "threshold", "pair", "difference", "p_raw",
+                 "p_holm_within", "p_holm_across"]].rename(columns={
+                     "p_raw": "raw p", "p_holm_within": "Holm within threshold",
+                     "p_holm_across": "Holm across thresholds"})
+    sig_w = int((d.p_holm_within < 0.05).sum())
+    sig_a = int((d.p_holm_across < 0.05).sum())
+    return (md(show) + f"\n\nAll {len(d)} comparisons (2 datasets x 9 pipelines x 3 thresholds "
+            f"x 10 pairs) are in `results_v2/sensitivity_preds/posthoc_holm_thresholds.csv`; "
+            f"{sig_w} are significant after the Holm adjustment within a threshold and "
+            f"{sig_a} after the adjustment across thresholds.")
+
+
+def table_s10a() -> str:
+    """Seizure-level metrics of P0 and P1 at the three thresholds."""
+    out = []
+    for ds, name in (("chbmit", "CHB-MIT"), ("siena", "Siena")):
+        f = SP / f"event_threshold_{ds}.csv"
+        if not f.exists():
+            return "(run python -m src.events --thresholds 0.3 0.5 0.7 and src.sensitivity_preds)"
+        g = pd.read_csv(f)
+        metrics = [("sens", "sensitivity")] + ([("fa", "false alarms/h")] if ds == "chbmit"
+                                               else [])
+        rows = []
+        for p in sorted(g.pipeline.unique()):
+            for m in OPS + ["spec2d_wide", "shallow"]:
+                x = g[(g.pipeline == p) & (g.model == m)].groupby("threshold")
+                row = {"pipeline": p, "model": m}
+                for c, lab in metrics:
+                    st = x[c].agg(["mean", "std"])
+                    for t in THR:
+                        row[f"{lab} {t:.1f}"] = f"{st.at[t, 'mean']:.2f} ± {st.at[t, 'std']:.2f}"
+                rows.append(row)
+        out += [f"**{name}**", "", md(pd.DataFrame(rows)), ""]
+    return "\n".join(out)
+
+
+def table_s10b() -> str:
+    f, w = SP / "posthoc_prevalence_summary.csv", SP / "posthoc_prevalence_weights.csv"
+    if not f.exists():
+        return "(run python -m src.posthoc_checks)"
+    s = pd.read_csv(f)
+    s["relative decline"] = s["relative decline"].map(lambda v: f"{100 * v:.1f}%")
+    ww = pd.read_csv(w)
+    ww["weight w"] = ww["weight w"].map("{:.1f}".format)
+    return (md(s) + "\n\nWeights per case:\n\n" + md(ww))
+
+
+def table_s10c() -> str:
+    f = SP / "posthoc_bootstrap_compare.csv"
+    if not f.exists():
+        return "(run python -m src.posthoc_checks)"
+    d = pd.read_csv(f)
+    d = d[d.pipeline == "all"].drop(columns=["pipeline", "matches bootstrap_<ds>.csv"])
+    d["dataset"] = d.dataset.map({"chbmit": "CHB-MIT", "siena": "Siena"})
+    d["corrected p"] = d["corrected p"].map("{:.4f}".format)
+    d["mean difference"] = d["mean difference"].map("{:+.3f}".format)
+    d["direction consistency"] = d["direction consistency"].map(lambda v: f"{100 * v:.1f}%")
+    return md(d)
+
+
 def main() -> None:
     text = f"""# Supplementary Material
 
@@ -322,6 +441,68 @@ equivalence margin the data can establish (delta_min), and the outcome at the ma
 ±0.05 and ±0.02 (`results_v2/multiverse/*_cuda/equivalence*.csv`; Figure 3).
 
 {table_s8()}
+
+## Table S9. Post hoc: sensitivity to the decision threshold (window level)
+
+Exploratory, specified after the primary analysis (Section 2.6). Every model's stored test
+predictions were thresholded at 0.3, 0.5 and 0.7; 0.5 is the primary analysis
+(`python -m src.sensitivity_preds`, `src.posthoc_checks`; Figure 9a).
+
+**S9a.** Macro F1 per pipeline and threshold, mean over the five seed sets of each run's
+fold mean.
+
+{table_s9a()}
+
+**S9b.** Each operator's mean rank (1 = best) over the 45 runs of a dataset and the share
+of runs in which it ranked first (ties share the rank), and the share of runs whose best
+operator differs from the best at 0.5.
+
+{table_s9b()}
+
+**S9c.** Operator pairs with a raw p below 0.05 at any threshold: corrected resampled t
+test on the fold values (seed sets averaged), Holm-adjusted within the ten pairs of one
+dataset, pipeline and threshold (the family of the primary analysis), and across the
+thirty comparisons of one dataset and pipeline (three thresholds x ten pairs), a more
+conservative sensitivity check. Difference: first minus second operator.
+
+{table_s9c()}
+
+## Table S10. Post hoc: seizure-level thresholds, class prevalence and inference
+
+Exploratory, specified after the primary analysis (Section 2.6).
+
+**S10a. Seizure-level metrics at three thresholds**, P0 and P1 only: every recording of
+every held-out person scored again with the saved models (`python -m src.events
+--thresholds 0.3 0.5 0.7`), no post-processing; pooled over the persons of a run, mean ±
+SD over the five seed sets. False alarms per hour are given for CHB-MIT only (Siena's
+recordings are cut around seizures).
+
+{table_s10a()}
+
+**S10b. CHB-MIT prevalence-adjusted macro F1.** Non-ictal test windows are weighted by
+w = N_nonictal,full / N_nonictal,sampled of their case (ictal windows: 1), so true
+positives and false negatives keep their counts and false positives and true negatives
+are scaled to the full non-ictal count; macro F1 is computed from this weighted
+confusion matrix at the 0.5 threshold. Subject-level: macro F1 per held-out person, mean
+over the 23 persons, then mean and SD over the 45 runs; pooled: the weighted confusion
+matrices of a run's persons summed first. The estimate assumes that the sampled
+non-ictal windows have the error rate of those not sampled; it is not a measurement on
+all windows (`src/posthoc_checks.py`).
+
+{table_s10b()}
+
+**S10c. Corrected paired t test and subject-level bootstrap**, operator pairs pooled over
+the nine pipelines (each subject's difference averaged over pipelines and seed sets).
+Corrected 95% interval: mean ± t(0.975, n-1) SE with the Nadeau-Bengio variance.
+Bootstrap: the held-out subject is the resampling unit, and both operators' results of a
+drawn subject enter together (paired); 10,000 resamples, percentile intervals; the second
+interval also resamples the five seed sets within each drawn subject. Direction
+consistency: share of resampled means with the sign of the observed difference. The
+bootstrap does not model the overlap of the LOSO training sets; the corrected test
+remains the primary analysis. All 90 pairs per dataset in
+`results_v2/sensitivity_preds/posthoc_bootstrap_compare.csv`.
+
+{table_s10c()}
 
 ## Supplementary Note 1. The Bonn corpus (earlier stage)
 

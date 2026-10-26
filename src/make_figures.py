@@ -1,4 +1,4 @@
-"""Results figures 2 to 8 of the manuscript (paper/manuscript_v2.md), from stored runs.
+"""Results figures 2 to 9 of the manuscript (paper/manuscript_v2.md), from stored runs.
 
 The order follows the Results (advisor's structure of 21 October 2026):
 
@@ -16,12 +16,16 @@ The order follows the Results (advisor's structure of 21 October 2026):
             (CHB-MIT), and seizure-level sensitivity on Siena
   Figure 8  cross-dataset: macro F1 in three settings, share of runs each operator wins
             in each setting, and the agreement of the rankings
+  Figure 9  post hoc sensitivity: share of runs each operator wins at thresholds 0.3,
+            0.5 and 0.7; seizure-level operating points of P0 and P1 at the same
+            thresholds (CHB-MIT); macro F1 sampled against prevalence-adjusted (CHB-MIT).
+            Needs src.sensitivity_preds and src.posthoc_checks first
 
 Only complete runs enter (every LOSO fold of all five operators; make_results). Every
 figure says how many seed sets it uses. Run it at any time; it uses what exists.
 
 Usage:  python -m src.make_figures [--device cuda] [--figures 2 3 ...]
-Output: paper/figures_manuscript/figure{2..8}_*.png and .pdf
+Output: paper/figures_manuscript/figure{2..9}_*.png and .pdf
 """
 from __future__ import annotations
 
@@ -627,10 +631,105 @@ def figure8(data: dict, device: str) -> None:
     plt.close(fig)
 
 
+def figure9(data: dict) -> None:
+    """Post hoc sensitivity to evaluation choices (advisor's review of 26 October 2026), from
+    the outputs of src/sensitivity_preds.py and src/posthoc_checks.py."""
+    sp = RESULTS_ROOT / "sensitivity_preds"
+    need = [sp / "threshold_chbmit.csv", sp / "threshold_siena.csv",
+            sp / "event_threshold_chbmit.csv", sp / "posthoc_prevalence_confusion.csv"]
+    if not all(f.exists() for f in need):
+        print("figure 9: run python -m src.sensitivity_preds and src.posthoc_checks first")
+        return
+    plt = _plt()
+    from matplotlib.lines import Line2D
+    thr = [0.3, 0.5, 0.7]
+    fig = plt.figure(figsize=(7.6, 3.2))
+    gs = fig.add_gridspec(1, 4, width_ratios=[1, 1, 1.45, 1.75], wspace=0.55)
+    # a: share of runs each operator ranks first, per threshold
+    for j, ds in enumerate(("chbmit", "siena")):
+        ax = fig.add_subplot(gs[0, j])
+        rm = pd.read_csv(sp / f"threshold_{ds}.csv")
+        rm = rm[rm.model.isin(OPS)]
+        winners = {}
+        for i, t in enumerate(thr):
+            w = rm.pivot_table(index=["pipeline", "seed"], columns="model",
+                               values=f"f1_macro@{t}")[OPS]
+            winners[t] = w.idxmax(axis=1)
+            won = (w.rank(axis=1, ascending=False, method="average") == 1).mean()
+            for k, m in enumerate(OPS):
+                ax.bar(i + (k - 2) * 0.16, 100 * won[m], width=0.15, color=COLOR[m])
+        for i, t in ((0, 0.3), (2, 0.7)):
+            changed = 100 * (winners[t] != winners[0.5]).mean()
+            ax.text(i, 99, f"{changed:.0f}%\nchanged", ha="center", va="top", fontsize=6.3,
+                    color=INK2)
+        ax.set_xticks(range(3), [f"{t:.1f}" for t in thr])
+        ax.set_ylim(0, 100)
+        ax.set_xlabel("decision threshold")
+        if j == 0:
+            ax.set_ylabel("runs ranked first (%)")
+            ax.text(0, 1.125, "a  Operator ranking", transform=ax.transAxes, fontsize=9,
+                    va="bottom")
+        ax.set_title(NAMES[ds], fontsize=7.5, color=INK2)
+        ax.grid(axis="x", visible=False)
+    # b: seizure-level operating points of P0 and P1 (CHB-MIT), one line per operator
+    ax = fig.add_subplot(gs[0, 2])
+    ev = pd.read_csv(sp / "event_threshold_chbmit.csv")
+    ev = ev[ev.model.isin(OPS)].groupby(["model", "threshold"])[["sens", "fa"]].mean()
+    tmark = {0.3: "o", 0.5: "s", 0.7: "^"}
+    for m in OPS:
+        pts = ev.xs(m).reindex(thr)
+        ax.plot(pts.fa, pts.sens, color=COLOR[m], lw=1.0, zorder=2)
+        for t in thr:
+            ax.plot(pts.at[t, "fa"], pts.at[t, "sens"], tmark[t], color=COLOR[m], ms=5,
+                    mec="white", mew=0.6, zorder=3)
+    ax.set_xlabel("false alarms per hour")
+    ax.set_ylabel("seizure-level sensitivity")
+    ax.set_title("b  Detection trade-off", loc="left", y=1.1)
+    ax.legend(handles=[Line2D([], [], color=INK2, marker=tmark[t], ls="", ms=5,
+                              label=f"threshold {t:.1f}") for t in thr],
+              loc="lower right", fontsize=6.3, handletextpad=0.2)
+    ax.text(0.03, 0.97, "CHB-MIT, P0 and P1", transform=ax.transAxes, va="top",
+            fontsize=6.5, color=INK2)
+    # c: macro F1 sampled (1:4) against prevalence-adjusted, per held-out person
+    ax = fig.add_subplot(gs[0, 3])
+    cm = pd.read_csv(sp / "posthoc_prevalence_confusion.csv")
+
+    def macro(tp, fn, fp, tn):
+        f1 = np.where(2 * tp + fp + fn > 0, 2 * tp / np.maximum(2 * tp + fp + fn, 1e-12), 0)
+        f0 = np.where(2 * tn + fn + fp > 0, 2 * tn / np.maximum(2 * tn + fn + fp, 1e-12), 0)
+        return (f1 + f0) / 2
+
+    cm["sampled"] = macro(cm.tp, cm.fn, cm.fp_sampled, cm.tn_sampled)
+    cm["adjusted"] = macro(cm.tp, cm.fn, cm.fp_weighted, cm.tn_weighted)
+    models = OPS + ["shallow"]
+    person = cm.groupby(["model", "fold"])[["sampled", "adjusted"]].mean()
+    rng = np.random.default_rng(0)
+    for i, m in enumerate(models):
+        col = COLOR.get(m, CTRL_STYLE["shallow"][0])
+        for off, key, alpha in ((-0.19, "sampled", 0.38), (0.19, "adjusted", 1.0)):
+            v = person.xs(m)[key]
+            ax.bar(i + off, v.mean(), width=0.36, color=col, alpha=alpha, zorder=2)
+            ax.scatter(i + off + rng.uniform(-0.08, 0.08, len(v)), v, s=3.5, color=INK,
+                       alpha=0.45, lw=0, zorder=3)
+    ax.set_xticks(range(len(models)), models, rotation=40, ha="right", fontsize=7,
+                  rotation_mode="anchor")
+    ax.set_ylabel("macro F1")
+    ax.set_ylim(0, 1)
+    ax.set_title("c  Class-prevalence adjustment", loc="left", y=1.1)
+    ax.legend(handles=[plt.Rectangle((0, 0), 1, 1, color=INK2, alpha=0.38,
+                                     label="sampled (1:4)"),
+                       plt.Rectangle((0, 0), 1, 1, color=INK2, label="prevalence-adjusted")],
+              loc="upper right", fontsize=6.3, handlelength=1.0)
+    ax.grid(axis="x", visible=False)
+    op_legend(fig, y=1.1)
+    save(fig, "figure9_posthoc_sensitivity")
+    plt.close(fig)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--device", default="cuda", choices=["cpu", "cuda"])
-    ap.add_argument("--figures", nargs="*", type=int, default=[2, 3, 4, 5, 6, 7, 8])
+    ap.add_argument("--figures", nargs="*", type=int, default=[2, 3, 4, 5, 6, 7, 8, 9])
     args = ap.parse_args()
     data = {}
     for ds in ("chbmit", "siena"):
@@ -638,7 +737,7 @@ def main() -> None:
         if long is not None:
             data[ds] = (long, rm)
             print(f"{NAMES[ds]}: {rm.groupby(['pipeline', 'seed']).ngroups} complete runs")
-    fns = {2: figure2, 3: figure3, 4: figure4, 5: figure5, 6: figure6, 7: figure7}
+    fns = {2: figure2, 3: figure3, 4: figure4, 5: figure5, 6: figure6, 7: figure7, 9: figure9}
     for f in args.figures:
         if f == 8:
             figure8(data, args.device)
