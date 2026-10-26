@@ -209,7 +209,8 @@ def widen_table(par: str) -> tuple[str, str | None, bool]:
     sizes = list(CHAR_PT)[1:] if ncol >= 8 else list(CHAR_PT)   # 8+ columns: footnotesize
     for size in sizes:
         avail = (TEXT_PT - 12.0 * ncol) / CHAR_PT[size]       # characters, minus tabcolsep
-        need = [(w + 2) / avail for w in longest]
+        need = [max(w + 2, (FONT_PT[size] * e + 3) / CHAR_PT[size]) / avail   # capitals
+                for w, e in zip(longest, longest_em)]          # ("CHB-MIT") are wider
         if sum(need) <= 1:
             setting = "\\" + size
             break
