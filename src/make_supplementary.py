@@ -337,9 +337,10 @@ def table_s10b() -> str:
         return "(run python -m src.posthoc_checks)"
     s = pd.read_csv(f)
     s["relative decline"] = s["relative decline"].map(lambda v: f"{100 * v:.1f}%")
-    ww = pd.read_csv(w)
+    ww = pd.read_csv(w).rename(columns={"windows (all, 10 s)": "all windows"})
     ww["weight w"] = ww["weight w"].map("{:.1f}".format)
-    return (md(s) + "\n\nWeights per case:\n\n" + md(ww))
+    return (md(s) + "\n\nWeights per case (all windows: every 10 s window of the case's "
+            "target-montage recordings):\n\n" + md(ww))
 
 
 def table_s10c() -> str:
@@ -479,8 +480,9 @@ recordings are cut around seizures).
 
 {table_s10a()}
 
-**S10b. CHB-MIT prevalence-adjusted macro F1.** Non-ictal test windows are weighted by
-w = N_nonictal,full / N_nonictal,sampled of their case (ictal windows: 1), so true
+**S10b. CHB-MIT prevalence-adjusted macro F1.** Each non-ictal test window is weighted by
+the number of non-ictal windows of its case in the complete recordings divided by the
+number sampled from that case (ictal windows: weight 1), so true
 positives and false negatives keep their counts and false positives and true negatives
 are scaled to the full non-ictal count; macro F1 is computed from this weighted
 confusion matrix at the 0.5 threshold. Subject-level: macro F1 per held-out person, mean
