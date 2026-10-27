@@ -36,6 +36,13 @@ Every comparison significant under either correction:
 
 Check: the bootstrap intervals drawn again equal those of bootstrap_<ds>.csv in 200 of 200 rows.
 
+Operator pairs per pipeline whose 95% interval excludes zero. The corrected interval and both bootstrap intervals are nominal (not adjusted for multiplicity); only the Holm column, the primary analysis, is adjusted (ten pairs of one pipeline):
+
+| dataset | corrected test, nominal (raw p < 0.05) | corrected test, Holm-adjusted p < 0.05 | bootstrap (subject), nominal | bootstrap (subject, then seed set), nominal |
+|---|---|---|---|---|
+| CHB-MIT | 1/90 | 0/90 | 10/90 | 3/90 |
+| Siena | 6/90 | 0/90 | 24/90 | 17/90 |
+
 Pooled over the nine pipelines (each subject's difference averaged over pipelines and seed sets; positive: first operator higher):
 
 | dataset | pair | mean difference | corrected 95% CI | corrected p | bootstrap 95% CI (subject) | bootstrap 95% CI (subject, then seed set) | direction consistency |
@@ -113,23 +120,40 @@ Check: the formula above reproduces scikit-learn's sample-weighted macro F1 to 5
 
 **B. Aggregation.** Subject-level: macro F1 from each held-out person's weighted confusion matrix, the mean over the 23 persons with equal weight, then the mean and SD over the 45 runs (nine pipelines x five seed sets); this is how sensitivity_preds computed it. Pooled: the weighted confusion matrices of all persons of a run summed first, then one macro F1 per run.
 
-| aggregation | model | sampled | sampled SD | adjusted | adjusted SD | decline | relative decline |
-|---|---|---|---|---|---|---|---|
-| subject-level | early | 0.677 | 0.013 | 0.517 | 0.016 | 0.160 | 0.237 |
-| subject-level | late | 0.681 | 0.015 | 0.555 | 0.015 | 0.126 | 0.185 |
-| subject-level | gated | 0.686 | 0.016 | 0.562 | 0.015 | 0.124 | 0.181 |
-| subject-level | attention | 0.683 | 0.014 | 0.558 | 0.014 | 0.125 | 0.183 |
-| subject-level | score | 0.673 | 0.017 | 0.545 | 0.014 | 0.128 | 0.189 |
-| subject-level | spec2d_wide | 0.683 | 0.014 | 0.541 | 0.014 | 0.142 | 0.208 |
-| subject-level | shallow | 0.690 | 0.008 | 0.454 | 0.004 | 0.237 | 0.343 |
-| pooled | early | 0.678 | 0.014 | 0.483 | 0.007 | 0.195 | 0.287 |
-| pooled | late | 0.694 | 0.020 | 0.498 | 0.008 | 0.196 | 0.282 |
-| pooled | gated | 0.698 | 0.021 | 0.500 | 0.008 | 0.198 | 0.283 |
-| pooled | attention | 0.701 | 0.018 | 0.496 | 0.008 | 0.205 | 0.293 |
-| pooled | score | 0.690 | 0.018 | 0.492 | 0.008 | 0.198 | 0.287 |
-| pooled | spec2d_wide | 0.684 | 0.014 | 0.489 | 0.006 | 0.195 | 0.285 |
-| pooled | shallow | 0.671 | 0.009 | 0.447 | 0.003 | 0.224 | 0.334 |
+| aggregation | model | sampled | sampled SD | adjusted | adjusted SD | decline | relative decline | false positive rate at 0.5 | precision at 0.5 (adjusted) |
+|---|---|---|---|---|---|---|---|---|---|
+| subject-level | early | 0.677 | 0.013 | 0.517 | 0.016 | 0.160 | 0.237 | 0.110 | 0.113 |
+| subject-level | late | 0.681 | 0.015 | 0.555 | 0.015 | 0.126 | 0.185 | 0.078 | 0.226 |
+| subject-level | gated | 0.686 | 0.016 | 0.562 | 0.015 | 0.124 | 0.181 | 0.074 | 0.244 |
+| subject-level | attention | 0.683 | 0.014 | 0.558 | 0.014 | 0.125 | 0.183 | 0.082 | 0.223 |
+| subject-level | score | 0.673 | 0.017 | 0.545 | 0.014 | 0.128 | 0.189 | 0.089 | 0.194 |
+| subject-level | spec2d_wide | 0.683 | 0.014 | 0.541 | 0.014 | 0.142 | 0.208 | 0.088 | 0.162 |
+| subject-level | shallow | 0.690 | 0.008 | 0.454 | 0.004 | 0.237 | 0.343 | 0.215 | 0.022 |
+| pooled | early | 0.678 | 0.014 | 0.483 | 0.007 | 0.195 | 0.287 | 0.103 | 0.014 |
+| pooled | late | 0.694 | 0.020 | 0.498 | 0.008 | 0.196 | 0.282 | 0.085 | 0.020 |
+| pooled | gated | 0.698 | 0.021 | 0.500 | 0.008 | 0.198 | 0.283 | 0.079 | 0.022 |
+| pooled | attention | 0.701 | 0.018 | 0.496 | 0.008 | 0.205 | 0.293 | 0.083 | 0.020 |
+| pooled | score | 0.690 | 0.018 | 0.492 | 0.008 | 0.198 | 0.287 | 0.089 | 0.018 |
+| pooled | spec2d_wide | 0.684 | 0.014 | 0.489 | 0.006 | 0.195 | 0.285 | 0.083 | 0.016 |
+| pooled | shallow | 0.671 | 0.009 | 0.447 | 0.003 | 0.224 | 0.334 | 0.183 | 0.009 |
 
 - subject-level: operators 0.673-0.686 sampled, 0.517-0.562 adjusted; largest absolute decline shallow (0.237), largest relative decline shallow (34.3 %)
 - pooled: operators 0.678-0.701 sampled, 0.483-0.500 adjusted; largest absolute decline shallow (0.224), largest relative decline shallow (33.4 %)
+
+## 4. CHB-MIT prevalence-adjusted operator comparisons
+
+The procedure of the primary analysis (Section 2.6) applied to the prevalence-adjusted fold values: per held-out subject the fold value of each operator, seed sets averaged; the corrected resampled t test (Nadeau and Bengio, test/train ratio 1/22, 22 degrees of freedom) on the 23 paired differences; Holm adjustment over the ten operator pairs of one pipeline (nine families). Post hoc and exploratory.
+
+| metric | raw p < 0.05 | Holm-adjusted p < 0.05 |
+|---|---|---|
+| nat_auprc | 5/90 | 0/90 |
+| nat_f1_macro | 22/90 | 3/90 |
+
+Holm-significant comparisons:
+
+| metric | pipeline | pair | mean difference | corrected 95% CI | t | raw p | Holm p |
+|---|---|---|---|---|---|---|---|
+| nat_f1_macro | P3 | early-late | -0.042 | [-0.069, -0.014] | -3.170 | 0.0044 | 0.0399 |
+| nat_f1_macro | P3 | early-attention | -0.057 | [-0.091, -0.023] | -3.477 | 0.0021 | 0.0214 |
+| nat_f1_macro | P5 | early-gated | -0.068 | [-0.106, -0.029] | -3.658 | 0.0014 | 0.0138 |
 

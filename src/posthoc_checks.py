@@ -16,6 +16,9 @@ trained or run again.
                  then the mean over persons) against pooled aggregation (the confusion
                  matrices of all persons of a run summed first), and the decline of each
                  model in absolute and relative terms
+  4. pairs       CHB-MIT prevalence-adjusted macro F1 and AUPRC: every operator pair in
+                 every pipeline with the procedure of the primary analysis (raw corrected
+                 p, Holm within the ten pairs of one pipeline)
 
 Usage:  python -m src.posthoc_checks          (after python -m src.sensitivity_preds)
 Output: results_v2/sensitivity_preds/posthoc_checks.md and CSV tables
@@ -158,6 +161,8 @@ def bootstrap_compare(ds: str) -> pd.DataFrame:
                 "bootstrap 95% CI (subject)": f"[{lo1:+.3f}, {hi1:+.3f}]",
                 "bootstrap 95% CI (subject, then seed set)": f"[{lo2:+.3f}, {hi2:+.3f}]",
                 "direction consistency": float(np.mean(np.sign(one) == np.sign(m))),
+                "bootstrap (subject) excludes 0": bool(lo1 > 0 or hi1 < 0),
+                "bootstrap (subject, then seed set) excludes 0": bool(lo2 > 0 or hi2 < 0),
                 "matches bootstrap_<ds>.csv": bool(ok)})
     return pd.DataFrame(rows)
 
@@ -186,7 +191,31 @@ def report_bootstrap(tabs: list[pd.DataFrame]) -> None:
     d.to_csv(OUT / "posthoc_bootstrap_compare.csv", index=False)
     say(f"Check: the bootstrap intervals drawn again equal those of bootstrap_<ds>.csv in "
         f"{int(d['matches bootstrap_<ds>.csv'].sum())} of {len(d)} rows.\n")
-    show = d[d.pipeline == "all"].drop(columns=["pipeline", "matches bootstrap_<ds>.csv"])
+    # nominal against nominal: neither interval is adjusted for multiplicity, so only
+    # the Holm column is comparable with the primary analysis
+    per = d[d.pipeline != "all"].reset_index(drop=True)
+    per["p_holm"] = np.nan
+    for _, g in per.groupby(["dataset", "pipeline"]):
+        per.loc[g.index, "p_holm"] = holm(g["corrected p"].to_numpy())
+    cnt = per.groupby("dataset").agg(
+        corrected_nominal=("corrected p", lambda s: f"{(s < 0.05).sum()}/{len(s)}"),
+        corrected_holm=("p_holm", lambda s: f"{(s < 0.05).sum()}/{len(s)}"),
+        boot_subject=("bootstrap (subject) excludes 0", lambda s: f"{s.sum()}/{len(s)}"),
+        boot_seed=("bootstrap (subject, then seed set) excludes 0",
+                   lambda s: f"{s.sum()}/{len(s)}")).reset_index()
+    cnt["dataset"] = cnt.dataset.map(NAMES)
+    say("Operator pairs per pipeline whose 95% interval excludes zero. The corrected interval "
+        "and both bootstrap intervals are nominal (not adjusted for multiplicity); only the "
+        "Holm column, the primary analysis, is adjusted (ten pairs of one pipeline):\n")
+    say(md(cnt.rename(columns={
+        "corrected_nominal": "corrected test, nominal (raw p < 0.05)",
+        "corrected_holm": "corrected test, Holm-adjusted p < 0.05",
+        "boot_subject": "bootstrap (subject), nominal",
+        "boot_seed": "bootstrap (subject, then seed set), nominal"})))
+    say("")
+    show = d[d.pipeline == "all"].drop(columns=[
+        "pipeline", "matches bootstrap_<ds>.csv", "bootstrap (subject) excludes 0",
+        "bootstrap (subject, then seed set) excludes 0"])
     show["dataset"] = show.dataset.map(NAMES)
     show["corrected p"] = show["corrected p"].map(fmt_p)
     say("Pooled over the nine pipelines (each subject's difference averaged over pipelines "
@@ -263,23 +292,30 @@ def prevalence_audit() -> None:
 
     cm["f1_sampled"] = [macro_f1(*v) for v in cm[["tp", "fn", "fp_sampled", "tn_sampled"]].values]
     cm["f1_adjusted"] = [macro_f1(*v) for v in cm[["tp", "fn", "fp_weighted", "tn_weighted"]].values]
-    subj_lvl = cm.groupby(["pipeline", "seed", "model"])[["f1_sampled", "f1_adjusted"]].mean()
+    cm["fpr"] = cm.fp_sampled / (cm.fp_sampled + cm.tn_sampled)
+    cm["precision_adjusted"] = (cm.tp / (cm.tp + cm.fp_weighted)).fillna(0.0)
+    subj_lvl = cm.groupby(["pipeline", "seed", "model"])[
+        ["f1_sampled", "f1_adjusted", "fpr", "precision_adjusted"]].mean()
     pooled = cm.groupby(["pipeline", "seed", "model"])[
         ["tp", "fn", "fp_sampled", "tn_sampled", "fp_weighted", "tn_weighted"]].sum()
     pooled["f1_sampled"] = [macro_f1(*v) for v in pooled[["tp", "fn", "fp_sampled",
                                                          "tn_sampled"]].values]
     pooled["f1_adjusted"] = [macro_f1(*v) for v in pooled[["tp", "fn", "fp_weighted",
                                                           "tn_weighted"]].values]
+    pooled["fpr"] = pooled.fp_sampled / (pooled.fp_sampled + pooled.tn_sampled)
+    pooled["precision_adjusted"] = pooled.tp / (pooled.tp + pooled.fp_weighted)
     out = []
     for lab, t in (("subject-level", subj_lvl), ("pooled", pooled)):
-        g = t.groupby("model")[["f1_sampled", "f1_adjusted"]]
+        g = t.groupby("model")[["f1_sampled", "f1_adjusted", "fpr", "precision_adjusted"]]
         mean, sd = g.mean(), g.std()
         for mdl in MODELS:
             s, a = mean.loc[mdl, "f1_sampled"], mean.loc[mdl, "f1_adjusted"]
             out.append({"aggregation": lab, "model": mdl, "sampled": s,
                         "sampled SD": sd.loc[mdl, "f1_sampled"], "adjusted": a,
                         "adjusted SD": sd.loc[mdl, "f1_adjusted"], "decline": s - a,
-                        "relative decline": (s - a) / s})
+                        "relative decline": (s - a) / s,
+                        "false positive rate at 0.5": mean.loc[mdl, "fpr"],
+                        "precision at 0.5 (adjusted)": mean.loc[mdl, "precision_adjusted"]})
     res = pd.DataFrame(out)
     res.to_csv(OUT / "posthoc_prevalence_summary.csv", index=False)
     say("**B. Aggregation.** Subject-level: macro F1 from each held-out person's weighted "
@@ -299,6 +335,51 @@ def prevalence_audit() -> None:
     say("")
 
 
+def prevalence_pairs() -> None:
+    """The operator pairs under prevalence adjustment, tested as in the primary analysis."""
+    fm = pd.read_csv(OUT / "fold_metrics_chbmit.csv")
+    n = fm.fold.nunique()
+    r, _ = ratios(n)
+    tq = sps.t.ppf(0.975, n - 1)
+    say("## 4. CHB-MIT prevalence-adjusted operator comparisons\n")
+    say(f"The procedure of the primary analysis (Section 2.6) applied to the prevalence-"
+        f"adjusted fold values: per held-out subject the fold value of each operator, seed "
+        f"sets averaged; the corrected resampled t test (Nadeau and Bengio, test/train ratio "
+        f"1/22, {n - 1} degrees of freedom) on the {n} paired differences; Holm adjustment "
+        f"over the ten operator pairs of one pipeline (nine families). Post hoc and "
+        f"exploratory.\n")
+    rows = []
+    for col in ("nat_f1_macro", "nat_auprc"):
+        y, pipes = arr(fm, col, FUSION)
+        for pi, p in enumerate(pipes):
+            res = []
+            for a, b in PAIRS:
+                d = y[:, pi, a] - y[:, pi, b]
+                t, pr = corrected_ttest(y[:, pi, a], y[:, pi, b], r)
+                se = corrected_se(d, r)
+                res.append({"metric": col, "pipeline": p, "pair": f"{FUSION[a]}-{FUSION[b]}",
+                            "mean difference": float(d.mean()),
+                            "corrected 95% CI": f"[{d.mean() - tq * se:+.3f}, "
+                                                f"{d.mean() + tq * se:+.3f}]",
+                            "t": t, "p_raw": pr})
+            for row, ph in zip(res, holm(np.array([x["p_raw"] for x in res]))):
+                row["p_holm"] = float(ph)
+            rows += res
+    d = pd.DataFrame(rows)
+    d.to_csv(OUT / "posthoc_prevalence_pairs.csv", index=False)
+    cnt = d.groupby("metric").agg(
+        nominal=("p_raw", lambda s: f"{(s < 0.05).sum()}/{len(s)}"),
+        holm=("p_holm", lambda s: f"{(s < 0.05).sum()}/{len(s)}")).reset_index()
+    say(md(cnt.rename(columns={"nominal": "raw p < 0.05", "holm": "Holm-adjusted p < 0.05"})))
+    show = d[d.p_holm < 0.05].copy()
+    say("\nHolm-significant comparisons:\n")
+    for c in ("p_raw", "p_holm"):
+        show[c] = show[c].map(fmt_p)
+    say(md(show.rename(columns={"p_raw": "raw p", "p_holm": "Holm p"})) if len(show)
+        else "(none)")
+    say("")
+
+
 def macro_f1(tp: float, fn: float, fp: float, tn: float) -> float:
     f1 = 2 * tp / (2 * tp + fp + fn) if tp + fp + fn else 0.0
     f0 = 2 * tn / (2 * tn + fn + fp) if tn + fn + fp else 0.0
@@ -313,6 +394,7 @@ def main() -> None:
     report_holm([holm_thresholds(ds) for ds in ("chbmit", "siena")])
     report_bootstrap([bootstrap_compare(ds) for ds in ("chbmit", "siena")])
     prevalence_audit()
+    prevalence_pairs()
     (OUT / "posthoc_checks.md").write_text("\n".join(REPORT) + "\n", encoding="utf-8")
     print(f"written: {OUT / 'posthoc_checks.md'}")
 

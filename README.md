@@ -46,6 +46,7 @@ on Siena. An earlier stage of the project used the Bonn dataset (Andrzejak et al
 | [`docs/RESULTS.md`](docs/RESULTS.md) | The results generator (`src/make_results.py`) |
 | [`results_v2/audit/methods_audit.md`](results_v2/audit/methods_audit.md) | Methods audit: counts, partitions, statistics and reproducibility numbers checked against the code and the stored outputs |
 | [`results_v2/sensitivity_preds/summary.md`](results_v2/sensitivity_preds/summary.md) | Post hoc sensitivity analyses: decision threshold, prevalence-adjusted estimates, subject-level bootstrap, seizure-level thresholds |
+| [`docs/LITERATURE_CHECK.md`](docs/LITERATURE_CHECK.md) | Sources still to be checked against their full texts before submission |
 | `docs/09_LITERATUR_TARAMASI.md` | Scoping literature review (Turkish) |
 | `docs/10_OLASILIK_VE_TEKRARLANABILIRLIK.md` | Thread count nondeterminism investigation (Turkish) |
 | `docs/11_CHBMIT_PLANI.md` | CHB-MIT download, verification, and pipeline notes (Turkish) |
@@ -111,7 +112,7 @@ browser:
 | Main tables (Table 4, event tables, cross-dataset tables) | `python -m src.make_results` |
 | Controls against the fusion operators (Figure 2c, f) | `python -m src.controls_stats` |
 | Figures 2 to 9 (Figure 9 after the post hoc steps below) | `python -m src.make_figures --device cuda` |
-| Supplementary Tables S1 to S10 | `python -m src.make_supplementary` |
+| Supplementary Tables S1 to S11 (S11: which code and files reproduce each analysis) | `python -m src.make_supplementary` |
 | What artefact removal removes (Table S5) | `python -m src.p6_signal_effects` |
 | Reproducibility of artefact removal across machines | `python -m src.ica_repro`, `python -m src.ica_sensitivity`, `python -m src.ica_repro_impact` (`docs/ICA_REPRO.md`) |
 | PDF and Overleaf bundle | `python paper/latex/build.py` |
@@ -123,7 +124,7 @@ raw EDF files, and so cannot run from the repository alone:
 |---|---|
 | Methods audit: dataset, window and seizure counts (198, 185 and 187 seizures), identical windows in every pipeline, disjoint LOSO partitions, the statistics against independent re-implementations, the device check (`results_v2/audit/`) | `python -m src.audit_methods` |
 | Post hoc sensitivity analyses from the stored predictions: thresholds 0.3, 0.5 and 0.7, CHB-MIT prevalence-adjusted estimates, subject-level bootstrap (`results_v2/sensitivity_preds/`) | `python -m src.sensitivity_preds` |
-| Checks of the post hoc analyses: Holm within and across thresholds, corrected test against the bootstrap, the prevalence weights and both aggregations (Supplementary Tables S9 and S10) | `python -m src.posthoc_checks` |
+| Checks of the post hoc analyses: Holm within and across thresholds, corrected test against the bootstrap at the same nominal level, the prevalence weights and both aggregations, the prevalence-adjusted operator comparisons (Supplementary Tables S9 and S10) | `python -m src.posthoc_checks` |
 | Seizure-level metrics at several thresholds (each run's `events_thresholds/`; run before `sensitivity_preds`) | `python -m src.events --dataset chbmit --pipeline P1 --runs loso_P1_cuda loso_P1_r1_cuda ... --thresholds 0.3 0.5 0.7` |
 
 ## Repository layout

@@ -623,26 +623,28 @@ positives and false negatives keep their counts and false positives and true neg
 are scaled to the full non-ictal count; macro F1 is computed from this weighted
 confusion matrix at the 0.5 threshold. Subject-level: macro F1 per held-out person, mean
 over the 23 persons, then mean and SD over the 45 runs; pooled: the weighted confusion
-matrices of a run's persons summed first. The estimate assumes that the sampled
+matrices of a run's persons summed first. False positive rate: share of the sampled
+non-ictal test windows predicted ictal at 0.5 (unchanged by the weighting); precision
+at 0.5 (adjusted): TP / (TP + weighted FP). The estimate assumes that the sampled
 non-ictal windows have the error rate of those not sampled; it is not a measurement on
 all windows (`src/posthoc_checks.py`).
 
-| aggregation | model | sampled | sampled SD | adjusted | adjusted SD | decline | relative decline |
-|---|---|---|---|---|---|---|---|
-| subject-level | early | 0.677 | 0.013 | 0.517 | 0.016 | 0.160 | 23.7% |
-| subject-level | late | 0.681 | 0.015 | 0.555 | 0.015 | 0.126 | 18.5% |
-| subject-level | gated | 0.686 | 0.016 | 0.562 | 0.015 | 0.124 | 18.1% |
-| subject-level | attention | 0.683 | 0.014 | 0.558 | 0.014 | 0.125 | 18.3% |
-| subject-level | score | 0.673 | 0.017 | 0.545 | 0.014 | 0.128 | 18.9% |
-| subject-level | spec2d_wide | 0.683 | 0.014 | 0.541 | 0.014 | 0.142 | 20.8% |
-| subject-level | shallow | 0.690 | 0.008 | 0.454 | 0.004 | 0.237 | 34.3% |
-| pooled | early | 0.678 | 0.014 | 0.483 | 0.007 | 0.195 | 28.7% |
-| pooled | late | 0.694 | 0.020 | 0.498 | 0.008 | 0.196 | 28.2% |
-| pooled | gated | 0.698 | 0.021 | 0.500 | 0.008 | 0.198 | 28.3% |
-| pooled | attention | 0.701 | 0.018 | 0.496 | 0.008 | 0.205 | 29.3% |
-| pooled | score | 0.690 | 0.018 | 0.492 | 0.008 | 0.198 | 28.7% |
-| pooled | spec2d_wide | 0.684 | 0.014 | 0.489 | 0.006 | 0.195 | 28.5% |
-| pooled | shallow | 0.671 | 0.009 | 0.447 | 0.003 | 0.224 | 33.4% |
+| aggregation | model | sampled | sampled SD | adjusted | adjusted SD | decline | relative decline | false positive rate at 0.5 | precision at 0.5 (adjusted) |
+|---|---|---|---|---|---|---|---|---|---|
+| subject-level | early | 0.677 | 0.013 | 0.517 | 0.016 | 0.160 | 23.7% | 0.110 | 0.113 |
+| subject-level | late | 0.681 | 0.015 | 0.555 | 0.015 | 0.126 | 18.5% | 0.078 | 0.226 |
+| subject-level | gated | 0.686 | 0.016 | 0.562 | 0.015 | 0.124 | 18.1% | 0.074 | 0.244 |
+| subject-level | attention | 0.683 | 0.014 | 0.558 | 0.014 | 0.125 | 18.3% | 0.082 | 0.223 |
+| subject-level | score | 0.673 | 0.017 | 0.545 | 0.014 | 0.128 | 18.9% | 0.089 | 0.194 |
+| subject-level | spec2d_wide | 0.683 | 0.014 | 0.541 | 0.014 | 0.142 | 20.8% | 0.088 | 0.162 |
+| subject-level | shallow | 0.690 | 0.008 | 0.454 | 0.004 | 0.237 | 34.3% | 0.215 | 0.022 |
+| pooled | early | 0.678 | 0.014 | 0.483 | 0.007 | 0.195 | 28.7% | 0.103 | 0.014 |
+| pooled | late | 0.694 | 0.020 | 0.498 | 0.008 | 0.196 | 28.2% | 0.085 | 0.020 |
+| pooled | gated | 0.698 | 0.021 | 0.500 | 0.008 | 0.198 | 28.3% | 0.079 | 0.022 |
+| pooled | attention | 0.701 | 0.018 | 0.496 | 0.008 | 0.205 | 29.3% | 0.083 | 0.020 |
+| pooled | score | 0.690 | 0.018 | 0.492 | 0.008 | 0.198 | 28.7% | 0.089 | 0.018 |
+| pooled | spec2d_wide | 0.684 | 0.014 | 0.489 | 0.006 | 0.195 | 28.5% | 0.083 | 0.016 |
+| pooled | shallow | 0.671 | 0.009 | 0.447 | 0.003 | 0.224 | 33.4% | 0.183 | 0.009 |
 
 Weights per case (all windows: every 10 s window of the case's target-montage recordings):
 
@@ -681,7 +683,13 @@ drawn subject enter together (paired); 10,000 resamples, percentile intervals; t
 interval also resamples the five seed sets within each drawn subject. Direction
 consistency: share of resampled means with the sign of the observed difference. The
 bootstrap does not model the overlap of the LOSO training sets; the corrected test
-remains the primary analysis. All 90 pairs per dataset in
+remains the primary analysis. Assumptions: the corrected test treats the per-subject
+differences as approximately normal and approximates the dependence between folds by the
+Nadeau-Bengio variance inflation (test/train ratio 1/22 and 1/13); the percentile
+bootstrap treats the held-out subjects as independent draws from a population of
+subjects, and with 23 and 14 subjects its intervals may be too narrow. Neither interval
+is adjusted for multiplicity: they are comparable with each other, whereas the primary
+analysis applies Holm adjustment within each pipeline. All 90 pairs per dataset in
 `results_v2/sensitivity_preds/posthoc_bootstrap_compare.csv`.
 
 | dataset | pair | mean difference | corrected 95% CI | corrected p | bootstrap 95% CI (subject) | bootstrap 95% CI (subject, then seed set) | direction consistency |
@@ -706,6 +714,59 @@ remains the primary analysis. All 90 pairs per dataset in
 | Siena | gated-attention | +0.005 | [-0.014, +0.025] | 0.5513 | [-0.007, +0.016] | [-0.011, +0.020] | 82.2% |
 | Siena | gated-score | -0.039 | [-0.092, +0.014] | 0.1323 | [-0.073, -0.010] | [-0.075, -0.008] | 99.9% |
 | Siena | attention-score | -0.045 | [-0.095, +0.006] | 0.0768 | [-0.079, -0.019] | [-0.080, -0.017] | 100.0% |
+
+Pairs per pipeline (90 per dataset) whose 95% interval excludes zero; only the Holm column is adjusted for multiplicity:
+
+| dataset | corrected test, nominal (raw p < 0.05) | corrected test, Holm-adjusted p < 0.05 | bootstrap (subject), nominal | bootstrap (subject, then seed set), nominal |
+|---|---|---|---|---|
+| CHB-MIT | 1/90 | 0/90 | 10/90 | 3/90 |
+| Siena | 6/90 | 0/90 | 24/90 | 17/90 |
+
+**S10d. CHB-MIT prevalence-adjusted operator comparisons.** The procedure of the primary
+analysis applied to the prevalence-adjusted fold values of S10b: per held-out subject
+the fold value of each operator, seed sets averaged; corrected resampled t test
+(Nadeau-Bengio, test/train ratio 1/22, 22 degrees of freedom) on the 23 paired
+differences; Holm adjustment within the ten operator pairs of one pipeline (nine
+families per metric). Difference: first minus second operator. Post hoc and exploratory
+(`results_v2/sensitivity_preds/posthoc_prevalence_pairs.csv`).
+
+| metric | raw p < 0.05 | Holm-adjusted p < 0.05 |
+|---|---|---|
+| AUPRC (adjusted) | 5/90 | 0/90 |
+| macro F1 (adjusted) | 22/90 | 3/90 |
+
+Holm-significant comparisons:
+
+| metric | pipeline | pair | mean difference | corrected 95% CI | t | raw p | Holm-adjusted p |
+|---|---|---|---|---|---|---|---|
+| macro F1 (adjusted) | P3 | early-late | -0.042 | [-0.069, -0.014] | -3.17 | 0.0044 | 0.0399 |
+| macro F1 (adjusted) | P3 | early-attention | -0.057 | [-0.091, -0.023] | -3.48 | 0.0021 | 0.0214 |
+| macro F1 (adjusted) | P5 | early-gated | -0.068 | [-0.106, -0.029] | -3.66 | 0.0014 | 0.0138 |
+
+## Table S11. Reproducibility map
+
+Where each analysis of the manuscript is implemented and where its results are stored
+in the public repository. Every `src/...` module runs as `python -m src.<module>`; the
+README lists the full commands and their order.
+
+| Manuscript | Code | Results and records |
+|---|---|---|
+| 2.1 CHB-MIT annotations (seizures assigned by file name; `chb09_08.edf`), counts of recordings and seizures | `src/chbmit.py` (`parse_summary`), `src/verify_chbmit.py`, `src/audit_methods.py` | `results_v2/audit/methods_audit.md`, `counts.csv` |
+| 2.1 Siena seizure lists, the six decisions, resampling to 256 Hz and the bipolar montage | `src/siena.py` (`read_bipolar`), `src/siena_qc.py`, `src/verify_siena.py`; `docs/SIENA.md` | Table S4 |
+| 2.2 Preprocessing pipelines P0 to P6c; spectrogram; GEDAI preset (Table S2) | `src/preprocess.py`, `src/chbmit_prep.py`, `src/gedai_qc.py` | per run `meta.json`, `results_v2/qc/gedai_settings/` |
+| 2.2 Artefact removal records per recording | `src/preprocess.py` | `results_v2/qc/p6_recording_logs.csv`, `p6_recording_logs_events.csv` |
+| 2.3 Models, parameter matching | `src/models.py` (`python -m src.models` prints the counts) | |
+| 2.4 Windows, LOSO partitions, inner validation, leakage check and its negative control | `src/chbmit_corpus.py`, `src/datasets.py`, `src/audit_methods.py` | `results_v2/audit/methods_audit.md`, `partitions_<ds>.csv` |
+| 2.4 Seeds per seed set, fold and model | `src/config.py` (`fold_seed`) | per run `meta.json` |
+| 2.4, 3.7 Training on CHB-MIT, testing on Siena | `src/cross_dataset.py` | `results_v2/cross/`, `results_v2/results/cross_*.csv` |
+| 2.5, 3.6 Seizure-level scoring (rules fixed before the runs), the 187 reference events | `src/events.py`; `docs/EVENTS.md`; `src/audit_methods.py` | per run `events/`, `results_v2/results/events_<ds>.csv` |
+| 2.6 Simulation of the naive paired test | `src/sim_cv_correlation.py` | |
+| 2.6, 3.1 to 3.4 Corrected tests, equivalence, rankings, RM-ANOVA, variance components, conservative test/train ratio | `src/multiverse.py`, `src/stats.py`, `src/audit_methods.py` | `results_v2/multiverse/chbmit_cuda/`, `siena_cuda/`, `results_v2/audit/methods_audit.md` |
+| 3.1 Controls against the operators | `src/controls_stats.py` | `results_v2/results/controls_*.csv`, `controls_tests.md` |
+| 3.1 to 3.7 Tables and figures | `src/make_results.py`, `src/make_figures.py`, `src/make_figure1.py`, `src/make_supplementary.py` | `results_v2/results/`, `paper/figures_manuscript/` |
+| 2.6, 3.8 Post hoc threshold, prevalence and bootstrap analyses (Tables S9, S10) | `src/sensitivity_preds.py`, `src/posthoc_checks.py`; seizure-level thresholds: `src/events.py --thresholds` | `results_v2/sensitivity_preds/` |
+| 2.7 CPU against GPU, repeated runs | `src/compare_runs.py`, `src/audit_methods.py`; `docs/PIPELINE.md` | `results_v2/audit/methods_audit.md` |
+| 2.7, 3.5 Reproducibility of artefact removal across machines, perturbation test, impact on the results, signal effects (Tables S1, S5) | `src/ica_repro.py`, `src/ica_sensitivity.py`, `src/ica_repro_impact.py`, `src/p6_signal_effects.py`, `src/gedai_qc.py`; `docs/ICA_REPRO.md` | `results_v2/ica_repro/`, `results_v2/qc/` |
 
 ## Supplementary Note 1. The Bonn corpus (earlier stage)
 

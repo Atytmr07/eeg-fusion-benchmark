@@ -22,6 +22,7 @@ except (AttributeError, ValueError):
     pass
 
 from .config import PROJECT_ROOT, RESULTS_ROOT
+from .stats import holm
 
 QC = RESULTS_ROOT / "qc"
 OUT = PROJECT_ROOT / "paper" / "supplementary.md"
@@ -348,12 +349,46 @@ def table_s10c() -> str:
     if not f.exists():
         return "(run python -m src.posthoc_checks)"
     d = pd.read_csv(f)
-    d = d[d.pipeline == "all"].drop(columns=["pipeline", "matches bootstrap_<ds>.csv"])
-    d["dataset"] = d.dataset.map({"chbmit": "CHB-MIT", "siena": "Siena"})
+    names = {"chbmit": "CHB-MIT", "siena": "Siena"}
+    b1, b2 = "bootstrap (subject) excludes 0", "bootstrap (subject, then seed set) excludes 0"
+    per = d[d.pipeline != "all"].reset_index(drop=True)
+    per["holm"] = np.nan
+    for _, g in per.groupby(["dataset", "pipeline"]):
+        per.loc[g.index, "holm"] = holm(g["corrected p"].to_numpy())
+    cnt = per.groupby("dataset").agg(**{
+        "corrected test, nominal (raw p < 0.05)": ("corrected p", lambda v: f"{(v < 0.05).sum()}/{len(v)}"),
+        "corrected test, Holm-adjusted p < 0.05": ("holm", lambda v: f"{(v < 0.05).sum()}/{len(v)}"),
+        "bootstrap (subject), nominal": (b1, lambda v: f"{v.sum()}/{len(v)}"),
+        "bootstrap (subject, then seed set), nominal": (b2, lambda v: f"{v.sum()}/{len(v)}"),
+    }).reset_index()
+    cnt["dataset"] = cnt.dataset.map(names)
+    d = d[d.pipeline == "all"].drop(columns=["pipeline", "matches bootstrap_<ds>.csv", b1, b2])
+    d["dataset"] = d.dataset.map(names)
     d["corrected p"] = d["corrected p"].map("{:.4f}".format)
     d["mean difference"] = d["mean difference"].map("{:+.3f}".format)
     d["direction consistency"] = d["direction consistency"].map(lambda v: f"{100 * v:.1f}%")
-    return md(d)
+    return (md(d) + "\n\nPairs per pipeline (90 per dataset) whose 95% interval excludes "
+            "zero; only the Holm column is adjusted for multiplicity:\n\n" + md(cnt))
+
+
+def table_s10d() -> str:
+    f = SP / "posthoc_prevalence_pairs.csv"
+    if not f.exists():
+        return "(run python -m src.posthoc_checks)"
+    d = pd.read_csv(f)
+    d["metric"] = d.metric.map({"nat_f1_macro": "macro F1 (adjusted)",
+                                "nat_auprc": "AUPRC (adjusted)"})
+    cnt = d.groupby("metric").agg(**{
+        "raw p < 0.05": ("p_raw", lambda v: f"{(v < 0.05).sum()}/{len(v)}"),
+        "Holm-adjusted p < 0.05": ("p_holm", lambda v: f"{(v < 0.05).sum()}/{len(v)}"),
+    }).reset_index()
+    sig = d[d.p_holm < 0.05].copy()
+    sig["mean difference"] = sig["mean difference"].map("{:+.3f}".format)
+    sig["t"] = sig.t.map("{:.2f}".format)
+    for c in ("p_raw", "p_holm"):
+        sig[c] = sig[c].map("{:.4f}".format)
+    sig = sig.rename(columns={"p_raw": "raw p", "p_holm": "Holm-adjusted p"})
+    return md(cnt) + "\n\nHolm-significant comparisons:\n\n" + md(sig)
 
 
 def main() -> None:
@@ -487,7 +522,9 @@ positives and false negatives keep their counts and false positives and true neg
 are scaled to the full non-ictal count; macro F1 is computed from this weighted
 confusion matrix at the 0.5 threshold. Subject-level: macro F1 per held-out person, mean
 over the 23 persons, then mean and SD over the 45 runs; pooled: the weighted confusion
-matrices of a run's persons summed first. The estimate assumes that the sampled
+matrices of a run's persons summed first. False positive rate: share of the sampled
+non-ictal test windows predicted ictal at 0.5 (unchanged by the weighting); precision
+at 0.5 (adjusted): TP / (TP + weighted FP). The estimate assumes that the sampled
 non-ictal windows have the error rate of those not sampled; it is not a measurement on
 all windows (`src/posthoc_checks.py`).
 
@@ -501,10 +538,51 @@ drawn subject enter together (paired); 10,000 resamples, percentile intervals; t
 interval also resamples the five seed sets within each drawn subject. Direction
 consistency: share of resampled means with the sign of the observed difference. The
 bootstrap does not model the overlap of the LOSO training sets; the corrected test
-remains the primary analysis. All 90 pairs per dataset in
+remains the primary analysis. Assumptions: the corrected test treats the per-subject
+differences as approximately normal and approximates the dependence between folds by the
+Nadeau-Bengio variance inflation (test/train ratio 1/22 and 1/13); the percentile
+bootstrap treats the held-out subjects as independent draws from a population of
+subjects, and with 23 and 14 subjects its intervals may be too narrow. Neither interval
+is adjusted for multiplicity: they are comparable with each other, whereas the primary
+analysis applies Holm adjustment within each pipeline. All 90 pairs per dataset in
 `results_v2/sensitivity_preds/posthoc_bootstrap_compare.csv`.
 
 {table_s10c()}
+
+**S10d. CHB-MIT prevalence-adjusted operator comparisons.** The procedure of the primary
+analysis applied to the prevalence-adjusted fold values of S10b: per held-out subject
+the fold value of each operator, seed sets averaged; corrected resampled t test
+(Nadeau-Bengio, test/train ratio 1/22, 22 degrees of freedom) on the 23 paired
+differences; Holm adjustment within the ten operator pairs of one pipeline (nine
+families per metric). Difference: first minus second operator. Post hoc and exploratory
+(`results_v2/sensitivity_preds/posthoc_prevalence_pairs.csv`).
+
+{table_s10d()}
+
+## Table S11. Reproducibility map
+
+Where each analysis of the manuscript is implemented and where its results are stored
+in the public repository. Every `src/...` module runs as `python -m src.<module>`; the
+README lists the full commands and their order.
+
+| Manuscript | Code | Results and records |
+|---|---|---|
+| 2.1 CHB-MIT annotations (seizures assigned by file name; `chb09_08.edf`), counts of recordings and seizures | `src/chbmit.py` (`parse_summary`), `src/verify_chbmit.py`, `src/audit_methods.py` | `results_v2/audit/methods_audit.md`, `counts.csv` |
+| 2.1 Siena seizure lists, the six decisions, resampling to 256 Hz and the bipolar montage | `src/siena.py` (`read_bipolar`), `src/siena_qc.py`, `src/verify_siena.py`; `docs/SIENA.md` | Table S4 |
+| 2.2 Preprocessing pipelines P0 to P6c; spectrogram; GEDAI preset (Table S2) | `src/preprocess.py`, `src/chbmit_prep.py`, `src/gedai_qc.py` | per run `meta.json`, `results_v2/qc/gedai_settings/` |
+| 2.2 Artefact removal records per recording | `src/preprocess.py` | `results_v2/qc/p6_recording_logs.csv`, `p6_recording_logs_events.csv` |
+| 2.3 Models, parameter matching | `src/models.py` (`python -m src.models` prints the counts) | |
+| 2.4 Windows, LOSO partitions, inner validation, leakage check and its negative control | `src/chbmit_corpus.py`, `src/datasets.py`, `src/audit_methods.py` | `results_v2/audit/methods_audit.md`, `partitions_<ds>.csv` |
+| 2.4 Seeds per seed set, fold and model | `src/config.py` (`fold_seed`) | per run `meta.json` |
+| 2.4, 3.7 Training on CHB-MIT, testing on Siena | `src/cross_dataset.py` | `results_v2/cross/`, `results_v2/results/cross_*.csv` |
+| 2.5, 3.6 Seizure-level scoring (rules fixed before the runs), the 187 reference events | `src/events.py`; `docs/EVENTS.md`; `src/audit_methods.py` | per run `events/`, `results_v2/results/events_<ds>.csv` |
+| 2.6 Simulation of the naive paired test | `src/sim_cv_correlation.py` | |
+| 2.6, 3.1 to 3.4 Corrected tests, equivalence, rankings, RM-ANOVA, variance components, conservative test/train ratio | `src/multiverse.py`, `src/stats.py`, `src/audit_methods.py` | `results_v2/multiverse/chbmit_cuda/`, `siena_cuda/`, `results_v2/audit/methods_audit.md` |
+| 3.1 Controls against the operators | `src/controls_stats.py` | `results_v2/results/controls_*.csv`, `controls_tests.md` |
+| 3.1 to 3.7 Tables and figures | `src/make_results.py`, `src/make_figures.py`, `src/make_figure1.py`, `src/make_supplementary.py` | `results_v2/results/`, `paper/figures_manuscript/` |
+| 2.6, 3.8 Post hoc threshold, prevalence and bootstrap analyses (Tables S9, S10) | `src/sensitivity_preds.py`, `src/posthoc_checks.py`; seizure-level thresholds: `src/events.py --thresholds` | `results_v2/sensitivity_preds/` |
+| 2.7 CPU against GPU, repeated runs | `src/compare_runs.py`, `src/audit_methods.py`; `docs/PIPELINE.md` | `results_v2/audit/methods_audit.md` |
+| 2.7, 3.5 Reproducibility of artefact removal across machines, perturbation test, impact on the results, signal effects (Tables S1, S5) | `src/ica_repro.py`, `src/ica_sensitivity.py`, `src/ica_repro_impact.py`, `src/p6_signal_effects.py`, `src/gedai_qc.py`; `docs/ICA_REPRO.md` | `results_v2/ica_repro/`, `results_v2/qc/` |
 
 ## Supplementary Note 1. The Bonn corpus (earlier stage)
 
