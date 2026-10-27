@@ -46,7 +46,7 @@ decides. Nothing is added to references.bib by the build.
 | Palmer et al. 2008 | Palmer_2008 |
 | Pham et al. 2020) | Pham_2020 |
 | Picard 2021) | Picard2021arxiv |
-| Rheude et al. 2025) | Rheude_2025 |
+| Rheude et al. 2025 | Rheude_2025 |
 | Ros et al. 2025) | Ros_2025 |
 | Sendelbach and Funk 2013) | Sendelbach_2013 |
 | Shanmugavelu et al. 2024) | Shanmugavelu_2024 |

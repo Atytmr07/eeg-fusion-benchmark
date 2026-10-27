@@ -98,100 +98,132 @@
 \textbf{DRAFT v2, NOT FOR SUBMISSION.} Restructured around the three research questions the
 advisor set on 10 October 2026. This file holds the Introduction (Section 1), the
 Methods (Section 2, in the advisor's subsections 2.1 to 2.7) and the Results of the
-five-seed runs (Section 3) and the Discussion (Section 4). The literature review is
+five-seed runs (Section 3), the Discussion (Section 4) and the Conclusions (Section 5). The literature review is
 provisional: the systematic search has run, but title and abstract screening was done
 by an AI assistant, and the human screening and the full texts follow after 17
 October; claims marked {[}abstract{]} rest on a source's abstract only and are to be
 checked against its full text. \nolinkurl{paper/manuscript.md} is the previous draft
 (Bonn and CHB-MIT, single pipeline) and stays unchanged until this one replaces it;
 the Bonn benchmark moves to Supplementary Note 1 (advisor, 16 October 2026). Every number below is traceable to a file in the
-repository (paths given).
+repository (Supplementary Table S11). Abstract and Introduction rewritten on the advisor's
+structure of 27 October 2026; the sources still to be checked against their full texts are
+listed in \nolinkurl{docs/LITERATURE_CHECK.md}.
 \end{minipage}}
 \end{center}
 
 \begin{abstract}
-Studies of convolutional networks for EEG seizure detection that fuse the raw waveform
-with its spectrogram often report that one fusion operator outperforms the others, on
-one dataset, one preprocessing pipeline and one training run. We tested whether such
-conclusions hold when these choices change. Five fusion operators (early, late, gated
-and attention fusion, matched in parameter count, and score fusion, an ensemble of the
-two single-branch networks) and single-branch and classical controls were compared
-under nine preprocessing pipelines, including three artefact removal algorithms
-(Extended Infomax, GEDAI, AMICA), and five seed sets, with leave-one-subject-out
-evaluation on CHB-MIT (23 subjects) and Siena (14 subjects) and by training on CHB-MIT
-and testing on Siena. Statistical significance (resampling-corrected tests), practical
-equivalence (margins fixed in advance) and ranking stability were assessed separately.
-The operators differed by a median of 0.021 (CHB-MIT) and 0.053 (Siena) macro F1 within
-a pipeline, and no difference was significant. Variability associated with the
-held-out subject made up 74 percent of the variance on CHB-MIT; the estimated shares of
-preprocessing and the operator were zero, that of the seed 1 percent. Rankings changed between seeds (median Kendall's W 0.22 on CHB-MIT), were
-more stable on Siena, where score fusion ranked first in 82 percent of runs without a
-significant advantage, and did not transfer between datasets. Early fusion had the
-lowest AUPRC in all 18 pipeline-dataset combinations. The controls stood to the
-operators as the operators stood to each other: a spectrogram network of the same size
-and a logistic regression on seven hand-crafted features reached similar or higher
-mean macro F1 at the 0.5 threshold, the latter above the best operator in 43 of 45
-Siena runs and the highest there at every threshold tested, but no difference was
-significant. With fixed seeds and package versions, GEDAI's threshold-based cleaning
-was deterministic on each machine but not across machines: it cleaned 27 percent of
-recordings differently on a second machine, enough to change seizure-level sensitivity
-by up to 0.054 and the order of the operators. Claims that one fusion operator is
-superior, made from a single dataset, pipeline and run, are not supported.
+A fusion operator that achieves the highest EEG seizure-detection score in one
+experiment may not remain superior when preprocessing, random seeds or evaluation
+conditions change. Yet architectural comparisons rarely test the robustness of such
+conclusions. We investigated whether fusion superiority survives these analytical
+choices. Four parameter-matched fusion architectures (early, late, gated and attention)
+and a separately evaluated score-fusion ensemble were compared with single-branch and
+classical baselines across nine preprocessing pipelines and five seed sets. Evaluation
+used subject-independent testing on CHB-MIT (23 subjects) and Siena (14 subjects),
+together with cross-dataset transfer. Statistical significance, practical equivalence
+and ranking stability were assessed separately. Median within-pipeline performance
+spreads were 0.021 and 0.053 macro F1 on CHB-MIT and Siena, respectively, with no
+operator pair significant in the primary corrected comparisons. Subject-associated
+variability accounted for approximately 74 percent of the estimated variance on CHB-MIT.
+Rankings varied across seeds and datasets; score fusion ranked first in 82 percent of
+Siena runs without establishing statistical superiority. Post hoc analyses showed that
+changing the decision threshold altered operator rankings, while prevalence-adjusted
+estimates on CHB-MIT gave lower macro F1 and a different preferred operator in more than
+half of the runs. Cross-machine differences in artefact removal also changed downstream
+detection outcomes. These findings distinguish high observed performance from robust
+comparative superiority and demonstrate the importance of evaluating EEG fusion under
+multiple analytical conditions rather than relying on a single favourable configuration.
 \end{abstract}
 
 \section{1. Introduction}\label{introduction}
 
-Electroencephalography (EEG) records the brain's electrical activity, and during an
-epileptic seizure that activity changes characteristically: amplitude rises, the signal
-becomes rhythmic and its power concentrates in particular frequency bands. Automatic
-seizure detection is therefore a signal classification problem, and convolutional neural
-networks (CNNs) are the dominant approach to it. A recurring design represents each EEG
-segment twice, as the raw waveform for a 1D CNN and as its time-frequency image for a 2D
-CNN, and combines the two branches with a fusion operator: early fusion of inputs or
-early features, late fusion of the final feature vectors, a learned gate or attention
-weighting, or a combination of the two branches' predicted scores. Studies of such
-models typically report that one operator outperforms the others. Whether such a
-statement holds once the analytic decisions around the comparison change is the
-question of this paper.
+Automatic seizure detection from electroencephalography (EEG) has increasingly benefited
+from deep learning architectures capable of extracting complementary information from
+neural signals. Among these approaches, multimodal convolutional neural networks (CNNs)
+combine time-domain EEG waveforms with time-frequency representations, typically through
+early fusion, late fusion, gating, attention or decision-level score aggregation. The
+underlying assumption is that integrating complementary representations can improve
+seizure discrimination beyond what either representation can achieve independently.
 
-\subsection{1.1 Preprocessing changes what deep models achieve}\label{preprocessing-changes-what-deep-models-achieve}
+However, an important methodological question remains unresolved: when one fusion
+operator outperforms another, how much of that advantage can be attributed to the fusion
+mechanism itself, and how much depends on the analytical conditions under which the
+comparison was conducted? A model may achieve the highest performance in one experiment
+without retaining that advantage under alternative preprocessing pipelines, stochastic
+training runs, datasets or decision thresholds. Consequently, identifying the
+highest-scoring architecture and establishing robust architectural superiority are
+fundamentally different objectives.
 
-Deep networks are often expected to learn from minimally processed EEG, yet the choice of
-preprocessing changes their results. In the first systematic study of EEG preprocessing
-for deep learning, 4,800 models trained on six tasks with four architectures differed
+\subsection{1.1 Preprocessing as a source of analytical variability}\label{preprocessing-as-a-source-of-analytical-variability}
+
+EEG preprocessing is not merely a technical preparation step. Filtering, referencing,
+normalisation and artefact removal modify the signal characteristics available to
+downstream learning algorithms. These transformations may influence both predictive
+performance and the relative effectiveness of different fusion mechanisms.
+
+Previous research has shown that deep-learning results can vary substantially across
+EEG preprocessing strategies. In the first systematic study of EEG preprocessing for deep
+learning, 4,800 models trained on six tasks with four architectures differed
 significantly between preprocessing pipelines; models trained on raw data ranked last on
 average, and minimal pipelines without artefact handling tended to serve them best (Del
 Pup et al.~2025) {[}abstract{]}. Artefact removal by independent component analysis, with
 Infomax or AMICA and three component rejection strategies, did not consistently improve
 deep decoding on three brain-computer interface datasets (\citealp{Kang_2024}) {[}abstract{]},
-and even the scope of normalisation changed which strategy worked best (\citealp{Truong_2025}) {[}abstract{]}. Outside deep learning the same sensitivity is documented by
-multiverse analyses, which run and report every defensible combination of analysis
-choices instead of one (\citealp{Steegen_2016}; \citealp{Clayson_2024}): across 43 preprocessing
-pipelines no single pipeline was best on every quality criterion (\citealp{Huang_2025})
-{[}abstract{]}; fourteen pipelines drawn from the N400 literature changed statistical
-outcomes, effect sizes and power (\citealp{Soskic_2024}) {[}abstract{]}; and only 13 of 270
-analyses of frontal alpha asymmetry in depression were significant (\citealp{Kolodziej_2021}) {[}abstract{]}. For event-related potentials, multiverse analyses have been used to
-choose pipelines by their effect on data quality and reliability (\citealp{Clayson_2021})
-{[}abstract{]}. A comparison of fusion operators made under one preprocessing pipeline
-therefore cannot tell whether its ranking belongs to the operators or to the pipeline.
+and even the scope of normalisation changed which strategy worked best (\citealp{Truong_2025}) {[}abstract{]}. In none of these studies did a single approach consistently
+give the best outcome across tasks and models.
 
-\subsection{1.2 Fusion operators are compared, but not under controlled conditions}\label{fusion-operators-are-compared-but-not-under-controlled-conditions}
+The broader multiverse-analysis literature provides a useful conceptual framework for
+understanding this problem. Rather than selecting one analytical pipeline and treating
+its outcome as definitive, a multiverse approach evaluates multiple defensible analytical
+choices and examines whether the conclusions remain stable (\citealp{Steegen_2016}; \citealp{Clayson_2024}). In EEG research, no single pipeline was best on every quality criterion across 43
+preprocessing pipelines (\citealp{Huang_2025}) {[}abstract{]}; fourteen pipelines drawn from the
+N400 literature changed statistical outcomes, effect sizes and power (\citealp{Soskic_2024})
+{[}abstract{]}; only 13 of 270 analyses of frontal alpha asymmetry in depression were
+significant (\citealp{Kolodziej_2021}) {[}abstract{]}; and for event-related potentials,
+multiverse analyses have been used to choose pipelines by their effect on data quality
+and reliability (\citealp{Clayson_2021}) {[}abstract{]}.
 
-Several recent studies compare fusion operators for EEG seizure detection or prediction
-directly (Table 1): five strategies within and across patients (\citealp{An_2026}), four
-operators under leave-one-subject-out evaluation, where they lie within one standard
-deviation of each other (\citealp{Einizade_2023}), three operators with paired tests over
-six seeds (\citealp{Basheer_2026}), and feature-level against decision-level fusion for
-seizure prediction (\citealp{Dasdemir_2025}). Among the studies we have read in full,
-none matches the parameter counts of the compared operators, tests the differences
-between them with a correction for repeated resampling, and tests them for equivalence;
-a larger fusion model that beats a smaller one may owe its advantage to capacity rather
-than to the way it fuses. Across more than 120 studies of hybrid EEG interfaces, only two
-explored more than one fusion strategy and one asked which was best (\citealp{Lee_2025}).
-Controlled comparisons in other domains point the same way: in ECG classification 1D and
-2D representations were compared with early, late and joint fusion (\citealp{Narotamo_2024}), a controlled benchmark on tabular neuroimaging data found the fusion strategy to
-matter more than the architecture (\citealp{Camastra_2026}), and added multimodal
-complexity often did not pay off (\citealp{Rheude_2025}).
+For EEG fusion, this distinction is particularly relevant. A fusion operator may appear
+superior because its architecture is better suited to a specific preprocessing
+transformation rather than because it provides a generalisable advantage. A comparison
+performed under only one preprocessing configuration cannot distinguish these
+possibilities.
+
+\subsection{1.2 Architectural comparisons require controlled experimental conditions}\label{architectural-comparisons-require-controlled-experimental-conditions}
+
+Several EEG seizure-detection studies have compared fusion strategies or proposed
+increasingly sophisticated mechanisms for combining complementary representations
+(Table 1): five strategies within and across patients (\citealp{An_2026}), four operators
+under leave-one-subject-out evaluation, where they lie within one standard deviation of
+each other (\citealp{Einizade_2023}), three operators with paired tests over six seeds
+(\citealp{Basheer_2026}), and feature-level against decision-level fusion for seizure
+prediction (\citealp{Dasdemir_2025}). These contributions have advanced multimodal EEG
+modelling, but their results also raise questions about the comparability of the
+evaluated architectures. Among the studies we have read in full, none matches the
+parameter counts of the compared operators, tests the differences between them with a
+correction for repeated resampling, and tests them for equivalence. Across more than 120
+studies of hybrid EEG interfaces, only two explored more than one fusion strategy and one
+asked which was best (\citealp{Lee_2025}).
+
+Differences in parameter count, feature representation, optimisation settings, training
+duration and evaluation protocols may confound the interpretation of architectural
+comparisons. A more complex fusion model may outperform a simpler alternative because of
+its larger capacity or a more favourable training configuration rather than the fusion
+mechanism itself. Controlled comparisons in other domains point the same way: in ECG
+classification 1D and 2D representations were compared with early, late and joint fusion
+(\citealp{Narotamo_2024}), a controlled benchmark on tabular neuroimaging data found the
+fusion strategy to matter more than the architecture (\citealp{Camastra_2026}), and added
+multimodal complexity often did not pay off (\citealp{Rheude_2025}, preprint).
+
+Accordingly, comparisons designed to isolate the contribution of fusion should control
+the underlying backbone, training procedure and model capacity wherever feasible.
+Single-branch and classical machine-learning baselines are also important: an observed
+improvement over another fusion architecture does not necessarily demonstrate that
+multimodal fusion provides meaningful added value.
+
+Even under controlled conditions, a higher mean performance score is not sufficient to
+establish superiority. Statistical uncertainty, the magnitude of the observed difference
+and the stability of the ranking must also be considered.
 
 \begingroup\small
 
@@ -238,106 +270,142 @@ What it leaves open
 
 \endgroup
 
-\subsection{1.3 One seed or one pipeline is a weak basis for a ranking}\label{one-seed-or-one-pipeline-is-a-weak-basis-for-a-ranking}
+\subsection{1.3 Statistical superiority, practical equivalence and ranking stability are distinct}\label{statistical-superiority-practical-equivalence-and-ranking-stability-are-distinct}
 
-A comparison built on one training run can be decided by factors unrelated to the methods
-compared. Identical training runs of deep networks produce different models: even after
-weak models were excluded, accuracy differed by up to 10.8 percent between identical
-runs, implementation-level factors alone caused differences of up to 2.9 percent, and
-only about one fifth of the surveyed papers used repeated runs to quantify this (\citealp{Pham_2020}) {[}abstract{]}. Every source of nondeterminism in network optimisation, down to a
-one-bit change in the initial parameters, produces similar run-to-run variability, which
-makes small improvements hard to separate from noise (\citealp{Summers2021arxiv})
-{[}abstract{]}, and seeds that perform far better or worse than average are easy to find
-(\citealp{Picard2021arxiv}) {[}abstract{]}. The computing environment adds its own variance: CPU
-multithreading makes training nondeterministic (\citealp{Xiao_2021}) {[}abstract{]},
-floating-point non-associativity in parallel computation causes run-to-run differences
-(\citealp{Shanmugavelu_2024}) {[}abstract{]}, and reproducible training requires control of
-both software randomness and hardware nondeterminism (\citealp{Chen_2022}) {[}abstract{]}. In
-speech recognition, training variance was large enough to call for a change in how
-results are reported (\citealp{van_den_Berg_2017}) {[}abstract{]}, and seed-induced variability
-can be tested for directly (\citealp{Banerjee_2025}) {[}abstract{]}. The statistics add a further
-trap: under repeated cross-validation the training sets overlap, so standard paired
-tests are overconfident unless their variance is corrected (\citealp{Nadeau_2003};
-\citealp{Bouckaert_2004}), and whether a comparison comes out significant can depend on
-the number of folds and repeats (\citealp{Jafrasteh_2025}).
+The reliability of model comparisons is further complicated by stochastic optimisation
+and dependence between evaluation folds. Different random seeds produce different fitted
+networks: even after weak models were excluded, accuracy differed by up to 10.8 percent
+between identical training runs, implementation-level factors alone caused differences
+of up to 2.9 percent, and only about one fifth of the surveyed papers used repeated runs
+to quantify this (\citealp{Pham_2020}) {[}abstract{]}. Every source of nondeterminism in network
+optimisation, down to a one-bit change in the initial parameters, produces similar
+run-to-run variability, which makes small improvements hard to separate from noise
+(\citealp{Summers2021arxiv}) {[}abstract{]}, and seeds that perform far better or worse than
+average are easy to find (\citealp{Picard2021arxiv}) {[}abstract{]}. In speech recognition, training
+variance was large enough to call for a change in how results are reported (\citealp{van_den_Berg_2017}) {[}abstract{]}, and seed-induced variability can be tested for directly
+(\citealp{Banerjee_2025}) {[}abstract{]}. In repeated subject-independent evaluation, the
+training sets of different folds overlap, so conventional paired tests that treat the
+folds as independent are overconfident unless their variance is corrected (\citealp{Nadeau_2003}; \citealp{Bouckaert_2004}), and whether a comparison comes out significant
+can depend on the number of folds and repeats (\citealp{Jafrasteh_2025}).
 
-\subsection{1.4 Results on one dataset rarely carry over to another}\label{results-on-one-dataset-rarely-carry-over-to-another}
+Three complementary properties should therefore be distinguished. Statistical
+significance concerns whether the available evidence supports a difference between
+models under a specified inferential framework. Practical equivalence concerns whether
+the difference is sufficiently small to fall within a prespecified margin of practical
+relevance. Ranking stability concerns whether the relative order of models is preserved
+when analytical conditions change.
 
-High accuracies reported for automatic seizure detection often do not hold on new
-patients or recording sites. When 28 algorithms from the SzCORE challenge were evaluated
-on 4,360 hours of held-out continuous EEG from 65 subjects, the best F1 score was 32
-percent, far below self-reported results, and the algorithms with the highest aggregate
-score were not the most consistent across subjects (\citealp{Dan2025arxiv}, preprint)
-{[}abstract{]}; the same group proposed standard datasets, cross-validation strategies and
-event-based metrics to make such comparisons possible (\citealp{Dan_2024}). Real-time
-detectors had been tested in distinct settings until they were compared under one (\citealp{Lee2022arxiv}, preprint) {[}abstract{]}; a prospective test on about 14,590 hours of adult EEG
-from another continent reported 76.68 percent with about 56 false alarms per 24 hours
-(\citealp{Yang2021arxiv}, preprint) {[}abstract{]}; and a systematic review names generalisability
-across training data and acquisition hardware among the main obstacles to clinical
-translation (\citealp{Moutonnet2024arxiv}, preprint) {[}abstract{]}. Within one public corpus, CHB-MIT
-results depend heavily on evaluation choices (\citealp{Ali_2024}), and the Bonn corpus,
-long a standard benchmark, is saturated and carries no subject identifiers, so it cannot
-test generalisation across patients (\citealp{Kontras_2026}).
+These properties are not interchangeable. Two models may show no statistically
+significant difference without being demonstrably equivalent: the absence of a
+significant difference is not evidence of equivalence. Conversely, one model may rank
+first consistently while its estimated advantage remains too uncertain to establish
+superiority. For fusion studies, evaluating these properties together provides a more
+informative assessment than selecting the architecture with the highest average score.
 
-\subsection{1.5 This study}\label{this-study}
+\subsection{1.4 Dataset shift and evaluation choices challenge the generalisability of conclusions}\label{dataset-shift-and-evaluation-choices-challenge-the-generalisability-of-conclusions}
 
-Our contribution is not another fusion operator, nor only a comparison of existing
-ones: it is a test of how far conclusions drawn from such a comparison hold when the
-analytic decisions around it change. We hold the backbone, the training protocol and the
-parameter budget fixed (the four jointly trained operators within 0.4 percent; score
-fusion, an ensemble of the two branches, is compared alongside them but is not
-parameter-matched), vary only the fusion operator, and repeat
-the whole comparison under nine preprocessing pipelines, including three artefact
-removal algorithms, and five seed sets, on two independent corpora and from one to the
-other. We ask three questions.
+Subject-independent evaluation is essential for investigating whether EEG seizure
+detectors generalise beyond the individuals represented in their training data. However,
+even leave-one-subject-out evaluation within one dataset may not capture the variability
+introduced by different patient populations, acquisition systems, recording protocols
+and seizure distributions. High accuracies reported for automatic seizure detection often
+do not hold on new patients or recording sites. When 28 algorithms from the SzCORE
+challenge were evaluated on 4,360 hours of held-out continuous EEG from 65 subjects, the
+best F1 score was 32 percent, far below self-reported results, and the algorithms with
+the highest aggregate score were not the most consistent across subjects (\citealp{Dan2025arxiv}, preprint) {[}abstract{]}. Real-time detectors had been tested in distinct settings
+until they were compared under one (\citealp{Lee2022arxiv}, preprint) {[}abstract{]}; a prospective
+test on about 14,590 hours of adult EEG from another continent reported 76.68 percent
+with about 56 false alarms per 24 hours (\citealp{Yang2021arxiv}, preprint) {[}abstract{]}; and a
+systematic review names generalisability across training data and acquisition hardware
+among the main obstacles to clinical translation (\citealp{Moutonnet2024arxiv}, preprint)
+{[}abstract{]}. Within one public corpus, CHB-MIT results depend heavily on evaluation
+choices (\citealp{Ali_2024}), and the Bonn corpus, long a standard benchmark, is saturated
+and carries no subject identifiers, so it cannot test generalisation across patients
+(\citealp{Kontras_2026}).
+
+Cross-dataset evaluation offers an additional test of generalisability. Importantly,
+transferring predictive performance does not necessarily imply that the relative ranking
+of fusion operators will also transfer. A model may retain acceptable aggregate
+performance while losing its position as the highest-ranked architecture.
+
+Evaluation choices introduce another source of uncertainty. Window-level macro F1
+depends on the threshold used to convert predicted probabilities into class labels,
+whereas event-level seizure sensitivity and false-alarm rates capture different aspects
+of detection performance; standard event-based scoring has been proposed to make such
+results comparable (\citealp{Dan_2024}). Furthermore, artificially sampled class
+distributions can produce performance estimates that differ substantially from those
+expected under the much lower seizure prevalence of continuous EEG recordings, because
+precision depends on how many non-seizure windows each false-positive rate applies to.
+
+Computational reproducibility is also relevant. CPU multithreading makes training
+nondeterministic (\citealp{Xiao_2021}) {[}abstract{]}, floating-point non-associativity in
+parallel computation causes run-to-run differences (\citealp{Shanmugavelu_2024}) {[}abstract{]},
+reproducible training requires control of both software randomness and hardware
+nondeterminism (\citealp{Chen_2022}) {[}abstract{]}, and neuroimaging pipelines, including ICA
+decompositions of fMRI data, give different results on different operating systems
+(\citealp{Glatard_2015}). Numerical differences introduced by hardware, software execution
+or artefact-removal procedures may therefore propagate to downstream predictions and
+potentially affect comparative conclusions.
+
+Together, these considerations suggest that robust model selection requires evaluating
+not only whether a fusion operator performs well, but whether the evidence supporting its
+apparent advantage survives defensible changes in analytical and evaluation conditions.
+
+\subsection{1.5 Research gap and contributions}\label{research-gap-and-contributions}
+
+Despite growing interest in multimodal EEG seizure detection, an important gap remains
+between reporting the performance of competing fusion architectures and systematically
+evaluating the robustness of the conclusions drawn from those comparisons. The question
+this study asks is therefore: when a fusion operator appears superior, can that
+conclusion be trusted beyond the particular analytical conditions under which it was
+obtained?
+
+The present study addresses this gap through a controlled, multiverse-inspired benchmark
+of fusion operators for EEG seizure detection. Four jointly trained fusion architectures,
+early, late, gated and attention fusion, are compared under parameter budgets matched
+within 0.4 percent, while score fusion is evaluated as a separate decision-level ensemble
+outside the parameter-matched group. Single-branch networks and a classical
+machine-learning baseline provide additional controls.
+
+The comparison is repeated across nine preprocessing pipelines, including three artefact
+removal algorithms, five seed sets and two independent EEG datasets, CHB-MIT and Siena,
+with leave-one-subject-out evaluation and cross-dataset transfer. Statistical
+significance, practical equivalence and ranking stability are examined separately.
+Additional reproducibility experiments investigate whether differences in artefact
+removal and computational execution can alter downstream conclusions.
+
+Three research questions guide the investigation:
 
 \begin{itemize}
 \tightlist
 \item
-  \textbf{RQ1, performance robustness.} Do fusion operators maintain their predictive
-  performance across different EEG preprocessing pipelines?
+  \textbf{RQ1, performance robustness.} Do differences between fusion operators remain
+  consistent across alternative EEG preprocessing pipelines and stochastic training
+  conditions?
 \item
-  \textbf{RQ2, ranking robustness.} Are the rankings of fusion operators stable across
-  preprocessing choices, artefact removal algorithms and stochastic training?
+  \textbf{RQ2, ranking robustness.} Are conclusions about the highest-performing fusion
+  operator stable across preprocessing strategies, random seeds, evaluation choices and
+  computational environments?
 \item
-  \textbf{RQ3, cross-dataset generalisation.} Do fusion performance patterns and rankings
-  generalise across independent EEG seizure datasets?
+  \textbf{RQ3, cross-dataset generalisability.} Do fusion performance patterns and operator
+  rankings transfer between independent EEG seizure datasets?
 \end{itemize}
 
-Throughout, three properties are kept apart, because each can hold without the
-others: \textbf{statistical significance} (is there evidence of a difference between two
-operators?), \textbf{practical equivalence} (does their difference lie within a margin
-fixed in advance?) and \textbf{ranking stability} (is their order preserved when
-preprocessing or seeds change?). In particular, the absence of a significant
-difference is not taken as evidence of equivalence.
+The primary analyses answer these questions at the prespecified decision threshold,
+metrics and equivalence margins. Exploratory post hoc analyses, specified after the
+primary results were known, serve as robustness checks of the same questions: they
+re-examine the operator comparisons and rankings at other decision thresholds, at the
+seizure level, and under an adjusted class prevalence. They are not confirmatory tests.
 
-The study contributes:
-
-\begin{enumerate}
-\def\labelenumi{\arabic{enumi}.}
-\tightlist
-\item
-  a comparison of five fusion operators, four of them jointly trained and matched in
-  parameter count and the fifth a decision-level ensemble outside that matching, with
-  single-branch and classical controls, crossed with nine preprocessing pipelines and five seed sets on
-  CHB-MIT and Siena, and a transfer experiment from one to the other;
-\item
-  an analysis that separates the effects of preprocessing, seed and their interaction
-  with the operator, and reports each operator's full rank distribution rather than a
-  single ranking;
-\item
-  a test of the reproducibility of three artefact removal algorithms across machines
-  and execution contexts, and of how much their irreproducibility changes the
-  comparison itself;
-\item
-  corrections to the source data and its documentation: a labelling error in CHB-MIT's
-  annotations, two of its cases that are one person and must be held out together, a
-  mains notch that has to follow each dataset's line frequency, and six problems in
-  Siena's seizure lists, each resolved and documented;
-\item
-  the code, the per-fold results of every run, and every analysis, public and
-  regenerated by single commands.
-\end{enumerate}
+The main contribution of this work is therefore not a new seizure-detection
+architecture, but a framework for assessing the robustness of comparative claims. By
+distinguishing observed performance, statistical evidence, practical equivalence and
+ranking stability, the study aims to establish when an apparent fusion advantage can be
+considered sufficiently reliable to support model selection. Along the way, the study
+documents corrections to the source data (a labelling error in CHB-MIT's annotations, two
+of its cases that are one person and must be held out together, a mains notch that has
+to follow each dataset's line frequency, and six problems in Siena's seizure lists), and
+releases the code, the per-fold results of every run and every analysis.
 
 \section{2. Methods}\label{methods}
 
@@ -361,8 +429,7 @@ subjects. We use the standard 18-channel bipolar (double banana) montage and kee
 683 recordings that contain all 18 channels, with 185 of the 198 annotated seizures in
 the windowed corpus; the three dropped recordings belong to part of subject chb12's
 data recorded in a different montage. Seizure annotations were parsed by order rather
-than by their printed number, which corrects a labelling error in \nolinkurl{chb09_08.edf}
-(\texttt{src/chbmit.py:\ parse\_summary}).
+than by their printed number, which corrects a labelling error in \nolinkurl{chb09_08.edf}.
 
 \textbf{Siena Scalp EEG} (\citealp{Detti_2020}) holds 41 recordings, 141.0 h by the EDF
 headers, from 14 adult patients, with 47 annotated seizures, recorded at 512 Hz in a
@@ -372,12 +439,12 @@ recording, two conflicting onset or end times, two start times that disagree wit
 EDF headers, an onset given only clinically) were resolved before any analysis, each
 as either a correction verified against the recording or a stated decision rule;
 Supplementary Table S4 lists every decision, how it was checked, its remaining
-uncertainty, and how much the alternative would change the windows (\nolinkurl{docs/SIENA.md}).
+uncertainty, and how much the alternative would change the windows.
 
 \textbf{Harmonisation.} Siena is converted to the CHB-MIT form before anything else: the
 18 bipolar channels are formed as electrode differences of the referential signals,
 and the continuous recording is resampled from 512 to 256 Hz with a polyphase filter
-(\nolinkurl{scipy.signal.resample_poly}, factor 1/2; \texttt{src/siena.py:\ read\_bipolar}). Both
+(\nolinkurl{scipy.signal.resample_poly}, factor 1/2). Both
 corpora then pass through identical code. Seizure times are converted to seconds from
 each recording's first sample using the EDF header start time (modulo 24 h for
 recordings past midnight).
@@ -417,7 +484,7 @@ one.
 Following the multiverse approach (\citealp{Steegen_2016}), nine defensible
 preprocessing pipelines are crossed with every model, operator and seed instead of
 choosing one. Each pipeline changes one hypothesis-driven aspect; windows, labels,
-spectrogram settings, models, training and evaluation are fixed (\nolinkurl{src/preprocess.py}).
+spectrogram settings, models, training and evaluation are fixed.
 
 \begingroup\small
 
@@ -528,8 +595,8 @@ which only past signal is available.
 \textbf{Representations.} Each 10 s window enters the network twice: as the 18-channel
 waveform (2,560 samples per channel) and as its log-magnitude short-time Fourier
 transform, log(1 + \textbar STFT\textbar), computed per channel with a 1 s Hann window, 0.5 s hop and
-256-point FFT and cropped at 64 Hz (65 frequency bins by 19 frames;
-\nolinkurl{src/chbmit_prep.py}). The 64 Hz ceiling is kept in every pipeline, so input shapes and
+256-point FFT and cropped at 64 Hz (65 frequency bins by 19 frames).
+The 64 Hz ceiling is kept in every pipeline, so input shapes and
 parameter counts never change.
 
 \textbf{Architecture.} A 1D convolutional encoder (channel widths 16, 32, 64) processes the
@@ -560,7 +627,7 @@ them:
 
 \textbf{Parameter matching.} Every jointly trained model (the four joint operators and two
 widened single-branch controls) is sized to a common budget by solving the fusion
-head's hidden width numerically (\nolinkurl{src/models.py}): with 18 input channels the models
+head's hidden width numerically: with 18 input channels the models
 have 102,236 to 103,712 parameters, the four joint operators within 0.36 percent of
 each other. Score fusion, an ensemble of two independently sized classifiers, keeps
 its natural size: it blends the probabilities of the two default-width single-branch
@@ -597,8 +664,8 @@ always contains ictal windows. It serves early stopping and the score fusion wei
 only. No subject's windows and no seizure's windows ever appear in two of the
 training, validation and test partitions; an automatic check of every fold confirms
 this for both datasets and that every stored run held out the same subjects in the
-same folds (\nolinkurl{src/audit_methods.py}), and the leakage checker was itself validated on a
-deliberately leaky split (\nolinkurl{src/chbmit_corpus.py}).
+same folds, and the leakage checker was itself validated on a deliberately leaky split
+(Supplementary Table S11).
 
 \textbf{Training.} AdamW (\citealp{Loshchilov_2019}), learning rate 1e-3, weight decay
 1e-4, batch size 32, class-weighted cross-entropy; early stopping on validation macro
@@ -611,7 +678,7 @@ stopping and the score fusion weight. The reported performance is therefore that
 fixed, untuned configuration rather than the best each operator could reach.
 
 \textbf{Seeds.} Every pipeline is run with five seed sets. A run's seed for each fold and
-model is derived from the seed set, fold and model (\texttt{src/config.py:\ fold\_seed}), so it
+model is derived from the seed set, fold and model, so it
 does not depend on execution order. It sets the weight initialisation, the order of
 the mini-batches and the dropout masks. It does not change the data: the window
 sampling (one fixed seed), the validation subjects (deterministic) and the artefact
@@ -623,7 +690,7 @@ to estimate the seed variance more reliably. It was not a rule fixed beforehand.
 
 \textbf{Cross-dataset experiment (RQ3).} Each model is trained once on all CHB-MIT subjects
 (with the same inner validation rule) and tested on every Siena window and recording,
-for every pipeline and seed set (\nolinkurl{src/cross_dataset.py}). The pipeline is applied to
+for every pipeline and seed set. The pipeline is applied to
 each dataset as defined, including each dataset's own mains notch in P2. Siena is
 used for testing only: the validation subjects are drawn from CHB-MIT, and no Siena
 window enters training, early stopping, the score fusion weight or any other choice.
@@ -666,13 +733,13 @@ false-positive events per hour on the true recording time. The scored recordings
 are the 185 annotated seizures of the 683 recordings in the target montage (of 198 in
 the dataset, Section 2.1); one of them, in chb11\_99, lasts 752 s and is split by the
 5 min rule into three reference events, and in no other recording does merging or
-splitting change the count (\nolinkurl{results_v2/audit/methods_audit.md}). Scoring the
+splitting change the count (Supplementary Table S11). Scoring the
 window labels themselves as predictions detects all of them without a false alarm,
 which checks the reference, the windows and the scoring together. On Siena only
 sensitivity is reported: its recordings are cut around seizures, so a false alarm
 rate would not describe continuous monitoring. The criterion, the merging of
 consecutive detections and the counting of false alarms were fixed, and committed,
-before any multiverse run (\nolinkurl{docs/EVENTS.md}), and are the same for every operator and
+before any multiverse run, and are the same for every operator and
 pipeline.
 
 \subsection{2.6 Statistical analysis}\label{statistical-analysis}
@@ -680,7 +747,7 @@ pipeline.
 \textbf{Pairwise comparisons.} Leave-one-subject-out folds share training data, so the
 standard paired test overstates significance; in a simulation of two equivalent
 classifiers the naive paired Wilcoxon test rejected in 37.6 percent of cases at a
-nominal 5 percent (\nolinkurl{src/sim_cv_correlation.py}). On the Bonn corpus, studied in an
+nominal 5 percent. On the Bonn corpus, studied in an
 earlier stage of this project, the naive test found 13 to 22 significant pairs among
 55 per task and the corrected test none among the deep models (Supplementary Note 1).
 Because LOSO training sets overlap substantially, pairs of operators are compared with
@@ -691,8 +758,8 @@ of freedom. We count subjects: n\_test/n\_train = 1/22 on CHB-MIT and 1/13 on Si
 held-out subject against the subjects outside it. Since 4 (Siena: 3) of these serve as
 validation subjects, the networks are fitted on 18 (10); with that conservative ratio,
 1/18 and 1/10, no operator pair becomes significant and the pairs equivalent within
-0.05 fall from 73 to 70 of 90 on CHB-MIT and from 21 to 19 on Siena
-(\nolinkurl{results_v2/audit/methods_audit.md}). Subjects contribute different numbers of
+0.05 fall from 73 to 70 of 90 on CHB-MIT and from 21 to 19 on Siena.
+Subjects contribute different numbers of
 windows, but each fold enters the test as one observation (Section 2.5). Seed sets are
 averaged within each fold before testing, so the five seed sets and nine pipelines
 never inflate the number of independent observations, which is always the number of
@@ -712,7 +779,7 @@ equivalent in every pipeline. Statistical significance and practical equivalence
 assessed separately: failure to reject equal performance is not interpreted as
 evidence of equivalence. The corrected test, the equivalence bound, the Holm
 adjustment and Kendall's W were checked against independent re-implementations
-(\nolinkurl{src/audit_methods.py}).
+(Supplementary Table S11).
 
 \textbf{Ranking stability.} In every run (pipeline and seed set) the five operators are
 ranked by mean macro F1. We report each operator's full rank distribution (counts per
@@ -752,8 +819,7 @@ sets in the same pipeline.
 Statistical significance is reported from the corrected tests and the ANOVA, practical
 size from the equivalence margins and the variance components in metric units, and
 ranking stability from the rank analyses; a result in one of these three is never
-used as evidence for another. All analyses are implemented in \nolinkurl{src/multiverse.py} and
-were validated on synthetic runs with known effects (39 checks).
+used as evidence for another. All analyses were validated on synthetic runs with known effects (39 checks).
 
 \textbf{Post hoc sensitivity analyses.} To examine the sensitivity of the main conclusions to
 evaluation choices, we conducted four exploratory post hoc analyses after completion of
@@ -777,7 +843,9 @@ so that true positives and false negatives keep their counts while false positiv
 true negatives are scaled to the full non-ictal count. Macro F1 was computed per
 held-out subject and averaged with equal weight, as in the primary analysis; a pooled
 version, which sums the confusion matrices of all subjects first, is reported alongside
-(Supplementary Table S10b). These prevalence-adjusted estimates assume that the sampled
+(Supplementary Table S10b). Operator pairs were compared on the prevalence-adjusted fold
+values with the corrected test and the Holm families of the primary analysis
+(Supplementary Table S10d). These prevalence-adjusted estimates assume that the sampled
 non-ictal windows are representative of the non-ictal windows not included in the
 primary evaluation; they do not constitute direct evaluation on the complete
 natural-prevalence window distribution. Finally, subject-level paired bootstrap
@@ -785,11 +853,14 @@ intervals were computed as an alternative assessment of inferential sensitivity:
 resamples of the held-out subjects, in which both operators' results of a drawn subject
 enter together, with percentile 95 percent intervals, and a variant that also resamples
 the five seed sets within each drawn subject. Unlike the corrected test, the bootstrap
-does not model the overlap of the LOSO training sets. Because these analyses were
+does not model the overlap of the LOSO training sets: it treats the held-out subjects as
+independent draws. The bootstrap intervals and the corrected 95 percent intervals set
+beside them are nominal, not adjusted for multiplicity, so they are compared with each
+other and not with the Holm-adjusted primary results. Because these analyses were
 specified after inspection of the primary results, they were treated as exploratory
 robustness assessments rather than confirmatory hypothesis tests. The primary corrected
 comparisons and the prespecified equivalence analyses remained unchanged
-(\nolinkurl{src/sensitivity_preds.py}, \nolinkurl{src/posthoc_checks.py}; Supplementary Tables S9 and S10).
+(Supplementary Tables S9 and S10).
 
 \subsection{2.7 Reproducibility and computational cost}\label{reproducibility-and-computational-cost}
 
@@ -844,10 +915,9 @@ on the GPU with PyTorch's deterministic algorithms; adaptive average pooling has
 deterministic CUDA backward, yet two GPU runs of the same fold were identical. Before
 switching to the GPU, its agreement with the CPU was tested at identical seeds: over
 five folds the mean absolute macro F1 difference between CPU and GPU was 0.074,
-slightly larger than the 0.066 between two CPU seed sets (\texttt{python\ -m\ src.compare\_runs};
-\nolinkurl{docs/PIPELINE.md}). The criterion fixed beforehand, a CPU-GPU difference no larger than
-the difference between seed sets, was therefore narrowly missed. The CPU-GPU difference
-is comparable in size to the variation between stochastic training runs; this similarity
+slightly larger than the 0.066 between two CPU seed sets. The criterion fixed beforehand, a CPU-GPU difference no larger than
+the difference between seed sets, was therefore narrowly missed, though the CPU-GPU
+difference is still of the same order as the variation between stochastic training runs; this similarity
 does not establish that hardware-related numerical differences and seed effects arise
 from the same mechanism, and we make no claim about the cause.
 
@@ -904,7 +974,7 @@ Effect on outcomes & trained models, test recordings & cleaned signals (training
 \endgroup
 
 \textbf{Reproducibility of artefact removal.} Fixing seeds and package versions did not
-make P6 reproducible across machines and execution contexts (\nolinkurl{docs/ICA_REPRO.md}).
+make P6 reproducible across machines and execution contexts.
 AMICA removed the same components in every recording on every machine and in every
 execution context; the power it kept differed by at most 0.003 between machines and
 0.0007 between two runs on the same machine. Extended Infomax removed different components in
@@ -940,10 +1010,10 @@ the GPU, one Siena run about a quarter of an hour, and one cross-dataset run abo
 public repository, whose README lists the commands that regenerate each table and figure.
 Following our own recommendation (Section 4.5), the repository also holds, per recording
 and artefact removal method, the outcome of the cleaning the models were trained and
-tested on (components removed, GEDAI's threshold, power kept;
-\nolinkurl{results_v2/qc/p6_recording_logs.csv}) and of the recleaning used for the event metrics
-(\nolinkurl{p6_recording_logs_events.csv}), so that a reader can check a reproduction recording
-by recording.
+tested on (components removed, GEDAI's threshold, power kept) and of the recleaning used for the
+event metrics, so that a reader can check a reproduction recording
+by recording. Supplementary Table S11 maps every analysis of the manuscript to the code
+that runs it and the files that hold its results.
 
 \section{3. Results}\label{results}
 
@@ -951,17 +1021,20 @@ The evaluation comprised nine preprocessing pipelines, five seed sets and five f
 operators, together with single-branch neural-network and classical controls. Each
 pipeline-seed configuration was evaluated with leave-one-subject-out (LOSO)
 cross-validation on CHB-MIT (23 subjects) and Siena (14 subjects), giving 45 runs per
-dataset; 45 further runs evaluated transfer from CHB-MIT to Siena
-(\nolinkurl{results_v2/multiverse/chbmit_cuda}, \nolinkurl{results_v2/multiverse/siena_cuda},
-\nolinkurl{results_v2/cross}). Means over runs are given with the standard deviation over runs.
+dataset; 45 further runs evaluated transfer from CHB-MIT to Siena.
+Means over runs are given with the standard deviation over runs.
 
-The results are presented in seven stages. We first examine whether fusion operators
+The results are presented in eight stages. We first examine whether fusion operators
 offer a meaningful performance advantage and whether it justifies their architectural
-complexity. We then distinguish statistical significance from practical equivalence,
-assess the stability of the operators' ranking across pipelines and seeds, and identify
-the principal sources of performance variability. Finally, we examine the effects and
-the reproducibility of artefact removal, the seizure-level detection, and whether the
-performance patterns generalise across datasets.
+complexity (RQ1; Section 3.1). We then distinguish statistical significance from
+practical equivalence (RQ1; Section 3.2), assess the stability of the operators' ranking
+across pipelines and seeds (RQ2; Section 3.3), and identify the principal sources of
+performance variability (RQ1 and RQ2; Section 3.4). We then examine the effects and the
+reproducibility of artefact removal (RQ2; Section 3.5), the seizure-level detection
+(Section 3.6), and whether the performance patterns and rankings generalise across
+datasets (RQ3; Section 3.7). Finally, the exploratory post hoc analyses check the
+robustness of these answers to the decision threshold and the class prevalence
+(Section 3.8).
 
 \subsection{3.1 Fusion complexity does not consistently translate into superior performance}\label{fusion-complexity-does-not-consistently-translate-into-superior-performance}
 
@@ -997,11 +1070,11 @@ and 0.720 on Siena, above the best operator in 43 of 45 runs and in all nine pip
 This advantage depends on the decision threshold on CHB-MIT, where the shallow
 classifier's macro F1 is the lowest of all models at 0.3 (0.642) and the highest at 0.7
 (0.715), but not on Siena, where it is the highest at 0.3, 0.5 and 0.7
-(\nolinkurl{results_v2/sensitivity_preds/summary.md}).
+(Supplementary Table S9a).
 
 These descriptive advantages did not amount to statistically significant superiority.
 Tested like the operator pairs (corrected test, Holm across the 30 control-operator
-comparisons of a pipeline; \nolinkurl{src/controls_stats.py}), no control differed significantly
+comparisons of a pipeline), no control differed significantly
 from any operator in any pipeline of either dataset, in macro F1 or AUPRC; the smallest
 corrected p was 0.12 (shallow against early fusion on Siena), and equivalence within
 0.05 macro F1 could be shown in 34 of 270 comparisons on CHB-MIT and 13 of 270 on Siena
@@ -1267,7 +1340,7 @@ recordings, with the probability threshold of 0.5 fixed in advance and without
 post-processing (Figure 7).
 
 On CHB-MIT the operators detected 68 to 79 percent of the annotated seizures, with 5.2 to
-7.7 false alarms per hour (\nolinkurl{results_v2/results/events_chbmit.csv}). Early fusion had a
+7.7 false alarms per hour. Early fusion had a
 distinct operating point: it reached the highest mean seizure-level sensitivity (0.79)
 and ranked first in sensitivity in 82 percent of runs, but it also raised the most false
 alarms in every run (7.7 per hour against 5.2 to 5.7 for the other operators). Taken
@@ -1373,31 +1446,62 @@ Reweighting the existing CHB-MIT predictions to the non-ictal window counts of t
 complete recordings, a prevalence of 0.36 percent ictal windows instead of 20 percent,
 reduced the mean macro F1 of the fusion operators from 0.673 to 0.686 under the sampled
 evaluation to 0.517 to 0.562 under prevalence adjustment (subject-level aggregation;
-Figure 9c; Supplementary Table S10b). The shallow classifier, which had the highest
+Figure 9c; Supplementary Table S10b). The decline follows from the change in prevalence
+itself: the weighting leaves sensitivity unchanged, but each false positive now stands
+for 15 to 334 non-ictal windows, so precision at the 0.5 threshold, and with it the
+ictal-class F1, fell for every model. The shallow classifier, which had the highest
 sampled macro F1 (0.690), showed the largest decline in both absolute and relative terms
 (to 0.454, a decline of 0.237 or 34 percent, against 0.124 to 0.160 or 18 to 24 percent
-for the operators) and had the lowest prevalence-adjusted macro F1, although its prevalence-adjusted AUPRC was the highest of all models (0.295 against 0.221 to 0.283), so that its decline reflects the fixed 0.5 threshold, at which it combined a sensitivity of 0.69 with a precision of 0.02, rather than a poorer ranking of windows; pooled aggregation
-gave the same order (operators 0.483 to 0.500, shallow 0.447). Under prevalence
-adjustment, three operator pairs were significant after the Holm correction within a
-pipeline, all with early fusion lower (P3: against late and attention fusion; P5:
-against gated fusion), consistent with its weaker ranking of windows (Section 3.1). The operator ranked first
-under prevalence adjustment was the one ranked first under the sampled evaluation in 42
-percent of the runs. This analysis demonstrates that absolute performance estimates, and
+for the operators) and had the lowest prevalence-adjusted macro F1; pooled aggregation
+gave the same order (operators 0.483 to 0.500, shallow 0.447). At 0.5 it labelled 21.5
+percent of the non-ictal test windows as ictal, against 7.4 to 11.0 percent for the
+operators, which under the adjusted prevalence left it a precision of 0.02 (operators
+0.11 to 0.24) at a sensitivity of 0.69. Its prevalence-adjusted AUPRC was nevertheless the
+highest of all models (0.295 against 0.221 to 0.283). Because AUPRC summarises precision
+over all thresholds, this suggests that the shallow classifier did not rank windows
+worse and that another threshold might have reduced its loss; it does not show that the
+fixed threshold alone caused the decline, since the lower prevalence reduces precision
+at every threshold, and no threshold was chosen under the adjusted prevalence.
+
+Operator pairs were compared on the prevalence-adjusted macro F1 with the procedure of
+the primary analysis: the corrected resampled t test on the 23 per-subject fold values
+(seed sets averaged; 22 degrees of freedom) and Holm adjustment within the ten operator
+pairs of each pipeline. Of the 90 comparisons, 22 had a raw p below 0.05 and three
+remained significant after Holm adjustment, all with early fusion lower: in P3 against
+late fusion (difference \(-0.042\); corrected 95 percent interval \(-0.069\) to \(-0.014\); raw
+p = 0.004, Holm-adjusted p = 0.040) and against attention fusion (\(-0.057\); \(-0.091\) to
+\(-0.023\); p = 0.002, adjusted p = 0.021), and in P5 against gated fusion (\(-0.068\); \(-0.106\) to
+\(-0.029\); p = 0.001, adjusted p = 0.014; Supplementary Table S10d). No pair differed after
+adjustment in prevalence-adjusted AUPRC (5 of 90 with a raw p below 0.05). The Holm
+adjustment controls the error rate within each pipeline, not across the nine pipelines,
+and the analysis was specified after the primary results were known; the three results
+are therefore exploratory findings rather than evidence that early fusion is inferior,
+although they agree with its weaker ranking of windows (Section 3.1). The operator
+ranked first under prevalence adjustment was the one ranked first under the sampled
+evaluation in 42 percent of the runs. This analysis demonstrates that absolute performance estimates, and
 potentially the apparent advantages of particular models, are sensitive to the
 evaluation class distribution. However, these estimates rely on the representativeness of
 the sampled non-ictal windows and should not be interpreted as directly measured
 performance on the complete continuous recordings.
 
 The subject-level bootstrap, which does not model the overlap of the LOSO training sets,
-gave narrower intervals than the corrected test: across the 90 operator pairs of a
-dataset, its 95 percent interval excluded zero for 10 pairs on CHB-MIT and 24 on Siena
-(3 and 17 when the seed sets were also resampled), against no pair after the corrected
-test and Holm adjustment. On Siena, pooled over pipelines, the bootstrap intervals of the
-differences between score fusion and each jointly trained operator excluded zero,
-whereas the corrected interval did so only for early fusion; the direction of these
-differences was the same in at least 98 percent of the resamples (Supplementary Table
-S10c). The direction of score fusion's advantage on Siena is therefore consistent, while
-its statistical support depends on the dependence assumptions of the inference.
+gave narrower intervals than the corrected test. Compared at the same nominal level,
+without adjustment for multiplicity, the bootstrap 95 percent interval excluded zero for
+10 of the 90 operator pairs on CHB-MIT and 24 on Siena (3 and 17 when the seed sets were
+also resampled), and the corrected 95 percent interval for 1 and 6 (Supplementary Table
+S10c); after the Holm adjustment of the primary analysis, no pair was significant. The
+nominal bootstrap intervals are therefore not evidence of significant differences. The
+two procedures also rest on different assumptions: the corrected test approximates the
+dependence created by the shared training data with the Nadeau-Bengio variance
+inflation and assumes approximately normal per-subject differences, whereas the
+percentile bootstrap treats the held-out subjects as independent draws and, with 23 and
+14 subjects, may give intervals that are too narrow. On Siena, pooled over pipelines, the
+nominal bootstrap intervals of the differences between score fusion and each jointly
+trained operator excluded zero, whereas the nominal corrected interval did so only for
+early fusion; the direction of these differences was the same in at least 98 percent of
+the resamples (Supplementary Table S10c). The direction of score fusion's advantage on
+Siena is therefore consistent, while whether it is statistically supported depends on the
+dependence assumptions of the inference.
 
 Taken together, the post hoc analyses reinforce the distinction between model
 performance, model ranking, and the robustness of a superiority claim. The primary
@@ -1508,10 +1612,12 @@ the training sets overlap extensively: in a simulation of two equivalent classif
 naive paired test rejected in 37.6 percent of cases at a nominal 5 percent. The
 resampling-corrected paired comparisons were therefore retained as the primary
 inferential approach. The post hoc subject-level bootstrap, which treats subjects as
-independent, gave narrower intervals and excluded zero for some pairs, notably score
-fusion's advantage on Siena, whose direction was consistent across resamples
-(Section 3.8). The two procedures rest on different dependence assumptions, which
-reinforces the importance of reporting inferential sensitivity rather than treating one
+independent, gave narrower intervals, and its nominal intervals, not adjusted for
+multiplicity, excluded zero for some pairs, notably score fusion's advantage on Siena,
+whose direction was consistent across resamples (Section 3.8). These nominal intervals
+are comparable with the nominal corrected intervals, which excluded zero for fewer pairs,
+not with the Holm-adjusted primary results, under which no pair was significant. The two
+procedures rest on different dependence assumptions, which reinforces the importance of reporting inferential sensitivity rather than treating one
 statistical procedure as definitive.
 
 These findings suggest that comparative EEG studies should report the magnitude and
@@ -1595,7 +1701,13 @@ The class-prevalence analysis identified a separate limitation of balanced or
 artificially sampled evaluation sets. Reweighting the existing CHB-MIT predictions to
 approximate the full non-ictal window distribution reduced the estimated macro F1 of the
 fusion operators from about 0.67 to 0.69 to about 0.52 to 0.56, and that of the shallow
-classifier, the highest under the sampled evaluation, to 0.45, the lowest, although its prevalence-adjusted AUPRC remained the highest of all models, so that its decline reflects the fixed threshold rather than a poorer ranking of windows. Because this
+classifier, the highest under the sampled evaluation, to 0.45, the lowest. At a fixed
+threshold, the much lower prevalence reduces precision for every model, and most for
+those that label more non-ictal windows as ictal, as the shallow classifier did at 0.5.
+Its prevalence-adjusted AUPRC, the highest of all models, indicates that it did not rank
+windows worse, but does not show that another threshold would have removed the decline.
+Three operator pairs differed after Holm adjustment, all with early fusion lower; as a
+post hoc result controlled only within each pipeline, this is exploratory. Because this
 calculation assumes that the sampled non-ictal windows represent the excluded windows, it
 should be interpreted as a prevalence-adjusted sensitivity estimate rather than a direct
 assessment of continuous-monitoring performance. Nevertheless, it demonstrates that
@@ -1761,12 +1873,29 @@ assistant (agreement with an independent AI pass, kappa 0.81), with the human sc
 and the full texts of the remaining candidates in progress, so that claims marked
 {[}abstract{]} in Section 1 rest on abstracts.
 
+\section{5. Conclusions}\label{conclusions}
+
+This study asked whether a fusion operator that appears superior in one EEG
+seizure-detection experiment remains superior when the analytical conditions around the
+comparison change. For RQ1, the differences between the parameter-matched operators were
+small, with median within-pipeline spreads of 0.021 and 0.053 macro F1 on CHB-MIT and
+Siena, and no pair differed significantly under the corrected comparisons in any
+pipeline; on CHB-MIT most pairs were equivalent within 0.05 but almost none within 0.02,
+and on Siena most were neither different nor demonstrably equivalent. For RQ2, the
+operator ranked first changed with the seed, the preprocessing pipeline, the decision
+threshold, the assumed class prevalence and the machine on which artefact removal ran,
+and a stable first place, as for score fusion on Siena, did not come with a significant
+advantage. For RQ3, aggregate performance transferred from CHB-MIT to Siena, but the
+ranking of the operators did not. Throughout, the variability associated with the
+held-out subject outweighed the effects of the operator and of preprocessing.
+
 Within these boundaries, the study provides evidence that selecting a fusion operator on
 the basis of one dataset, preprocessing pipeline, training run or operating threshold can
-produce conclusions that are not preserved under other defensible analytical choices. The
-broader methodological implication is that superiority should be demonstrated through
-the stability, uncertainty and practical relevance of comparative results, not inferred
-from a single favourable performance estimate.
+produce conclusions that are not preserved under other defensible analytical choices. A
+model may achieve the highest score without providing sufficient evidence of robust
+superiority. Superiority should therefore be demonstrated through the stability,
+uncertainty and practical relevance of comparative results, not inferred from a single
+favourable performance estimate.
 
 \section{Use of AI assistance}\label{use-of-ai-assistance}
 
@@ -3261,7 +3390,9 @@ positives and false negatives keep their counts and false positives and true neg
 are scaled to the full non-ictal count; macro F1 is computed from this weighted
 confusion matrix at the 0.5 threshold. Subject-level: macro F1 per held-out person, mean
 over the 23 persons, then mean and SD over the 45 runs; pooled: the weighted confusion
-matrices of a run's persons summed first. The estimate assumes that the sampled
+matrices of a run's persons summed first. False positive rate: share of the sampled
+non-ictal test windows predicted ictal at 0.5 (unchanged by the weighting); precision
+at 0.5 (adjusted): TP / (TP + weighted FP). The estimate assumes that the sampled
 non-ictal windows have the error rate of those not sampled; it is not a measurement on
 all windows (\nolinkurl{src/posthoc_checks.py}).
 
@@ -3269,14 +3400,16 @@ all windows (\nolinkurl{src/posthoc_checks.py}).
 
 {\def\LTcaptype{none} % do not increment counter
 \begin{longtable}[]{@{}
-  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1493}}
-  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1294}}
-  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1095}}
-  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1194}}
-  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1144}}
-  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1244}}
-  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1095}}
-  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1443}}@{}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 18\tabcolsep) * \real{0.1350}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 18\tabcolsep) * \real{0.1350}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 18\tabcolsep) * \real{0.0900}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 18\tabcolsep) * \real{0.0900}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 18\tabcolsep) * \real{0.0900}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 18\tabcolsep) * \real{0.0900}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 18\tabcolsep) * \real{0.0750}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 18\tabcolsep) * \real{0.0850}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 18\tabcolsep) * \real{0.1000}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 18\tabcolsep) * \real{0.1100}}@{}}
 \toprule\noalign{}
 \begin{minipage}[b]{\linewidth}\raggedright
 aggregation
@@ -3294,25 +3427,29 @@ adjusted SD
 decline
 \end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
 relative decline
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+false positive rate at 0.5
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+precision at 0.5 (adjusted)
 \end{minipage} \\
 \midrule\noalign{}
 \endhead
 \bottomrule\noalign{}
 \endlastfoot
-subject-level & early & 0.677 & 0.013 & 0.517 & 0.016 & 0.160 & 23.7\% \\
-subject-level & late & 0.681 & 0.015 & 0.555 & 0.015 & 0.126 & 18.5\% \\
-subject-level & gated & 0.686 & 0.016 & 0.562 & 0.015 & 0.124 & 18.1\% \\
-subject-level & attention & 0.683 & 0.014 & 0.558 & 0.014 & 0.125 & 18.3\% \\
-subject-level & score & 0.673 & 0.017 & 0.545 & 0.014 & 0.128 & 18.9\% \\
-subject-level & spec2d\_wide & 0.683 & 0.014 & 0.541 & 0.014 & 0.142 & 20.8\% \\
-subject-level & shallow & 0.690 & 0.008 & 0.454 & 0.004 & 0.237 & 34.3\% \\
-pooled & early & 0.678 & 0.014 & 0.483 & 0.007 & 0.195 & 28.7\% \\
-pooled & late & 0.694 & 0.020 & 0.498 & 0.008 & 0.196 & 28.2\% \\
-pooled & gated & 0.698 & 0.021 & 0.500 & 0.008 & 0.198 & 28.3\% \\
-pooled & attention & 0.701 & 0.018 & 0.496 & 0.008 & 0.205 & 29.3\% \\
-pooled & score & 0.690 & 0.018 & 0.492 & 0.008 & 0.198 & 28.7\% \\
-pooled & spec2d\_wide & 0.684 & 0.014 & 0.489 & 0.006 & 0.195 & 28.5\% \\
-pooled & shallow & 0.671 & 0.009 & 0.447 & 0.003 & 0.224 & 33.4\% \\
+subject-level & early & 0.677 & 0.013 & 0.517 & 0.016 & 0.160 & 23.7\% & 0.110 & 0.113 \\
+subject-level & late & 0.681 & 0.015 & 0.555 & 0.015 & 0.126 & 18.5\% & 0.078 & 0.226 \\
+subject-level & gated & 0.686 & 0.016 & 0.562 & 0.015 & 0.124 & 18.1\% & 0.074 & 0.244 \\
+subject-level & attention & 0.683 & 0.014 & 0.558 & 0.014 & 0.125 & 18.3\% & 0.082 & 0.223 \\
+subject-level & score & 0.673 & 0.017 & 0.545 & 0.014 & 0.128 & 18.9\% & 0.089 & 0.194 \\
+subject-level & spec2d\_wide & 0.683 & 0.014 & 0.541 & 0.014 & 0.142 & 20.8\% & 0.088 & 0.162 \\
+subject-level & shallow & 0.690 & 0.008 & 0.454 & 0.004 & 0.237 & 34.3\% & 0.215 & 0.022 \\
+pooled & early & 0.678 & 0.014 & 0.483 & 0.007 & 0.195 & 28.7\% & 0.103 & 0.014 \\
+pooled & late & 0.694 & 0.020 & 0.498 & 0.008 & 0.196 & 28.2\% & 0.085 & 0.020 \\
+pooled & gated & 0.698 & 0.021 & 0.500 & 0.008 & 0.198 & 28.3\% & 0.079 & 0.022 \\
+pooled & attention & 0.701 & 0.018 & 0.496 & 0.008 & 0.205 & 29.3\% & 0.083 & 0.020 \\
+pooled & score & 0.690 & 0.018 & 0.492 & 0.008 & 0.198 & 28.7\% & 0.089 & 0.018 \\
+pooled & spec2d\_wide & 0.684 & 0.014 & 0.489 & 0.006 & 0.195 & 28.5\% & 0.083 & 0.016 \\
+pooled & shallow & 0.671 & 0.009 & 0.447 & 0.003 & 0.224 & 33.4\% & 0.183 & 0.009 \\
 \end{longtable}
 }
 
@@ -3385,7 +3522,13 @@ drawn subject enter together (paired); 10,000 resamples, percentile intervals; t
 interval also resamples the five seed sets within each drawn subject. Direction
 consistency: share of resampled means with the sign of the observed difference. The
 bootstrap does not model the overlap of the LOSO training sets; the corrected test
-remains the primary analysis. All 90 pairs per dataset in
+remains the primary analysis. Assumptions: the corrected test treats the per-subject
+differences as approximately normal and approximates the dependence between folds by the
+Nadeau-Bengio variance inflation (test/train ratio 1/22 and 1/13); the percentile
+bootstrap treats the held-out subjects as independent draws from a population of
+subjects, and with 23 and 14 subjects its intervals may be too narrow. Neither interval
+is adjusted for multiplicity: they are comparable with each other, whereas the primary
+analysis applies Holm adjustment within each pipeline. All 90 pairs per dataset in
 \nolinkurl{results_v2/sensitivity_preds/posthoc_bootstrap_compare.csv}.
 
 \begin{landscape}\begingroup\footnotesize
@@ -3446,6 +3589,154 @@ Siena & attention-score & -0.045 & {[}-0.095,~+0.006{]} & 0.0768 & {[}-0.079,~-0
 }
 
 \endgroup\end{landscape}
+
+Pairs per pipeline (90 per dataset) whose 95\% interval excludes zero; only the Holm column is adjusted for multiplicity:
+
+\begingroup\small
+
+{\def\LTcaptype{none} % do not increment counter
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\linewidth - 8\tabcolsep) * \real{0.1256}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 8\tabcolsep) * \real{0.2211}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 8\tabcolsep) * \real{0.2211}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 8\tabcolsep) * \real{0.1960}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 8\tabcolsep) * \real{0.2362}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+dataset
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+corrected test, nominal (raw p \textless{} 0.05)
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+corrected test, Holm-adjusted p \textless{} 0.05
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+bootstrap (subject), nominal
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+bootstrap (subject, then seed set), nominal
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+CHB-MIT & 1/90 & 0/90 & 10/90 & 3/90 \\
+Siena & 6/90 & 0/90 & 24/90 & 17/90 \\
+\end{longtable}
+}
+
+\endgroup
+
+\textbf{S10d. CHB-MIT prevalence-adjusted operator comparisons.} The procedure of the primary
+analysis applied to the prevalence-adjusted fold values of S10b: per held-out subject
+the fold value of each operator, seed sets averaged; corrected resampled t test
+(Nadeau-Bengio, test/train ratio 1/22, 22 degrees of freedom) on the 23 paired
+differences; Holm adjustment within the ten operator pairs of one pipeline (nine
+families per metric). Difference: first minus second operator. Post hoc and exploratory
+(\nolinkurl{results_v2/sensitivity_preds/posthoc_prevalence_pairs.csv}).
+
+{\def\LTcaptype{none} % do not increment counter
+\begin{longtable}[]{@{}lll@{}}
+\toprule\noalign{}
+metric & raw p \textless{} 0.05 & Holm-adjusted p \textless{} 0.05 \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+AUPRC (adjusted) & 5/90 & 0/90 \\
+macro F1 (adjusted) & 22/90 & 3/90 \\
+\end{longtable}
+}
+
+Holm-significant comparisons:
+
+\begingroup\footnotesize\setlength{\tabcolsep}{3pt}
+
+{\def\LTcaptype{none} % do not increment counter
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1493}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.0896}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1493}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1244}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1592}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.0896}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.0896}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1493}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+metric
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+pipeline
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+pair
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+mean difference
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+corrected 95\% CI
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+t
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+raw p
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Holm-adjusted p
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+macro F1 (adjusted) & P3 & early-late & -0.042 & {[}-0.069,~-0.014{]} & -3.17 & 0.0044 & 0.0399 \\
+macro F1 (adjusted) & P3 & early-attention & -0.057 & {[}-0.091,~-0.023{]} & -3.48 & 0.0021 & 0.0214 \\
+macro F1 (adjusted) & P5 & early-gated & -0.068 & {[}-0.106,~-0.029{]} & -3.66 & 0.0014 & 0.0138 \\
+\end{longtable}
+}
+
+\endgroup
+
+\begingroup\small
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.2400}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3150}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.4450}}@{}}
+\caption{\textbf{Reproducibility map.} Where each analysis of the manuscript is implemented and where its results are stored in the public repository. Every \nolinkurl{src/...} module runs as \protect\texttt{python\ -m\ src.\textless{}module\textgreater{}}; the README lists the full commands and their order.}\tabularnewline
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Manuscript
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Code
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Results and records
+\end{minipage} \\
+\midrule\noalign{}
+\endfirsthead
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Manuscript
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Code
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Results and records
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+2.1 CHB-MIT annotations (seizures assigned by file name; \nolinkurl{chb09_08.edf}), counts of recordings and seizures & \nolinkurl{src/chbmit.py} (\nolinkurl{parse_summary}), \nolinkurl{src/verify_chbmit.py}, \nolinkurl{src/audit_methods.py} & \nolinkurl{results_v2/audit/methods_audit.md}, \nolinkurl{counts.csv} \\
+2.1 Siena seizure lists, the six decisions, resampling to 256 Hz and the bipolar montage & \nolinkurl{src/siena.py} (\nolinkurl{read_bipolar}), \nolinkurl{src/siena_qc.py}, \nolinkurl{src/verify_siena.py}; \nolinkurl{docs/SIENA.md} & Table S4 \\
+2.2 Preprocessing pipelines P0 to P6c; spectrogram; GEDAI preset (Table S2) & \nolinkurl{src/preprocess.py}, \nolinkurl{src/chbmit_prep.py}, \nolinkurl{src/gedai_qc.py} & per run \nolinkurl{meta.json}, \nolinkurl{results_v2/qc/gedai_settings/} \\
+2.2 Artefact removal records per recording & \nolinkurl{src/preprocess.py} & \nolinkurl{results_v2/qc/p6_recording_logs.csv}, \nolinkurl{p6_recording_logs_events.csv} \\
+2.3 Models, parameter matching & \nolinkurl{src/models.py} (\texttt{python\ -m\ src.models} prints the counts) & \\
+2.4 Windows, LOSO partitions, inner validation, leakage check and its negative control & \nolinkurl{src/chbmit_corpus.py}, \nolinkurl{src/datasets.py}, \nolinkurl{src/audit_methods.py} & \nolinkurl{results_v2/audit/methods_audit.md}, \nolinkurl{partitions_<ds>.csv} \\
+2.4 Seeds per seed set, fold and model & \nolinkurl{src/config.py} (\nolinkurl{fold_seed}) & per run \nolinkurl{meta.json} \\
+2.4, 3.7 Training on CHB-MIT, testing on Siena & \nolinkurl{src/cross_dataset.py} & \nolinkurl{results_v2/cross/}, \nolinkurl{results_v2/results/cross_*.csv} \\
+2.5, 3.6 Seizure-level scoring (rules fixed before the runs), the 187 reference events & \nolinkurl{src/events.py}; \nolinkurl{docs/EVENTS.md}; \nolinkurl{src/audit_methods.py} & per run \nolinkurl{events/}, \nolinkurl{results_v2/results/events_<ds>.csv} \\
+2.6 Simulation of the naive paired test & \nolinkurl{src/sim_cv_correlation.py} & \\
+2.6, 3.1 to 3.4 Corrected tests, equivalence, rankings, RM-ANOVA, variance components, conservative test/train ratio & \nolinkurl{src/multiverse.py}, \nolinkurl{src/stats.py}, \nolinkurl{src/audit_methods.py} & \nolinkurl{results_v2/multiverse/chbmit_cuda/}, \nolinkurl{siena_cuda/}, \nolinkurl{results_v2/audit/methods_audit.md} \\
+3.1 Controls against the operators & \nolinkurl{src/controls_stats.py} & \nolinkurl{results_v2/results/controls_*.csv}, \nolinkurl{controls_tests.md} \\
+3.1 to 3.7 Tables and figures & \nolinkurl{src/make_results.py}, \nolinkurl{src/make_figures.py}, \nolinkurl{src/make_figure1.py}, \nolinkurl{src/make_supplementary.py} & \nolinkurl{results_v2/results/}, \nolinkurl{paper/figures_manuscript/} \\
+2.6, 3.8 Post hoc threshold, prevalence and bootstrap analyses (Tables S9, S10) & \nolinkurl{src/sensitivity_preds.py}, \nolinkurl{src/posthoc_checks.py}; seizure-level thresholds: \texttt{src/events.py\ -\/-thresholds} & \nolinkurl{results_v2/sensitivity_preds/} \\
+2.7 CPU against GPU, repeated runs & \nolinkurl{src/compare_runs.py}, \nolinkurl{src/audit_methods.py}; \nolinkurl{docs/PIPELINE.md} & \nolinkurl{results_v2/audit/methods_audit.md} \\
+2.7, 3.5 Reproducibility of artefact removal across machines, perturbation test, impact on the results, signal effects (Tables S1, S5) & \nolinkurl{src/ica_repro.py}, \nolinkurl{src/ica_sensitivity.py}, \nolinkurl{src/ica_repro_impact.py}, \nolinkurl{src/p6_signal_effects.py}, \nolinkurl{src/gedai_qc.py}; \nolinkurl{docs/ICA_REPRO.md} & \nolinkurl{results_v2/ica_repro/}, \nolinkurl{results_v2/qc/} \\
+\end{longtable}
+
+\endgroup
 
 \section{Supplementary Note 1. The Bonn corpus (earlier stage)}\label{supplementary-note-1.-the-bonn-corpus-earlier-stage}
 
