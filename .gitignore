@@ -33,3 +33,9 @@ results_v2/_events_partial/
 
 # trained models of the multiverse runs (4.6 GB); results, predictions and event metrics are tracked
 results_v2/**/models/
+
+# per run statistics written by chbmit_stats after each run (regenerable; the grouped run is tracked)
+results_v2/*/phase0_loso_P*/
+# self-test output of make_results and the early P0 check run
+results_v2/results_selftest/
+results_v2/chbmit/p0_check/
