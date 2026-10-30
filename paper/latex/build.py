@@ -1,4 +1,4 @@
-"""Build paper/latex/main.tex and main.pdf from paper/manuscript.md.
+"""Build paper/latex/main.tex and main.pdf from paper/manuscript_v2.md.
 
     python paper/latex/build.py            # main.tex, main.pdf, arxiv/ bundle
     python paper/latex/build.py --draft    # keep the DRAFT note at the top

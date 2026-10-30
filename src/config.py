@@ -87,7 +87,7 @@ class Config:
 
     # CPU thread count. It is part of the run identity because it changes results:
     # floating point summation order depends on it, which moves per-fold macro F1 by
-    # up to 0.09 (see docs/10_OLASILIK_VE_TEKRARLANABILIRLIK.md).
+    # up to 0.09 (see docs/PIPELINE.md).
     threads: int = 2
 
     models: tuple = field(default=MODELS)

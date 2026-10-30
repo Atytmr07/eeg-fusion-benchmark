@@ -15,7 +15,7 @@ far; runs that are incomplete or still missing are listed in the report.
 ## What it writes
 
 The output goes to `results_v2/results/results.md`. Each table is in Markdown, ready
-to paste into `paper/manuscript.md`, with its caption and source. The figures go to
+to paste into the manuscript, with its caption and source. The figures go to
 `paper/figures_manuscript/`.
 
 | Item | Content | Source | Files |

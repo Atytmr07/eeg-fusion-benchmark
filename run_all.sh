@@ -4,7 +4,7 @@
 set -u
 PY=${PY:-python}
 # Thread sayisi sonuclari degistirir ve artik kosu hash'ine dahildir (bkz.
-# docs/10_OLASILIK_VE_TEKRARLANABILIRLIK.md). Degistirirseniz eski kosularla
+# docs/PIPELINE.md). Degistirirseniz eski kosularla
 # karsilastirilamaz.
 THREADS=${THREADS:-2}
 cd "$(dirname "$0")"

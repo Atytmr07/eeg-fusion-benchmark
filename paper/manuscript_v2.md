@@ -5,12 +5,10 @@
 > provisional: the systematic search has run, but title and abstract screening was done
 > by an AI assistant, and the human screening and the full texts follow after 17
 > October; claims marked [abstract] rest on a source's abstract only and are to be
-> checked against its full text. `paper/manuscript.md` is the previous draft
-> (Bonn and CHB-MIT, single pipeline) and stays unchanged until this one replaces it;
-> the Bonn benchmark moves to Supplementary Note 1 (advisor, 16 October 2026). Every number below is traceable to a file in the
+> checked against its full text. The Bonn benchmark of the previous draft (Bonn and
+> CHB-MIT, single pipeline) moves to Supplementary Note 1 (advisor, 16 October 2026). Every number below is traceable to a file in the
 > repository (Supplementary Table S11). Abstract and Introduction rewritten on the advisor's
-> structure of 27 October 2026; the sources still to be checked against their full texts are
-> listed in `docs/LITERATURE_CHECK.md`.
+> structure of 27 October 2026.
 
 # Do Fusion Operators Matter, and Does the Answer Survive Preprocessing? A Parameter-Matched Multiverse Comparison of Multimodal CNN Fusion for EEG Seizure Detection
 

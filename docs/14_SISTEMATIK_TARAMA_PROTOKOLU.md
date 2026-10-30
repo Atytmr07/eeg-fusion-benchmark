@@ -2,9 +2,9 @@
 
 **Tarih:** 21 Eylül 2026
 **Durum:** Aramalar 3 Ekim 2026'da çalıştırıldı; sonuçlar ve sapmalar `docs/15_LITERATUR_SONUCLARI.md` içinde.
-**Neden gerekli:** `docs/09_LITERATUR_TARAMASI.md` bir kapsam belirleme (scoping)
-taramasıydı, kayıtlı değildi. `paper/proposal.md` §3 açıkça "novelty iddiasından önce
-kayıtlı bir tarama yapacağım" diyor. Bu belge o taramanın protokolü.
+**Neden gerekli:** Önceki tarama bir kapsam belirleme (scoping) taramasıydı, kayıtlı
+değildi; yenilik iddiasından önce kayıtlı bir tarama gerekiyordu. Bu belge o taramanın
+protokolü.
 
 **Erişim notu:** Scopus ve Web of Science kurumsal erişim gerektirir. Bu belgedeki
 sorgu dizeleri veritabanlarına elle girilip sonuçlar (RIS, CSV veya BibTeX) dışa
@@ -15,7 +15,7 @@ aktarılacak; tekilleştirme, tarama tablosu ve PRISMA akış şeması bu dışa
 
 ## 1. Araştırma sorusu (protokolün gerekçesi)
 
-`paper/proposal.md` §2'deki soru: *Mimari boyutu, eğitim protokolü ve veri sabit
+Projenin sorusu: *Mimari boyutu, eğitim protokolü ve veri sabit
 tutulduğunda, füzyon operatörü seçimi EEG nöbet tespitinde ölçülebilir ve
 istatistiksel olarak savunulabilir bir fark yaratıyor mu?*
 
@@ -184,7 +184,7 @@ Bu şema doldurulduktan sonra makalenin yöntem bölümüne bir şekil olarak gi
 
 ## 8. Zaman çizelgesi
 
-`paper/proposal.md`'deki takvimle uyumlu (Güz 2026, 1-4. haftalar):
+Proje takvimiyle uyumlu (Güz 2026, 1-4. haftalar):
 
 | Hafta | İş |
 |---|---|

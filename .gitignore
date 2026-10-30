@@ -39,3 +39,16 @@ results_v2/*/phase0_loso_P*/
 # self-test output of make_results and the early P0 check run
 results_v2/results_selftest/
 results_v2/chbmit/p0_check/
+
+# Internal working notes and early drafts: kept on the authors' machines, not public
+docs/gonderim_hazirlik.md
+docs/09_LITERATUR_TARAMASI.md
+docs/10_OLASILIK_VE_TEKRARLANABILIRLIK.md
+docs/11_CHBMIT_PLANI.md
+docs/13_CHBMIT_ISTATISTIK.md
+docs/LITERATURE_CHECK.md
+paper/intro_draft.md
+paper/proposal.md
+paper/manuscript.md
+paper/latex/main.pdf
+paper/latex/citation_report.md

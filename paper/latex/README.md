@@ -6,7 +6,6 @@ python paper/latex/build.py --draft    # keeps the DRAFT note as a box on page 1
 python paper/latex/build.py --no-pdf   # main.tex only (no LaTeX needed)
 python paper/latex/build.py --bib plain   # reference list as written (option a)
 python paper/latex/build.py --no-supplementary   # without paper/supplementary.md
-python paper/latex/build.py --manuscript paper/manuscript.md   # the previous draft
 ```
 
 The source is `paper/manuscript_v2.md` by default. It is only read, never written.

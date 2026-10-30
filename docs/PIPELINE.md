@@ -1,14 +1,14 @@
 # Pipeline and Methodology
 
-> **Scope.** This document was written for the first draft (`paper/manuscript.md`: Bonn
-> and CHB-MIT, one pipeline). The current study (`paper/manuscript_v2.md`) adds Siena,
+> **Scope.** This document was written for the first draft (Bonn and CHB-MIT, one
+> pipeline). The current study (`paper/manuscript_v2.md`) adds Siena,
 > the nine-pipeline multiverse, five GPU seed sets and the seizure-level metrics; those are
 > documented in the manuscript's Methods and in `docs/RESULTS.md`, `docs/EVENTS.md`,
 > `docs/SIENA.md` and `docs/ICA_REPRO.md`. For data, models, parameter matching, training
 > and the statistical tests this document remains the detailed reference; where it and
 > the current manuscript differ, the manuscript and the code are authoritative.
 
-This document describes, end to end, how every number in `paper/manuscript.md` is
+This document describes, end to end, how every number in the first draft was
 produced: data, preprocessing, models, training, evaluation, and statistical analysis.
 Every setting below is taken from the code, not from memory, and each section names the
 file that implements it. Open issues are listed in Section 9 rather than left implicit.
@@ -360,7 +360,7 @@ of negative result.
   are bit for bit repeatable (verified with three identical runs); changing the thread
   count alone moves per fold macro F1 by up to 0.093 on Bonn and 0.208 in one CHB-MIT
   fold, comparable to the differences between operators. Thread count is therefore part
-  of the run identity (`docs/10_OLASILIK_VE_TEKRARLANABILIRLIK.md`).
+  of the run identity.
 - **Numerical realisations in the manuscript.** Bonn Table 2 comes from the original runs
   at 2 threads. The Bonn log loss and Brier analysis comes from a 12 thread rerun that also
   stored predicted probabilities (`results_v2/rerun_probs/`). The CHB-MIT run
@@ -372,8 +372,7 @@ of negative result.
 ## 8. Reproducing each result
 
 Raw data goes under `data/` (not in the repository): Bonn sets as `data/A` to `data/E`,
-CHB-MIT as `data/chbmit/chbNN/`. `docs/11_CHBMIT_PLANI.md` documents the CHB-MIT download
-and verification. Stored results for every step below are already in `results_v2/`, so
+CHB-MIT as `data/chbmit/chbNN/` (download and checks: `src/verify_chbmit.py`). Stored results for every step below are already in `results_v2/`, so
 the statistics and figures can be regenerated without the raw data or a GPU.
 
 | Result | Command | Output |

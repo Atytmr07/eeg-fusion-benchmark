@@ -15,7 +15,7 @@ cross-dataset runs) it writes:
 
 Only complete runs (every LOSO fold for all five fusion operators) enter the tables;
 incomplete and missing ones are listed in the report. Tables are Markdown, ready to
-paste into paper/manuscript.md, with their sources; every table is also a CSV.
+paste into the manuscript, with their sources; every table is also a CSV.
 
 Usage:  python -m src.make_results [--datasets chbmit siena] [--device cpu]
         python -m src.make_results --synthetic     # self-test on synthetic runs

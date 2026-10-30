@@ -37,8 +37,7 @@ on Siena. An earlier stage of the project used the Bonn dataset (Andrzejak et al
 | Document | Contents |
 |---|---|
 | [`docs/PIPELINE.md`](docs/PIPELINE.md) | **Start here.** End to end pipeline and methodology: data, preprocessing, models, parameter matching, training, evaluation, statistics, reproducibility, how to reproduce each result, known issues |
-| [`paper/manuscript_v2.md`](paper/manuscript_v2.md) | Manuscript draft (multiverse study); `paper/manuscript.md` is the earlier draft |
-| [`paper/proposal.md`](paper/proposal.md) | Research proposal |
+| [`paper/manuscript_v2.md`](paper/manuscript_v2.md) | Manuscript draft (multiverse study) |
 | [`docs/SIENA.md`](docs/SIENA.md) | Siena Scalp EEG: download, harmonisation to the CHB-MIT form, the six seizure-list decisions |
 | [`docs/MULTIVERSE.md`](docs/MULTIVERSE.md) | Multiverse analysis: every statistic, its outputs and its synthetic validation |
 | [`docs/EVENTS.md`](docs/EVENTS.md) | Seizure-level metrics, fixed before the multiverse runs |
@@ -46,11 +45,6 @@ on Siena. An earlier stage of the project used the Bonn dataset (Andrzejak et al
 | [`docs/RESULTS.md`](docs/RESULTS.md) | The results generator (`src/make_results.py`) |
 | [`results_v2/audit/methods_audit.md`](results_v2/audit/methods_audit.md) | Methods audit: counts, partitions, statistics and reproducibility numbers checked against the code and the stored outputs |
 | [`results_v2/sensitivity_preds/summary.md`](results_v2/sensitivity_preds/summary.md) | Post hoc sensitivity analyses: decision threshold, prevalence-adjusted estimates, subject-level bootstrap, seizure-level thresholds |
-| [`docs/LITERATURE_CHECK.md`](docs/LITERATURE_CHECK.md) | Sources still to be checked against their full texts before submission |
-| `docs/09_LITERATUR_TARAMASI.md` | Scoping literature review (Turkish) |
-| `docs/10_OLASILIK_VE_TEKRARLANABILIRLIK.md` | Thread count nondeterminism investigation (Turkish) |
-| `docs/11_CHBMIT_PLANI.md` | CHB-MIT download, verification, and pipeline notes (Turkish) |
-| `docs/13_CHBMIT_ISTATISTIK.md` | CHB-MIT statistical analysis notes (Turkish) |
 | `docs/14_SISTEMATIK_TARAMA_PROTOKOLU.md` | Systematic literature search protocol (Turkish) |
 | `docs/15_LITERATUR_SONUCLARI.md` | Systematic literature search results (Turkish) |
 
