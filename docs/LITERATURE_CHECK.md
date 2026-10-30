@@ -28,13 +28,15 @@ manuscript states (shortened); **Check** = what the full text has to show.
 | A10 | Picard 2021 (arXiv) | 1.3 | Seeds far better or worse than average are easy to find | The finding as stated | | |
 | A11 | van den Berg et al. 2017, doi:10.1109/icassp.2017.7952564 | 1.3 | Training variance in speech recognition large enough to call for a change in reporting | The finding as stated | | |
 | A12 | Banerjee et al. 2025, doi:10.1109/jstsp.2025.3583140 | 1.3 | Seed-induced variability can be tested for directly | The method as stated | | |
-| A13 | Dan et al. 2025 (preprint) | 1.4 | 28 SzCORE challenge algorithms; 4,360 h of held-out EEG from 65 subjects; best F1 32 percent; highest aggregate score not the most consistent across subjects | All numbers; the consistency statement | | |
+| A13 | Dan et al. 2026, ICML (PMLR 306; was the 2025 arXiv preprint) | 1.4 | 28 SzCORE challenge algorithms; 4,360 h of held-out EEG from 65 subjects; best F1 32 percent; highest aggregate score not the most consistent across subjects | All numbers; the consistency statement | | |
 | A14 | Lee et al. 2022 (preprint) | 1.4 | Real-time detectors tested in distinct settings until compared under one | The finding as stated | | |
 | A15 | Yang et al. 2021 (preprint) | 1.4 | Prospective test on about 14,590 h of adult EEG from another continent; 76.68 percent; about 56 false alarms per 24 h | All numbers; what 76.68 percent measures (sensitivity?) | | |
 | A16 | Moutonnet et al. 2024 (preprint) | 1.4 | Systematic review: generalisability across training data and acquisition hardware among the main obstacles to clinical translation | The finding as stated | | |
 | A17 | Xiao et al. 2021, doi:10.1109/issre52982.2021.00063 | 1.4 | CPU multithreading makes training nondeterministic | The finding as stated | | |
 | A18 | Shanmugavelu et al. 2024, doi:10.1109/scw63240.2024.00028 | 1.4 | Floating-point non-associativity in parallel computation causes run-to-run differences | The finding as stated | | |
 | A19 | Chen et al. 2022, doi:10.1145/3510003.3510163 | 1.4 | Reproducible training requires control of software randomness and hardware nondeterminism | The finding as stated | | |
+| A20 | Kessler et al. 2025, doi:10.1038/s42003-025-08464-3 (advisor, 28 Oct; cited 30 Oct) | 1.1 | Multiverse of preprocessing steps on ERP CORE (7 experiments, 40 participants) with EEGNet and time-resolved logistic regression; preprocessing changed decoding performance considerably; every artefact correction step lowered it | 7 experiments; "all artifact correction steps reduced decoding performance"; that artefacts covarying with the condition is their explanation (1.1 says "partly because") | | |
+| A21 | Samanos et al. 2025, EMBC, doi:10.1109/embc58623.2025.11254038 (advisor, 28 Oct; cited 30 Oct) | 3.8 | 19 patient-independent detectors reviewed, 3 re-implemented under SzCORE; reported and standardised performance differed notably; high sensitivity with low precision (about 70 and 14 percent) | 3.8 text: re-implemented detectors on complete recordings had high sensitivity with low precision, partly because they were trained and evaluated after many non-seizure samples were removed (p. 5) | | |
 
 ## B. Table 1 and the novelty claim
 
@@ -50,7 +52,7 @@ full texts are still being read is removed once this is done.
 |---|---|---|---|---|
 | B1 | An et al. 2026, doi:10.1016/j.neunet.2026.109078 | Hand-crafted with deep features, not waveform with spectrogram; strategies not parameter matched; not tested against each other (Wilcoxon with Holm only against prior methods) | | |
 | B2 | Einizade et al. 2023, doi:10.1016/j.bspc.2022.104076 | No parameter matching, no statistical test; operators within one SD of each other (LOSO on TUH, four operators) | | |
-| B3 | Basheer and Mishra 2026, doi:10.1016/j.patrec.2026.07.016 | Both streams from the same raw EEG; uncorrected t tests against concatenation only; no parameter matching; six seeds | | |
+| B3 | Basheer and Mishra 2026, doi:10.1016/j.patrec.2026.07.016 | Two encoders on the same raw input rather than two representations (wording changed 30 Oct); uncorrected t tests against concatenation only; no parameter matching; six seeds | | |
 | B4 | Daşdemir and Örnek 2025, doi:10.1016/j.jestch.2025.102212 | Prediction, not detection; two operators; 0.20 point accuracy difference without a stated test or parameter matching | | |
 | B5 | Wang et al. 2026, doi:10.1016/j.neucom.2026.132929 | One ablation against concatenation; patient-specific evaluation; no statistical test; CHB-MIT and Siena | | |
 | B6 | Chatzichristos et al. 2020, doi:10.1109/spmb50085.2020.9353630 | One operator, no alternatives | | |
@@ -59,9 +61,12 @@ full texts are still being read is removed once this is done.
 | B9 | Narotamo et al. 2024, doi:10.1016/j.bspc.2024.106141 | ECG; early, late and joint fusion; no parameter matching, no corrected or equivalence statistics | | |
 | B10 | Camastra et al. 2026, doi:10.3390/brainsci16040405 | Tabular neuroimaging; strategy matters more than architecture; no paired or equivalence testing | | |
 | B11 | Ali et al. 2024, doi:10.1098/rsos.230601 | CHB-MIT results depend heavily on evaluation choices | | |
-| B12 | Dan et al. 2024, doi:10.1111/epi.18113 | SzCORE: standard datasets, event-based scoring and metrics | | |
+| B12 | Dan et al. 2025 (Epilepsia 66(S3), print issue; online 2024), doi:10.1111/epi.18113 | SzCORE: standard datasets, event-based scoring and metrics | | |
 | B13 | Kontras et al. 2026 | Bonn saturated (eleven models at AUROC >= 0.99), no subject identifiers | | |
 | B14 | Lee et al. 2025, doi:10.1007/s13534-025-00469-5 (1.2, not in Table 1) | More than 120 studies of hybrid EEG interfaces; only two explored more than one fusion strategy; one asked which was best | | |
+| B15 | Miantezila Junior et al. 2026, doi:10.1016/j.compbiomed.2026.111895 (advisor, 28 Oct; Table 1 in bold, cited in 1.2, 4.1 and 4.2 on 30 Oct) | Two modalities, not two representations; parameter counts not reported per operator; Wilcoxon with Holm not corrected for overlapping training sets; no equivalence test; gated recommended although no operator difference significant (Table 4, 6.2). Background: EEG and ECG for emotion recognition; concatenation, bidirectional cross-attention and adaptive gated fusion against both single modalities; LOSO, three seeds, about 1.3M parameters; fusion did not consistently beat the best single modality; gated fusion had the lowest variance across seeds. **Closest to our design so far: check whether parameter counts are matched across strategies, which statistical test (if any) is used, and whether any equivalence test is run, because the novelty sentence depends on it** | | |
+| B16 | Tiwary et al. 2026, doi:10.1007/s00521-026-12518-w (advisor, 28 Oct; Table 1 and 4.2 on 30 Oct) | One operator (concatenation); ablations tested against the full model only; no parameter counts; no equivalence test. 4.2: full model preferred over A4 by 0.04 F1 with SDs about 10 (Table 4). Background: patient-independent seizure detection, LOSO on CHB-MIT and subject-disjoint TUSZ; EMD and DWT branches fused after channel attention; ablations of branches and attention, not of the fusion operator; check statistical testing and parameter matching | | |
+| B17 | Tian et al. 2019, doi:10.1109/TNSRE.2019.2940485 (from Samanos et al. 2025, Table VI; missed by part A, see the A2 search in docs/15 §2.1b; Table 1 and the multi-view definition in the Introduction opening on 30 Oct) | Time, FFT and wavelet-packet views of CHB-MIT EEG, one CNN per view, features combined by a multi-view TSK fuzzy classifier; patient-specific 5-fold CV on balanced 1 s segments; compared with single-view features only; no test, no parameter counts | | |
 
 ## C. Discussion sources still to be checked
 
@@ -74,10 +79,25 @@ full texts are still being read is removed once this is done.
 | C5 | Rheude et al. 2025 (preprint) | 1.2, 4.1 | In a broader evaluation of multimodal models, added fusion complexity often did not pay off | The finding as stated; whether a published version exists | | |
 | C6 | Sendelbach and Funk 2013, doi:10.4037/nci.0b013e3182a903f9 | 4.4 | Alarm fatigue | That it supports the clinical trade-off sentence | | |
 
+## E. Sources sent by the advisor on 28 October 2026
+
+An et al. 2026 (B1), Basheer and Mishra 2026 (B3), Del Pup et al. 2025 (A1), Steegen et
+al. 2016, Nadeau and Bengio 2003 and Bouckaert and Frank 2004 are already cited. Her "Dan
+et al. (2025), Epilepsia" is taken to be the SzCORE framework paper (B12, online 2024,
+Epilepsia 66(S3), 2025 issue). New: A20, A21, B15, B16 above, all checked so far against
+metadata and abstract only (entries added to `references.bib`).
+
+The SzCORE challenge preprint cited as Dan et al. 2025 (A13) has been published at ICML
+2026 (PMLR 306, 22743–22757; key `Dan_2026` in `references.bib`). Its abstract there
+still gives 28 algorithms, 65 subjects, 4,360 h, best F1 32 percent, and states that the
+highest aggregate F1 did not give the most consistent ranking across subjects. The
+citation in 1.4 now points to the published version (Dan et al. 2026), and SzCORE is
+cited by its print year (Dan et al. 2025), as decided on 29 October 2026.
+
 ## D. Summary sentences that rest on several sources
 
 | # | Where | Sentence | Rests on |
 |---|---|---|---|
 | D1 | 1.1 | "In none of these studies did a single approach consistently give the best outcome across tasks and models." | A1 to A3 |
-| D2 | 1.2 | "Among the studies we have read in full, none matches ..." (novelty claim) | B1 to B13 |
+| D2 | 1.2 | "Among the studies we have read in full, none matches ..." (novelty claim) | B1 to B13, and B15 and B16 once read |
 | D3 | 1.4 | Standard event-based scoring proposed to make results comparable | B12 |

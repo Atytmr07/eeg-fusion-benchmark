@@ -39,7 +39,7 @@ non-ictal windows per ictal window). Event metrics instead need the model's outp
 
 ## Event scoring
 
-SzCORE event-based scoring (Dan et al. 2024), as implemented in its reference library
+SzCORE event-based scoring (Dan et al. 2025), as implemented in its reference library
 `timescoring` 0.0.7 (`timescoring.scoring.EventScoring`), with the library's default
 parameters:
 

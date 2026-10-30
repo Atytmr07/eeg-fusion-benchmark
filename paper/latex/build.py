@@ -433,7 +433,8 @@ def strip_accents(s: str) -> str:
 
 # Capital initial, including accented Latin capitals (Örnek, Šoškić, Łukasz).
 UPPER = "A-Z" + "".join(c for c in map(chr, range(0xC0, 0x250)) if c.isupper())
-NAME = rf"(?:(?:[Vv]an den|[Vv]an|[Vv]on|[Dd]e|Del|del|Le)\s)?[{UPPER}][\w'’-]+"
+# Two-word surnames ending in "Junior" (Miantezila Junior) are one name.
+NAME = rf"(?:(?:[Vv]an den|[Vv]an|[Vv]on|[Dd]e|Del|del|Le)\s)?[{UPPER}][\w'’-]+(?:\sJunior)?"
 CITE = re.compile(
     rf"(?P<lead>\(|;\s|\b)(?P<first>{NAME})"
     rf"(?P<rest>\s+et\s+al\.|(?:,\s+{NAME})*,?\s+and\s+{NAME})?"
