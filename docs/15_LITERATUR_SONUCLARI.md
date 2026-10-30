@@ -64,9 +64,9 @@ ayrı bir kör tarama kümesi oluyor (`records_A2.csv`).
 
 | Veritabanı | Sorgu (birebir) | Sonuç |
 |---|---|---|
-| Scopus | `TITLE-ABS-KEY ( ( "EEG" OR "electroencephalogra*" ) AND ( "seizure" OR "epilep*" ) AND ( "deep learning" OR "CNN" OR "convolutional neural network" OR "neural network" ) AND ( "multi-view" OR "multiview" OR "fused" OR "fuse" OR "fusing" OR "multi-domain" OR "dual-branch" OR "two-branch" OR "two-stream" OR "dual-stream" OR "multi-stream" OR "multi-branch" OR "hybrid features" OR "parallel CNN" OR "concatenat*" ) ) AND NOT TITLE-ABS-KEY ( "fusion" OR "multimodal" OR "multi-modal" ) AND ( LIMIT-TO ( LANGUAGE , "English" ) )` | bekliyor |
-| Web of Science | `TS=(("EEG" OR "electroencephalogra*") AND ("seizure" OR "epilep*") AND ("deep learning" OR "CNN" OR "convolutional neural network" OR "neural network") AND ("multi-view" OR "multiview" OR "fused" OR "fuse" OR "fusing" OR "multi-domain" OR "dual-branch" OR "two-branch" OR "two-stream" OR "dual-stream" OR "multi-stream" OR "multi-branch" OR "hybrid features" OR "parallel CNN" OR "concatenat*")) NOT TS=("fusion" OR "multimodal" OR "multi-modal")`, Languages = English | bekliyor |
-| IEEE Xplore (Command Search, All Metadata) | `("All Metadata":"EEG" OR "All Metadata":"electroencephalogram") AND ("All Metadata":"seizure" OR "All Metadata":"epilepsy" OR "All Metadata":"epileptic") AND ("All Metadata":"deep learning" OR "All Metadata":"CNN" OR "All Metadata":"convolutional neural network") AND ("All Metadata":"multi-view" OR "All Metadata":"multiview" OR "All Metadata":"fused" OR "All Metadata":"multi-domain" OR "All Metadata":"dual-branch" OR "All Metadata":"two-stream" OR "All Metadata":"multi-branch" OR "All Metadata":"hybrid features" OR "All Metadata":"concatenated" OR "All Metadata":"concatenation") NOT ("All Metadata":"fusion" OR "All Metadata":"multimodal" OR "All Metadata":"multi-modal")` | bekliyor |
+| Scopus | `TITLE-ABS-KEY ( ( "EEG" OR "electroencephalogra*" ) AND ( "seizure" OR "epilep*" ) AND ( "deep learning" OR "CNN" OR "convolutional neural network" OR "neural network" ) AND ( "multi-view" OR "multiview" OR "fused" OR "fuse" OR "fusing" OR "multi-domain" OR "dual-branch" OR "two-branch" OR "two-stream" OR "dual-stream" OR "multi-stream" OR "multi-branch" OR "hybrid features" OR "parallel CNN" OR "concatenat*" ) ) AND NOT TITLE-ABS-KEY ( "fusion" OR "multimodal" OR "multi-modal" ) AND ( LIMIT-TO ( LANGUAGE , "English" ) )` | 167 (2026-10-30) |
+| Web of Science | `TS=(("EEG" OR "electroencephalogra*") AND ("seizure" OR "epilep*") AND ("deep learning" OR "CNN" OR "convolutional neural network" OR "neural network") AND ("multi-view" OR "multiview" OR "fused" OR "fuse" OR "fusing" OR "multi-domain" OR "dual-branch" OR "two-branch" OR "two-stream" OR "dual-stream" OR "multi-stream" OR "multi-branch" OR "hybrid features" OR "parallel CNN" OR "concatenat*")) NOT TS=("fusion" OR "multimodal" OR "multi-modal")`, Languages = English | 92 (2026-10-30; hepsi English) |
+| IEEE Xplore (Command Search, All Metadata) | `("All Metadata":"EEG" OR "All Metadata":"electroencephalogram") AND ("All Metadata":"seizure" OR "All Metadata":"epilepsy" OR "All Metadata":"epileptic") AND ("All Metadata":"deep learning" OR "All Metadata":"CNN" OR "All Metadata":"convolutional neural network") AND ("All Metadata":"multi-view" OR "All Metadata":"multiview" OR "All Metadata":"fused" OR "All Metadata":"multi-domain" OR "All Metadata":"dual-branch" OR "All Metadata":"two-stream" OR "All Metadata":"multi-branch" OR "All Metadata":"hybrid features" OR "All Metadata":"concatenated" OR "All Metadata":"concatenation") NOT ("All Metadata":"fusion" OR "All Metadata":"multimodal" OR "All Metadata":"multi-modal")` | 50 (2026-10-30) |
 | arXiv API | `arxiv_queries.json`, anahtar `A2` (joker karakterler açık yazıldı; API `concatenat*` için 0 döndürdü) | 3 |
 
 Ön kestirim (protokol veritabanı değil, yalnızca ölçek için): aynı dize OpenAlex'te 145
@@ -74,6 +74,26 @@ kayıt verdi, 134'ü mevcut kayıtlarda (A, B1–B4, extraction.csv) yok; %75'i 
 sonrası. Scopus, WoS ve IEEE dışa aktarımları üniversite erişimiyle alınıp
 `exports/` altına `<veritabanı>_A2_<tarih>` adıyla konacak, sonra
 `screen.py merge --part A2`.
+
+**Sonuç (30 Ekim 2026).** Dışa aktarımlar Claude tarafından, kullanıcının üniversite ve
+kişisel oturumlarıyla, uygulamanın tarayıcısında alındı (Scopus CSV: citation information +
+abstract & keywords; WoS tab-delimited Full Record, 1–92; IEEE Citations sekmesi, RIS,
+Citation and Abstract). `merge --part A2`: 312 kayıt (Scopus 167, WoS 92, IEEE 50, arXiv
+3) → tekrarlar ayıklanınca **188**. Bunların 3'ü Kısım A'da zaten var (A20030 = A0085,
+A20060 = A0223, A20076 = A0279; dizinleme terimlerindeki "fusion" bir veritabanında
+AND NOT'a takılmış, ötekinde takılmamış) ve A'daki kararlarıyla kalır; **185 kayıt**
+taranır. Kısım B ve `extraction.csv` ile çakışma yok. Tian et al. (2019) A2'de var
+(A20176; IEEE listesinin ilk kaydı), yani A2 bu boşluğu kapatıyor.
+
+**A2 taraması (A ile aynı yöntem, §4).** Birincil başlık/özet kararlarını Claude verdi,
+A'daki ölçütler ve sınır vakalardaki emsal kararlarla (ör. tek ağa giren el yapımı
+öznitelik vektörü = hariç 2; el yapımı + derin öznitelik birleşimi = dahil):
+**27 dahil, 26 belirsiz, 132 hariç** (gerekçe 1: 41, 2: 90, 3: 1), `records_A2.csv`.
+İnsan kontrolü için aynı seed (20261003) ile %20 örnek: 37 kayıt (`second_pass_A2.csv`).
+A'nın 111 kayıtlık örneğiyle birlikte kişi başı **tek sayfa**:
+`human_screen_AA2_<ad>.html` (148 kayıt; çıktı `human_screen_AA2_<ad>.csv`, kısımlara
+ayrılıp `human-agreement` her kısım için ayrı çalıştırılır). A2'de ikinci AI geçişi
+yapılmadı; ikinci göz doğrudan iki yazarın kör taraması.
 
 ### 2.2 Kısım B (tamamlayıcı tarama)
 

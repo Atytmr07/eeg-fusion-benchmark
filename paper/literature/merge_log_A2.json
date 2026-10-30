@@ -1,0 +1,16 @@
+{
+  "exports": {
+    "arxiv_A2_2026-10-29.xml": 3,
+    "ieee_A2_2026-10-30.ris": 50,
+    "scopus_A2_2026-10-30.csv": 167,
+    "wos_A2_2026-10-30.txt": 92
+  },
+  "per_database_unique": {
+    "wos": 92,
+    "arxiv": 3,
+    "scopus": 166,
+    "ieee": 50
+  },
+  "records_raw": 312,
+  "records_unique": 188
+}
