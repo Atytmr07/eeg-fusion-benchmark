@@ -46,5 +46,13 @@
     "results": 37,
     "file": "arxiv_B4_2026-10-03.xml",
     "error": false
+  },
+  "A2": {
+    "database": "arXiv API",
+    "date": "2026-10-29",
+    "query": "(abs:EEG OR abs:electroencephalography OR abs:electroencephalogram) AND (abs:seizure OR abs:seizures OR abs:epilepsy OR abs:epileptic) AND (abs:\"deep learning\" OR abs:CNN OR abs:\"convolutional neural network\" OR abs:\"neural network\") AND (abs:\"multi-view\" OR abs:multiview OR abs:fused OR abs:fuse OR abs:fusing OR abs:\"multi-domain\" OR abs:\"dual-branch\" OR abs:\"two-branch\" OR abs:\"two-stream\" OR abs:\"dual-stream\" OR abs:\"multi-stream\" OR abs:\"multi-branch\" OR abs:\"hybrid features\" OR abs:\"parallel CNN\" OR abs:concatenated OR abs:concatenation OR abs:concatenating) ANDNOT (abs:fusion OR abs:multimodal OR abs:\"multi-modal\")",
+    "results": 3,
+    "file": "arxiv_A2_2026-10-29.xml",
+    "note": "supplementary search for synonyms of fusion that part A missed (multi-view, fused, multi-domain, dual-branch, two-stream, multi-branch, hybrid features, parallel CNN, concatenation); ANDNOT keeps it disjoint from part A; wildcards written out because the arXiv API ignored concatenat*"
   }
 }

@@ -54,6 +54,27 @@ işaretli (Bölüm 8).
    herkese açık repoya konmadı. Repoda yalnızca künye alanları var (`*_meta.csv`);
    özetli tam dosyalar yerel olarak tutuluyor (`exports/.gitignore`).
 
+### 2.1b Kısım A2: eş anlamlı terimlerle ek arama (29 Ekim 2026)
+
+**Gerekçe.** Samanos et al. (2025) Table VI'da geçen Tian et al. (2019, TNSRE) Kısım A'ya
+girmedi: özetinde "fusion" ya da "multimodal" yok, aynı EEG'nin birden fazla temsilini
+birleştirmeyi "multi-view" diye anlatıyor. A2 aynı yapıyı, füzyonun eş anlamlılarıyla
+kuruyor ve A'nın terimlerini `AND NOT` ile dışarıda bırakıyor; A ile A2 kesişmiyor, A2
+ayrı bir kör tarama kümesi oluyor (`records_A2.csv`).
+
+| Veritabanı | Sorgu (birebir) | Sonuç |
+|---|---|---|
+| Scopus | `TITLE-ABS-KEY ( ( "EEG" OR "electroencephalogra*" ) AND ( "seizure" OR "epilep*" ) AND ( "deep learning" OR "CNN" OR "convolutional neural network" OR "neural network" ) AND ( "multi-view" OR "multiview" OR "fused" OR "fuse" OR "fusing" OR "multi-domain" OR "dual-branch" OR "two-branch" OR "two-stream" OR "dual-stream" OR "multi-stream" OR "multi-branch" OR "hybrid features" OR "parallel CNN" OR "concatenat*" ) ) AND NOT TITLE-ABS-KEY ( "fusion" OR "multimodal" OR "multi-modal" ) AND ( LIMIT-TO ( LANGUAGE , "English" ) )` | bekliyor |
+| Web of Science | `TS=(("EEG" OR "electroencephalogra*") AND ("seizure" OR "epilep*") AND ("deep learning" OR "CNN" OR "convolutional neural network" OR "neural network") AND ("multi-view" OR "multiview" OR "fused" OR "fuse" OR "fusing" OR "multi-domain" OR "dual-branch" OR "two-branch" OR "two-stream" OR "dual-stream" OR "multi-stream" OR "multi-branch" OR "hybrid features" OR "parallel CNN" OR "concatenat*")) NOT TS=("fusion" OR "multimodal" OR "multi-modal")`, Languages = English | bekliyor |
+| IEEE Xplore (Command Search, All Metadata) | `("All Metadata":"EEG" OR "All Metadata":"electroencephalogram") AND ("All Metadata":"seizure" OR "All Metadata":"epilepsy" OR "All Metadata":"epileptic") AND ("All Metadata":"deep learning" OR "All Metadata":"CNN" OR "All Metadata":"convolutional neural network") AND ("All Metadata":"multi-view" OR "All Metadata":"multiview" OR "All Metadata":"fused" OR "All Metadata":"multi-domain" OR "All Metadata":"dual-branch" OR "All Metadata":"two-stream" OR "All Metadata":"multi-branch" OR "All Metadata":"hybrid features" OR "All Metadata":"concatenated" OR "All Metadata":"concatenation") NOT ("All Metadata":"fusion" OR "All Metadata":"multimodal" OR "All Metadata":"multi-modal")` | bekliyor |
+| arXiv API | `arxiv_queries.json`, anahtar `A2` (joker karakterler açık yazıldı; API `concatenat*` için 0 döndürdü) | 3 |
+
+Ön kestirim (protokol veritabanı değil, yalnızca ölçek için): aynı dize OpenAlex'te 145
+kayıt verdi, 134'ü mevcut kayıtlarda (A, B1–B4, extraction.csv) yok; %75'i 2022 ve
+sonrası. Scopus, WoS ve IEEE dışa aktarımları üniversite erişimiyle alınıp
+`exports/` altına `<veritabanı>_A2_<tarih>` adıyla konacak, sonra
+`screen.py merge --part A2`.
+
 ### 2.2 Kısım B (tamamlayıcı tarama)
 
 | Konu | Scopus sorgusu (birebir) | Scopus | arXiv |

@@ -1,0 +1,116 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/cBfm8aT4aCFkC1WUHfbhIpPJAeY</id>
+  <title>arXiv Query: search_query=(abs:EEG OR abs:electroencephalography OR abs:electroencephalogram) AND (abs:seizure OR abs:seizures OR abs:epilepsy OR abs:epileptic) AND (abs:"deep learning" OR abs:CNN OR abs:"convolutional neural network" OR abs:"neural network") AND (abs:"multi-view" OR abs:multiview OR abs:fused OR abs:fuse OR abs:fusing OR abs:"multi-domain" OR abs:"dual-branch" OR abs:"two-branch" OR abs:"two-stream" OR abs:"dual-stream" OR abs:"multi-stream" OR abs:"multi-branch" OR abs:"hybrid features" OR abs:"parallel CNN" OR abs:concatenated OR abs:concatenation OR abs:concatenating) ANDNOT (abs:fusion OR abs:multimodal OR abs:"multi-modal")&amp;id_list=&amp;start=0&amp;max_results=500</title>
+  <updated>2026-10-29T17:24:44Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=(abs:EEG+OR+(abs:electroencephalography+OR+abs:electroencephalogram))+AND+((abs:seizure+OR+(abs:seizures+OR+(abs:epilepsy+OR+abs:epileptic)))+AND+((abs:%22deep+learning%22+OR+(abs:CNN+OR+(abs:%22convolutional+neural+network%22+OR+abs:%22neural+network%22)))+AND+((abs:%22multi-view%22+OR+(abs:multiview+OR+(abs:fused+OR+(abs:fuse+OR+(abs:fusing+OR+(abs:%22multi-domain%22+OR+(abs:%22dual-branch%22+OR+(abs:%22two-branch%22+OR+(abs:%22two-stream%22+OR+(abs:%22dual-stream%22+OR+(abs:%22multi-stream%22+OR+(abs:%22multi-branch%22+OR+(abs:%22hybrid+features%22+OR+(abs:%22parallel+CNN%22+OR+(abs:concatenated+OR+(abs:concatenation+OR+abs:concatenating))))))))))))))))+ANDNOT+(abs:fusion+OR+(abs:multimodal+OR+abs:%22multi-modal%22)))))&amp;start=0&amp;max_results=500&amp;id_list=" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>500</opensearch:itemsPerPage>
+  <opensearch:totalResults>3</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2412.15224v1</id>
+    <title>Multi-Branch Mutual-Distillation Transformer for EEG-Based Seizure Subtype Classification</title>
+    <updated>2024-12-04T11:31:23Z</updated>
+    <link href="https://arxiv.org/abs/2412.15224v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2412.15224v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Cross-subject electroencephalogram (EEG) based seizure subtype classification is very important in precise epilepsy diagnostics. Deep learning is a promising solution, due to its ability to automatically extract latent patterns. However, it usually requires a large amount of training data, which may not always be available in clinical practice. This paper proposes Multi-Branch Mutual-Distillation (MBMD) Transformer for cross-subject EEG-based seizure subtype classification, which can be effectively trained from small labeled data. MBMD Transformer replaces all even-numbered encoder blocks of the vanilla Vision Transformer by our designed multi-branch encoder blocks. A mutual-distillation strategy is proposed to transfer knowledge between the raw EEG data and its wavelets of different frequency bands. Experiments on two public EEG datasets demonstrated that our proposed MBMD Transformer outperformed several traditional machine learning and state-of-the-art deep learning approaches. To our knowledge, this is the first work on knowledge distillation for EEG-based seizure subtype classification.</summary>
+    <category term="eess.SP" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2024-12-04T11:31:23Z</published>
+    <arxiv:primary_category term="eess.SP"/>
+    <arxiv:journal_ref>IEEE Trans. on Neural Systems and Rehabilitation Engineering, 32:831-839, 2024</arxiv:journal_ref>
+    <author>
+      <name>Ruimin Peng</name>
+    </author>
+    <author>
+      <name>Zhenbang Du</name>
+    </author>
+    <author>
+      <name>Changming Zhao</name>
+    </author>
+    <author>
+      <name>Jingwei Luo</name>
+    </author>
+    <author>
+      <name>Wenzhong Liu</name>
+    </author>
+    <author>
+      <name>Xinxing Chen</name>
+    </author>
+    <author>
+      <name>Dongrui Wu</name>
+    </author>
+    <arxiv:doi>10.1109/TNSRE.2024.3365713</arxiv:doi>
+    <link rel="related" href="https://doi.org/10.1109/TNSRE.2024.3365713" title="doi"/>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2506.21140v2</id>
+    <title>DBConformer: Dual-Branch Convolutional Transformer for EEG Decoding</title>
+    <updated>2025-09-19T19:25:52Z</updated>
+    <link href="https://arxiv.org/abs/2506.21140v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2506.21140v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Electroencephalography (EEG)-based brain-computer interfaces (BCIs) transform spontaneous/evoked neural activity into control commands for external communication. While convolutional neural networks (CNNs) remain the mainstream backbone for EEG decoding, their inherently short receptive field makes it difficult to capture long-range temporal dependencies and global inter-channel relationships. Recent CNN-Transformer (Conformer) hybrids partially address this issue, but most adopt a serial design, resulting in suboptimal integration of local and global features, and often overlook explicit channel-wise modeling. To address these limitations, we propose DBConformer, a dual-branch convolutional Transformer network tailored for EEG decoding. It integrates a temporal Conformer to model long-range temporal dependencies and a spatial Conformer to extract inter-channel interactions, capturing both temporal dynamics and spatial patterns in EEG signals. A lightweight channel attention module further refines spatial representations by assigning data-driven importance to EEG channels. Extensive experiments under four evaluation settings on three paradigms, including motor imagery, seizure detection, and steady-state visual evoked potential, demonstrated that DBConformer consistently outperformed 13 competitive baseline models, with over an eight-fold reduction in parameters than current high-capacity EEG Conformer architecture. Furthermore, the visualization results confirmed that the features extracted by DBConformer are physiologically interpretable and aligned with prior knowledge. The superior performance and interpretability of DBConformer make it reliable for accurate, robust, and explainable EEG decoding. Code is publicized at https://github.com/wzwvv/DBConformer.</summary>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2025-06-26T10:53:24Z</published>
+    <arxiv:comment>14 pages, 7 figures</arxiv:comment>
+    <arxiv:primary_category term="cs.LG"/>
+    <author>
+      <name>Ziwei Wang</name>
+    </author>
+    <author>
+      <name>Hongbin Wang</name>
+    </author>
+    <author>
+      <name>Tianwang Jia</name>
+    </author>
+    <author>
+      <name>Xingyi He</name>
+    </author>
+    <author>
+      <name>Siyang Li</name>
+    </author>
+    <author>
+      <name>Dongrui Wu</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2205.06090v3</id>
+    <title>NeuralTree: A 256-Channel 0.227-$μ$J/Class Versatile Neural Activity Classification and Closed-Loop Neuromodulation SoC</title>
+    <updated>2022-12-08T17:03:11Z</updated>
+    <link href="https://arxiv.org/abs/2205.06090v3" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2205.06090v3" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Closed-loop neural interfaces with on-chip machine learning can detect and suppress disease symptoms in neurological disorders or restore lost functions in paralyzed patients. While high-density neural recording can provide rich neural activity information for accurate disease-state detection, existing systems have low channel counts and poor scalability, which could limit their therapeutic efficacy. This work presents a highly scalable and versatile closed-loop neural interface SoC that can overcome these limitations. A 256-channel time-division multiplexed (TDM) front-end with a two-step fast-settling mixed-signal DC servo loop (DSL) is proposed to record high-spatial-resolution neural activity and perform channel-selective brain-state inference. A tree-structured neural network (NeuralTree) classification processor extracts a rich set of neural biomarkers in a patient- and disease-specific manner. Trained with an energy-aware learning algorithm, the NeuralTree classifier detects the symptoms of underlying disorders (e.g., epilepsy and movement disorders) at an optimal energy-accuracy tradeoff. A 16-channel high-voltage (HV) compliant neurostimulator closes the therapeutic loop by delivering charge-balanced biphasic current pulses to the brain. The proposed SoC was fabricated in 65-nm CMOS and achieved a 0.227-$μ$J/class energy efficiency in a compact area of 0.014mm$^2$/channel. The SoC was extensively verified on human electroencephalography (EEG) and intracranial EEG (iEEG) epilepsy datasets, obtaining 95.6%/94% sensitivity and 96.8%/96.9% specificity, respectively. In vivo neural recordings using soft $μ$ECoG arrays and multi-domain biomarker extraction were further performed on a rat model of epilepsy. In addition, for the first time in literature, on-chip classification of rest-state tremor in Parkinson's disease (PD) from human local field potentials (LFPs) was demonstrated.</summary>
+    <category term="eess.SP" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="eess.SY" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2022-05-12T13:56:01Z</published>
+    <arxiv:primary_category term="eess.SP"/>
+    <arxiv:journal_ref>IEEE Journal of Solid-State Circuits, vol. 57, no. 11, pp. 3243-3257, Nov. 2022</arxiv:journal_ref>
+    <author>
+      <name>Uisub Shin</name>
+    </author>
+    <author>
+      <name>Cong Ding</name>
+    </author>
+    <author>
+      <name>Bingzhao Zhu</name>
+    </author>
+    <author>
+      <name>Yashwanth Vyza</name>
+    </author>
+    <author>
+      <name>Alix Trouillet</name>
+    </author>
+    <author>
+      <name>Emilie C. M. Revol</name>
+    </author>
+    <author>
+      <name>Stéphanie P. Lacour</name>
+    </author>
+    <author>
+      <name>Mahsa Shoaran</name>
+    </author>
+    <arxiv:doi>10.1109/JSSC.2022.3204508</arxiv:doi>
+    <link rel="related" href="https://doi.org/10.1109/JSSC.2022.3204508" title="doi"/>
+  </entry>
+</feed>
