@@ -82,7 +82,7 @@ analytical dependencies. Rather than selecting a single defensible pipeline, mul
 analysis examines how conclusions change across alternative analytical decisions (Steegen
 et al. 2016; Clayson 2024). In EEG research, this approach has revealed substantial
 variability in data quality, statistical outcomes and decoding performance across
-preprocessing configurations (Huang et al. 2025; Šoškić et al. 2024) [abstract].
+preprocessing configurations (Kessler et al. 2025; Šoškić et al. 2024).
 Importantly, these studies establish the relevance of preprocessing multiverses but do not
 directly determine whether the relative ranking of competing seizure-detection fusion
 operators is preserved across such choices.
@@ -156,10 +156,10 @@ texts of the remaining candidates are still being read).
 | **Miantezila Junior et al. (2026)** | Compares concatenation, cross-attention and gated fusion of EEG and ECG with both single modalities for emotion recognition; leave-one-subject-out, three seeds, pairwise Wilcoxon tests with Holm correction | Two recording modalities rather than two representations of one signal; parameter counts not reported per operator; tests not corrected for overlapping training sets; no equivalence test; gated fusion recommended although no operator difference was significant |
 | Tiwary et al. (2026) | EMD and DWT feature branches after input channel attention, fused by concatenation; leave-one-subject-out on CHB-MIT, official split on TUSZ | One operator; ablations of branches and attention tested against the full model only; parameter counts not reported; no equivalence test |
 | **Daşdemir and Örnek (2025)** | Protocol-controlled comparison of two fusion strategies for EEG | Seizure prediction, not detection; two operators; a 0.20 point accuracy difference without a stated test or parameter matching |
-| Wang et al. (2026), *Neurocomputing* | Cross-attention fusion of time-domain and S-transform views, CHB-MIT and Siena | One ablation against concatenation, patient-specific evaluation, no statistical test |
+| Wang et al. (2026), *Neurocomputing* | Cross-attention fusion of a Gramian angular field (time-domain) view and an S-transform view, CHB-MIT and Siena | One ablation against concatenation, patient-specific evaluation; uncorrected Wilcoxon tests against the full model only; parameter counts not reported |
 | Chatzichristos et al. (2020) | Attention-gated multi-view fusion | One operator, no alternatives |
 | Tian et al. (2019) | Time, frequency and wavelet-packet views of CHB-MIT EEG, one CNN per view, features combined by a multi-view fuzzy classifier | Compared with single views only; patient-specific evaluation on balanced segments; no statistical test or parameter counts |
-| Das et al. (2024); Huang et al. (2024) | 1D+2D fusion; multi-head attention fusion | Fixed design, no operator ablation; gains without matched parameter counts |
+| Huang et al. (2024) | Multi-head self-attention fusion of three hand-crafted feature views (time, STFT, sample entropy) on Bonn | Fixed design, no comparison with other fusion operators; no statistical test or parameter counts |
 | Narotamo et al. (2024) | 1D and 2D representations with early, late and joint fusion | ECG; no parameter matching or corrected and equivalence statistics |
 | Camastra et al. (2026), *Brain Sciences* | Controlled fusion benchmark: strategy matters more than architecture | Tabular neuroimaging features; no paired or equivalence testing |
 | Ali et al. (2024) | CHB-MIT results depend heavily on evaluation choices | Not about fusion operators |
@@ -1509,9 +1509,9 @@ preprocessing. At the prespecified threshold the operators detected 68 to 79 per
 CHB-MIT's seizures with 5.2 to 7.7 false alarms per hour, that is 125 to 185 false alarms
 per day of monitoring, and no person reached a mean below one false alarm per hour.
 Generic scalp EEG detectors evaluated for clinical use have reported 0.1 to 5 false alarms
-per hour, most about 0.2 to 0.3, and patient-specific detectors fewer; a low false alarm
-rate is regarded as essential for clinical acceptance, and validation standards require
-it to be reported (Baumgartner et al. 2018; Beniczky and Ryvlin 2018). The person
+per hour, the largest evaluations about 0.2 to 0.3, and patient-specific detectors fewer; a low false alarm
+rate is regarded as essential for clinical acceptance (Baumgartner et al. 2018), and the
+SzCORE evaluation standard requires false alarms per day to be reported (Dan et al. 2025). The person
 mattered more than the choice of operator: mean sensitivity ranged from 0.24 (chb06) to
 1.00 across persons and the false alarm rate from 1.3 to 12.3 per hour, while the
 operators' means spanned 0.68 to 0.79 and 5.2 to 7.7, which motivates patient-specific adaptation, not tested here, rather than the search for a better generic operator; patient-specific classifiers
