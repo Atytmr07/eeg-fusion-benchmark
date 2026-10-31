@@ -1,11 +1,7 @@
 > **DRAFT v2, NOT FOR SUBMISSION.** Restructured around the three research questions the
 > advisor set on 10 October 2026. This file holds the Introduction (Section 1), the
 > Methods (Section 2, in the advisor's subsections 2.1 to 2.7) and the Results of the
-> five-seed runs (Section 3), the Discussion (Section 4) and the Conclusions (Section 5). The literature review is
-> provisional: the systematic search has run, but title and abstract screening was done
-> by an AI assistant, and the human screening and the full texts follow after 17
-> October; claims marked [abstract] rest on a source's abstract only and are to be
-> checked against its full text. The Bonn benchmark of the previous draft (Bonn and
+> five-seed runs (Section 3), the Discussion (Section 4) and the Conclusions (Section 5). The Bonn benchmark of the previous draft (Bonn and
 > CHB-MIT, single pipeline) moves to Supplementary Note 1 (advisor, 16 October 2026). Every number below is traceable to a file in the
 > repository (Supplementary Table S11). Abstract and Introduction rewritten on the advisor's
 > structure of 27 October 2026.
@@ -145,8 +141,7 @@ conditions are varied. This requires distinguishing observed performance differe
 statistically supported superiority, practical equivalence and stability of model
 rankings.
 
-**Table 1. Closest related work** (from the systematic search of 3 October 2026, with later additions; studies in bold are the closest to this one; the full
-texts of the remaining candidates are still being read).
+**Table 1. Closest related work** (studies in bold are the closest to this one).
 
 | Work | Contribution | What it leaves open |
 |---|---|---|
@@ -1622,11 +1617,7 @@ the cross-dataset experiment combines multiple sources of domain shift and canno
 identify their individual contributions. Further details concern the data: 13 of
 CHB-MIT's 198 seizures lie in recordings without the standard montage and were not used;
 Siena's summed recording time (141.0 h by the EDF headers) differs from the dataset
-description (128.4 h) for reasons that remain unexplained for three patients; and the
-title and abstract screening of the systematic literature search was done by an AI
-assistant (agreement with an independent AI pass, kappa 0.81), with the human screening
-and the full texts of the remaining candidates in progress, so that claims marked
-[abstract] in Section 1 rest on abstracts.
+description (128.4 h) for reasons that remain unexplained for three patients.
 
 ## 5. Conclusions
 
