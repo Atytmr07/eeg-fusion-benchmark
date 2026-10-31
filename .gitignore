@@ -52,3 +52,7 @@ paper/proposal.md
 paper/manuscript.md
 paper/latex/main.pdf
 paper/latex/citation_report.md
+
+# Local human screening attempts (not part of the paper)
+paper/literature/human_screen_*.csv
+paper/literature/agreement_human_*.json
