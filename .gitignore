@@ -54,3 +54,4 @@ paper/latex/*.log
 paper/latex/*.out
 paper/latex/*.toc
 paper/latex/*.blg
+paper/latex/citation_report.md
