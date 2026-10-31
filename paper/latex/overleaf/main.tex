@@ -1,4 +1,4 @@
-% Pandoc template for paper/manuscript.md -> main.tex (see build.py).
+% Pandoc template for paper/manuscript_v2.md -> main.tex (see build.py).
 % Compiles with plain pdflatex, as arXiv does.
 \documentclass[11pt,a4paper]{article}
 
@@ -93,23 +93,6 @@
 \begin{document}
 \maketitle
 
-\begin{center}
-\fbox{\begin{minipage}{0.92\linewidth}\small
-\textbf{DRAFT v2, NOT FOR SUBMISSION.} Restructured around the three research questions the
-advisor set on 10 October 2026. This file holds the Introduction (Section 1), the
-Methods (Section 2, in the advisor's subsections 2.1 to 2.7) and the Results of the
-five-seed runs (Section 3), the Discussion (Section 4) and the Conclusions (Section 5). The literature review is
-provisional: the systematic search has run, but title and abstract screening was done
-by an AI assistant, and the human screening and the full texts follow after 17
-October; claims marked {[}abstract{]} rest on a source's abstract only and are to be
-checked against its full text. \nolinkurl{paper/manuscript.md} is the previous draft
-(Bonn and CHB-MIT, single pipeline) and stays unchanged until this one replaces it;
-the Bonn benchmark moves to Supplementary Note 1 (advisor, 16 October 2026). Every number below is traceable to a file in the
-repository (Supplementary Table S11). Abstract and Introduction rewritten on the advisor's
-structure of 27 October 2026; the sources still to be checked against their full texts are
-listed in \nolinkurl{docs/LITERATURE_CHECK.md}.
-\end{minipage}}
-\end{center}
 
 \begin{abstract}
 A fusion operator that achieves the highest EEG seizure-detection score in one
@@ -141,7 +124,9 @@ Automatic seizure detection from electroencephalography (EEG) has increasingly b
 from deep learning architectures capable of extracting complementary information from
 neural signals. Among these approaches, multimodal convolutional neural networks (CNNs)
 combine time-domain EEG waveforms with time-frequency representations, typically through
-early fusion, late fusion, gating, attention or decision-level score aggregation. The
+early fusion, late fusion, gating, attention or decision-level score aggregation. Here,
+multimodal refers to two representations of the same EEG signal, also called multi-view
+fusion (\citealp{Tian_2019}), not to different recording modalities such as EEG and ECG. The
 underlying assumption is that integrating complementary representations can improve
 seizure discrimination beyond what either representation can achieve independently.
 
@@ -161,77 +146,89 @@ normalisation and artefact removal modify the signal characteristics available t
 downstream learning algorithms. These transformations may influence both predictive
 performance and the relative effectiveness of different fusion mechanisms.
 
-Previous research has shown that deep-learning results can vary substantially across
-EEG preprocessing strategies. In the first systematic study of EEG preprocessing for deep
-learning, 4,800 models trained on six tasks with four architectures differed
-significantly between preprocessing pipelines; models trained on raw data ranked last on
-average, and minimal pipelines without artefact handling tended to serve them best (Del
-Pup et al.~2025) {[}abstract{]}. Artefact removal by independent component analysis, with
-Infomax or AMICA and three component rejection strategies, did not consistently improve
-deep decoding on three brain-computer interface datasets (\citealp{Kang_2024}) {[}abstract{]},
-and even the scope of normalisation changed which strategy worked best (\citealp{Truong_2025}) {[}abstract{]}. In none of these studies did a single approach consistently
-give the best outcome across tasks and models.
+Previous research has demonstrated that EEG preprocessing decisions can substantially
+influence downstream decoding performance. \citet{Del_Pup_2025} systematically evaluated
+preprocessing strategies across multiple deep-learning architectures and EEG tasks,
+showing that the relative effectiveness of preprocessing choices depends on the analytical
+configuration. Similarly, \citet{Kessler_2025} examined 2,592 preprocessing
+configurations across event-related EEG decoding experiments, demonstrating that choices
+concerning filtering, artefact handling and other processing steps can materially affect
+decoding outcomes. Together, these findings challenge the assumption that preprocessing is
+a neutral operation whose influence can be separated from model evaluation.
 
-The broader multiverse-analysis literature provides a useful conceptual framework for
-understanding this problem. Rather than selecting one analytical pipeline and treating
-its outcome as definitive, a multiverse approach evaluates multiple defensible analytical
-choices and examines whether the conclusions remain stable (\citealp{Steegen_2016}; \citealp{Clayson_2024}). In EEG research, no single pipeline was best on every quality criterion across 43
-preprocessing pipelines (\citealp{Huang_2025}) {[}abstract{]}; fourteen pipelines drawn from the
-N400 literature changed statistical outcomes, effect sizes and power (\citealp{Soskic_2024})
-{[}abstract{]}; only 13 of 270 analyses of frontal alpha asymmetry in depression were
-significant (\citealp{Kolodziej_2021}) {[}abstract{]}; and for event-related potentials,
-multiverse analyses have been used to choose pipelines by their effect on data quality
-and reliability (\citealp{Clayson_2021}) {[}abstract{]}.
+The broader multiverse-analysis framework offers a systematic way to investigate such
+analytical dependencies. Rather than selecting a single defensible pipeline, multiverse
+analysis examines how conclusions change across alternative analytical decisions (\citealp{Steegen_2016}; \citealp{Clayson_2024}). In EEG research, this approach has revealed substantial
+variability in data quality, statistical outcomes and decoding performance across
+preprocessing configurations (\citealp{Kessler_2025}; \citealp{Soskic_2024}).
+Importantly, these studies establish the relevance of preprocessing multiverses but do not
+directly determine whether the relative ranking of competing seizure-detection fusion
+operators is preserved across such choices.
 
-For EEG fusion, this distinction is particularly relevant. A fusion operator may appear
-superior because its architecture is better suited to a specific preprocessing
-transformation rather than because it provides a generalisable advantage. A comparison
-performed under only one preprocessing configuration cannot distinguish these
-possibilities.
+This distinction is central to the present investigation. If different fusion
+architectures respond differently to filtering, normalisation or artefact removal, an
+operator that performs best under one preprocessing pipeline may not remain preferable
+under another. Consequently, assessing the robustness of fusion superiority requires
+varying preprocessing and fusion architecture within the same controlled experimental
+design.
 
 \subsection{1.2 Architectural comparisons require controlled experimental conditions}\label{architectural-comparisons-require-controlled-experimental-conditions}
 
-Several EEG seizure-detection studies have compared fusion strategies or proposed
-increasingly sophisticated mechanisms for combining complementary representations
-(Table 1): five strategies within and across patients (\citealp{An_2026}), four operators
-under leave-one-subject-out evaluation, where they lie within one standard deviation of
-each other (\citealp{Einizade_2023}), three operators with paired tests over six seeds
-(\citealp{Basheer_2026}), and feature-level against decision-level fusion for seizure
-prediction (\citealp{Dasdemir_2025}). These contributions have advanced multimodal EEG
-modelling, but their results also raise questions about the comparability of the
-evaluated architectures. Among the studies we have read in full, none matches the
-parameter counts of the compared operators, tests the differences between them with a
-correction for repeated resampling, and tests them for equivalence. Across more than 120
-studies of hybrid EEG interfaces, only two explored more than one fusion strategy and one
-asked which was best (\citealp{Lee_2025}).
+Multimodal EEG models increasingly combine complementary signal representations to improve
+seizure detection and prediction. Several studies have investigated alternative fusion
+mechanisms, including feature concatenation, attention-based integration, gating and
+decision-level aggregation. However, the central question is not simply whether fusion can
+improve predictive performance, but whether an observed advantage of one fusion operator
+over another can be attributed to the fusion mechanism itself.
 
-Differences in parameter count, feature representation, optimisation settings, training
-duration and evaluation protocols may confound the interpretation of architectural
-comparisons. A more complex fusion model may outperform a simpler alternative because of
-its larger capacity or a more favourable training configuration rather than the fusion
-mechanism itself. Controlled comparisons in other domains point the same way: in ECG
-classification 1D and 2D representations were compared with early, late and joint fusion
-(\citealp{Narotamo_2024}), a controlled benchmark on tabular neuroimaging data found the
-fusion strategy to matter more than the architecture (\citealp{Camastra_2026}), and added
-multimodal complexity often did not pay off (\citealp{Rheude_2025}, preprint).
+Recent seizure-detection studies provide relevant evidence (Table 1). \citet{An_2026}
+compared multiple knowledge-data fusion strategies and reported that the preferred
+strategy varied across datasets and model configurations. This suggests that the
+effectiveness of a fusion mechanism may depend on the broader experimental setting. \citet{Tiwary_2026} developed a dual-branch architecture combining complementary EEG
+representations and evaluated it under subject-independent protocols, demonstrating the
+relevance of representation fusion while leaving open the question of systematic
+operator-level superiority. Similarly, \citet{Einizade_2023} compared alternative fusion
+mechanisms under leave-one-subject-out evaluation, while \citet{Basheer_2026}
+examined several fusion strategies using repeated training and statistical comparisons.
+Collectively, these studies demonstrate increasing methodological attention to fusion
+design, but also illustrate that architectural comparisons may differ in their controls,
+statistical procedures and evaluation scope.
 
-Accordingly, comparisons designed to isolate the contribution of fusion should control
-the underlying backbone, training procedure and model capacity wherever feasible.
-Single-branch and classical machine-learning baselines are also important: an observed
-improvement over another fusion architecture does not necessarily demonstrate that
-multimodal fusion provides meaningful added value.
+A particularly relevant example is provided by \citet{Miantezila_Junior_2026}, who
+compared concatenation, cross-attention and gated fusion for EEG-ECG emotion recognition
+using leave-one-subject-out evaluation. Although the compared fusion strategies did not
+show statistically significant performance differences, gated fusion was recommended as
+the preferred configuration. This illustrates a broader methodological difficulty: the
+operator achieving the most favourable observed result may be recommended even when the
+available statistical evidence does not establish its superiority. The study did not
+combine parameter-matched operator comparisons with dependence-corrected inference and
+formal equivalence testing. Although EEG-ECG emotion recognition differs from EEG seizure
+detection, the distinction between observed performance and defensible architectural
+superiority is directly relevant to both settings.
 
-Even under controlled conditions, a higher mean performance score is not sufficient to
-establish superiority. Statistical uncertainty, the magnitude of the observed difference
-and the stability of the ranking must also be considered.
+Controlled fusion comparisons must therefore consider potential confounding factors.
+Differences in model capacity, feature representation, optimisation procedure and
+evaluation protocol can influence apparent architectural advantages. A more complex fusion
+operator may outperform a simpler alternative because of additional parameters or
+favourable training conditions rather than the fusion mechanism itself. Moreover,
+improvements over another fusion architecture do not necessarily demonstrate that
+multimodal fusion provides meaningful added value relative to single-representation or
+classical machine-learning baselines.
+
+The contribution of the present study is not the introduction of another fusion operator.
+Instead, it is the systematic evaluation of whether comparative conclusions about existing
+operators remain supported when architectural capacity is controlled and analytical
+conditions are varied. This requires distinguishing observed performance differences from
+statistically supported superiority, practical equivalence and stability of model
+rankings.
 
 \begingroup\small
 
 \begin{longtable}[]{@{}
-  >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.2111}}
-  >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3467}}
-  >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.4422}}@{}}
-\caption{\textbf{Closest related work} (from the systematic search of 3 October 2026; studies in bold are the closest to this one; the full texts of the remaining candidates are still being read).}\tabularnewline
+  >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.1859}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3869}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.4271}}@{}}
+\caption{\textbf{Closest related work} (studies in bold are the closest to this one).}\tabularnewline
 \toprule\noalign{}
 \begin{minipage}[b]{\linewidth}\raggedright
 Work
@@ -256,15 +253,18 @@ What it leaves open
 \endlastfoot
 \textbf{\citet{An_2026}, fastSeizureNet} & Compares five fusion strategies for EEG seizure detection, within and across patients, with several backbones & Fuses hand-crafted with deep features rather than a waveform with its spectrogram; strategies not parameter matched and not tested against each other (a Wilcoxon test with Holm correction is used only against prior methods) \\
 \citet{Einizade_2023}, fAttNet & Compares four fusion operators over raw EEG, wavelet packet and hand-engineered views, leave-one-subject-out on TUH & No parameter matching, no statistical test; the operators lie within one standard deviation of each other \\
-\citet{Basheer_2026} & Compares concatenation, element-wise addition and KAN gating, paired t tests over six seeds & Both streams come from the same raw EEG; uncorrected tests against concatenation only; no parameter matching \\
+\citet{Basheer_2026} & Compares concatenation, element-wise addition and KAN gating, paired t tests over six seeds & Two encoders on the same raw input rather than two representations; uncorrected tests against concatenation only; no parameter matching \\
+\textbf{\citet{Miantezila_Junior_2026}} & Compares concatenation, cross-attention and gated fusion of EEG and ECG with both single modalities for emotion recognition; leave-one-subject-out, three seeds, pairwise Wilcoxon tests with Holm correction & Two recording modalities rather than two representations of one signal; parameter counts not reported per operator; tests not corrected for overlapping training sets; no equivalence test; gated fusion recommended although no operator difference was significant \\
+\citet{Tiwary_2026} & EMD and DWT feature branches after input channel attention, fused by concatenation; leave-one-subject-out on CHB-MIT, official split on TUSZ & One operator; ablations of branches and attention tested against the full model only; parameter counts not reported; no equivalence test \\
 \textbf{\citet{Dasdemir_2025}} & Protocol-controlled comparison of two fusion strategies for EEG & Seizure prediction, not detection; two operators; a 0.20 point accuracy difference without a stated test or parameter matching \\
-\citet{Wang_2026a}, \emph{Neurocomputing} & Cross-attention fusion of time-domain and S-transform views, CHB-MIT and Siena & One ablation against concatenation, patient-specific evaluation, no statistical test \\
+\citet{Wang_2026a}, \emph{Neurocomputing} & Cross-attention fusion of a Gramian angular field (time-domain) view and an S-transform view, CHB-MIT and Siena & One ablation against concatenation, patient-specific evaluation; uncorrected Wilcoxon tests against the full model only; parameter counts not reported \\
 \citet{Chatzichristos_2020} & Attention-gated multi-view fusion & One operator, no alternatives \\
-\citet{Das_2024}; \citet{Huang_2024} & 1D+2D fusion; multi-head attention fusion & Fixed design, no operator ablation; gains without matched parameter counts \\
+\citet{Tian_2019} & Time, frequency and wavelet-packet views of CHB-MIT EEG, one CNN per view, features combined by a multi-view fuzzy classifier & Compared with single views only; patient-specific evaluation on balanced segments; no statistical test or parameter counts \\
+\citet{Huang_2024} & Multi-head self-attention fusion of three hand-crafted feature views (time, STFT, sample entropy) on Bonn & Fixed design, no comparison with other fusion operators; no statistical test or parameter counts \\
 \citet{Narotamo_2024} & 1D and 2D representations with early, late and joint fusion & ECG; no parameter matching or corrected and equivalence statistics \\
 \citet{Camastra_2026}, \emph{Brain Sciences} & Controlled fusion benchmark: strategy matters more than architecture & Tabular neuroimaging features; no paired or equivalence testing \\
 \citet{Ali_2024} & CHB-MIT results depend heavily on evaluation choices & Not about fusion operators \\
-\citet{Dan_2024}, SzCORE & Standard datasets, event-based scoring and metrics for seizure detection & An evaluation framework \\
+\citet{Dan_2025}, SzCORE & Standard datasets, event-based scoring and metrics for seizure detection & An evaluation framework \\
 \citet{Kontras_2026}, NeuroAtlas & Bonn is saturated (eleven models at AUROC \textgreater= 0.99) and has no subject identifiers & Not a fusion comparison \\
 \end{longtable}
 
@@ -272,107 +272,106 @@ What it leaves open
 
 \subsection{1.3 Statistical superiority, practical equivalence and ranking stability are distinct}\label{statistical-superiority-practical-equivalence-and-ranking-stability-are-distinct}
 
-The reliability of model comparisons is further complicated by stochastic optimisation
-and dependence between evaluation folds. Different random seeds produce different fitted
-networks: even after weak models were excluded, accuracy differed by up to 10.8 percent
-between identical training runs, implementation-level factors alone caused differences
-of up to 2.9 percent, and only about one fifth of the surveyed papers used repeated runs
-to quantify this (\citealp{Pham_2020}) {[}abstract{]}. Every source of nondeterminism in network
-optimisation, down to a one-bit change in the initial parameters, produces similar
-run-to-run variability, which makes small improvements hard to separate from noise
-(\citealp{Summers2021arxiv}) {[}abstract{]}, and seeds that perform far better or worse than
-average are easy to find (\citealp{Picard2021arxiv}) {[}abstract{]}. In speech recognition, training
-variance was large enough to call for a change in how results are reported (\citealp{van_den_Berg_2017}) {[}abstract{]}, and seed-induced variability can be tested for directly
-(\citealp{Banerjee_2025}) {[}abstract{]}. In repeated subject-independent evaluation, the
-training sets of different folds overlap, so conventional paired tests that treat the
-folds as independent are overconfident unless their variance is corrected (\citealp{Nadeau_2003}; \citealp{Bouckaert_2004}), and whether a comparison comes out significant
-can depend on the number of folds and repeats (\citealp{Jafrasteh_2025}).
+Reliable architectural comparisons require explicit consideration of stochastic
+variability and statistical uncertainty. Deep-learning models trained with identical
+configurations can produce different outcomes because of random initialisation,
+optimisation dynamics and implementation-level nondeterminism. Consequently, an observed
+performance advantage in a single training run may not represent a reproducible difference
+between architectures.
 
-Three complementary properties should therefore be distinguished. Statistical
-significance concerns whether the available evidence supports a difference between
-models under a specified inferential framework. Practical equivalence concerns whether
-the difference is sufficiently small to fall within a prespecified margin of practical
-relevance. Ranking stability concerns whether the relative order of models is preserved
-when analytical conditions change.
+Statistical inference is further complicated when models are evaluated using overlapping
+training sets. \citet{Nadeau_2003} investigated variance estimation under repeated
+resampling, while \citet{Bouckaert_2004} extended corrected testing approaches to
+cross-validation-based classifier comparisons. These methods provide a framework for
+accounting for dependence that conventional paired tests may underestimate, although their
+application to leave-one-subject-out evaluation requires explicit assumptions and careful
+interpretation.
 
-These properties are not interchangeable. Two models may show no statistically
-significant difference without being demonstrably equivalent: the absence of a
-significant difference is not evidence of equivalence. Conversely, one model may rank
-first consistently while its estimated advantage remains too uncertain to establish
-superiority. For fusion studies, evaluating these properties together provides a more
-informative assessment than selecting the architecture with the highest average score.
+Three distinct properties are relevant when evaluating fusion operators. Statistical
+superiority concerns whether the evidence supports a difference between competing methods
+under a specified inferential procedure. Practical equivalence concerns whether the
+magnitude of their difference is sufficiently small to fall within prespecified bounds of
+practical relevance. Equivalence testing, including the two one-sided tests procedure
+discussed by \citet{Lakens_2017}, provides a formal means of examining this second question.
+Ranking stability concerns whether the relative ordering of competing methods remains
+consistent across preprocessing pipelines, random seeds, datasets or evaluation
+conditions.
+
+These properties are complementary rather than interchangeable. Failure to reject a null
+hypothesis of equal performance does not establish equivalence, and repeatedly ranking
+first does not necessarily demonstrate statistically supported superiority. Conversely, a
+model may achieve statistically distinguishable performance under one analytical
+configuration without maintaining that advantage under other defensible choices.
+Evaluating statistical evidence, practical equivalence and ranking stability together
+therefore provides a more complete basis for assessing claims of fusion superiority.
 
 \subsection{1.4 Dataset shift and evaluation choices challenge the generalisability of conclusions}\label{dataset-shift-and-evaluation-choices-challenge-the-generalisability-of-conclusions}
 
 Subject-independent evaluation is essential for investigating whether EEG seizure
 detectors generalise beyond the individuals represented in their training data. However,
-even leave-one-subject-out evaluation within one dataset may not capture the variability
-introduced by different patient populations, acquisition systems, recording protocols
-and seizure distributions. High accuracies reported for automatic seizure detection often
-do not hold on new patients or recording sites. When 28 algorithms from the SzCORE
-challenge were evaluated on 4,360 hours of held-out continuous EEG from 65 subjects, the
-best F1 score was 32 percent, far below self-reported results, and the algorithms with
-the highest aggregate score were not the most consistent across subjects (\citealp{Dan2025arxiv}, preprint) {[}abstract{]}. Real-time detectors had been tested in distinct settings
-until they were compared under one (\citealp{Lee2022arxiv}, preprint) {[}abstract{]}; a prospective
-test on about 14,590 hours of adult EEG from another continent reported 76.68 percent
-with about 56 false alarms per 24 hours (\citealp{Yang2021arxiv}, preprint) {[}abstract{]}; and a
-systematic review names generalisability across training data and acquisition hardware
-among the main obstacles to clinical translation (\citealp{Moutonnet2024arxiv}, preprint)
-{[}abstract{]}. Within one public corpus, CHB-MIT results depend heavily on evaluation
-choices (\citealp{Ali_2024}), and the Bonn corpus, long a standard benchmark, is saturated
-and carries no subject identifiers, so it cannot test generalisation across patients
-(\citealp{Kontras_2026}).
+performance measured within a single dataset may not fully capture the variability
+introduced by differences in patient populations, acquisition systems, recording protocols
+and seizure distributions. Cross-dataset evaluation therefore provides an additional
+assessment of generalisability. Importantly, preservation of predictive performance does
+not necessarily imply preservation of architectural rankings: a fusion operator may remain
+competitive in absolute terms while losing its relative advantage over alternative
+operators.
 
-Cross-dataset evaluation offers an additional test of generalisability. Importantly,
-transferring predictive performance does not necessarily imply that the relative ranking
-of fusion operators will also transfer. A model may retain acceptable aggregate
-performance while losing its position as the highest-ranked architecture.
+The importance of standardised evaluation has been emphasised by the Seizure Community
+Open-Source Research Evaluation (SzCORE) framework (\citealp{Dan_2025}), which provides
+common evaluation procedures and clinically relevant seizure-detection metrics. Related
+benchmarking efforts have highlighted discrepancies between performance reported under
+heterogeneous experimental protocols and results obtained under standardised evaluation
+conditions (\citealp{Samanos_2025}; \citealp{Dan_2026}). These findings reinforce the importance
+of evaluating seizure-detection systems using consistent datasets, event definitions and
+scoring procedures rather than relying exclusively on previously published aggregate
+performance values.
 
-Evaluation choices introduce another source of uncertainty. Window-level macro F1
-depends on the threshold used to convert predicted probabilities into class labels,
-whereas event-level seizure sensitivity and false-alarm rates capture different aspects
-of detection performance; standard event-based scoring has been proposed to make such
-results comparable (\citealp{Dan_2024}). Furthermore, artificially sampled class
-distributions can produce performance estimates that differ substantially from those
-expected under the much lower seizure prevalence of continuous EEG recordings, because
-precision depends on how many non-seizure windows each false-positive rate applies to.
+Evaluation conditions can also alter the apparent merits of competing models. Window-level
+classification metrics depend on the decision threshold and class distribution, whereas
+event-level sensitivity and false-alarm rates capture different aspects of seizure
+detection. In particular, precision is sensitive to seizure prevalence: performance
+estimated from artificially balanced or seizure-enriched evaluation samples may differ
+from estimates obtained under the much lower seizure prevalence characteristic of
+continuous EEG recordings. Consequently, an architecture that appears preferable under one
+operating threshold or class distribution may not remain preferable under another.
 
-Computational reproducibility is also relevant. CPU multithreading makes training
-nondeterministic (\citealp{Xiao_2021}) {[}abstract{]}, floating-point non-associativity in
-parallel computation causes run-to-run differences (\citealp{Shanmugavelu_2024}) {[}abstract{]},
-reproducible training requires control of both software randomness and hardware
-nondeterminism (\citealp{Chen_2022}) {[}abstract{]}, and neuroimaging pipelines, including ICA
-decompositions of fMRI data, give different results on different operating systems
-(\citealp{Glatard_2015}). Numerical differences introduced by hardware, software execution
-or artefact-removal procedures may therefore propagate to downstream predictions and
-potentially affect comparative conclusions.
+Computational reproducibility introduces a further consideration. Numerical differences
+arising from software execution, hardware environments or artefact-removal procedures can
+propagate into downstream predictions. For architectural comparisons, such variability is
+relevant not only when it changes absolute performance but also when it alters the
+relative ranking of competing fusion operators.
 
-Together, these considerations suggest that robust model selection requires evaluating
-not only whether a fusion operator performs well, but whether the evidence supporting its
-apparent advantage survives defensible changes in analytical and evaluation conditions.
+Together, these considerations indicate that robust model selection requires examining
+whether comparative conclusions survive changes in preprocessing, stochastic training,
+dataset, evaluation threshold, class-prevalence assumptions and computational execution.
 
 \subsection{1.5 Research gap and contributions}\label{research-gap-and-contributions}
 
-Despite growing interest in multimodal EEG seizure detection, an important gap remains
-between reporting the performance of competing fusion architectures and systematically
-evaluating the robustness of the conclusions drawn from those comparisons. The question
-this study asks is therefore: when a fusion operator appears superior, can that
-conclusion be trusted beyond the particular analytical conditions under which it was
-obtained?
+The literature reviewed above establishes several complementary findings. EEG
+preprocessing can substantially influence decoding outcomes; multimodal representations
+offer promising opportunities for seizure detection; and subject-independent, standardised
+evaluation is essential for meaningful assessment. Existing studies have also compared
+alternative fusion strategies and, in some cases, examined their statistical differences.
+Nevertheless, evidence that a fusion operator achieves the highest observed score under a
+particular experimental configuration is not equivalent to evidence that the operator is
+robustly superior.
 
-The present study addresses this gap through a controlled, multiverse-inspired benchmark
-of fusion operators for EEG seizure detection. Four jointly trained fusion architectures,
-early, late, gated and attention fusion, are compared under parameter budgets matched
-within 0.4 percent, while score fusion is evaluated as a separate decision-level ensemble
-outside the parameter-matched group. Single-branch networks and a classical
-machine-learning baseline provide additional controls.
+The remaining methodological challenge is therefore to determine whether comparative
+conclusions about fusion operators survive the analytical decisions surrounding their
+evaluation. To address this question, we conduct a controlled, multiverse-inspired
+comparison of four parameter-matched, jointly trained fusion architectures (early, late,
+gated and attention fusion) alongside a separately evaluated decision-level score-fusion
+ensemble. Single-branch networks and a classical machine-learning baseline provide
+additional controls. The evaluation crosses nine preprocessing pipelines with repeated
+stochastic training and subject-independent testing on CHB-MIT and Siena, supplemented by
+cross-dataset transfer and computational reproducibility analyses.
 
-The comparison is repeated across nine preprocessing pipelines, including three artefact
-removal algorithms, five seed sets and two independent EEG datasets, CHB-MIT and Siena,
-with leave-one-subject-out evaluation and cross-dataset transfer. Statistical
-significance, practical equivalence and ranking stability are examined separately.
-Additional reproducibility experiments investigate whether differences in artefact
-removal and computational execution can alter downstream conclusions.
+Rather than treating the highest observed performance as sufficient evidence of
+superiority, we examine statistical significance, practical equivalence and ranking
+stability as distinct properties of architectural comparisons. The objective is to
+establish not merely which fusion operator performs best under a particular configuration,
+but under what conditions claims of fusion superiority remain scientifically defensible.
 
 Three research questions guide the investigation:
 
@@ -481,9 +480,10 @@ one.
 
 \subsection{2.2 Preprocessing multiverse}\label{preprocessing-multiverse}
 
-Following the multiverse approach (\citealp{Steegen_2016}), nine defensible
-preprocessing pipelines are crossed with every model, operator and seed instead of
-choosing one. Each pipeline changes one hypothesis-driven aspect; windows, labels,
+Following the multiverse-analysis perspective of \citet{Steegen_2016}, the experimental
+design crosses defensible preprocessing choices with alternative fusion architectures,
+allowing the robustness of comparative conclusions to be examined across analytical
+configurations rather than inferred from a single selected pipeline. Each pipeline changes one hypothesis-driven aspect; windows, labels,
 spectrogram settings, models, training and evaluation are fixed.
 
 \begingroup\small
@@ -724,7 +724,7 @@ windows well and still miss seizures or raise many false alarms.
 every 10 s window of every recording of the held-out subject, not only the subsampled
 test windows, after the pipeline's own preprocessing; a window is positive when its
 probability exceeds 0.5, with no further post-processing. Detections are scored
-against the annotated seizures with SzCORE's event scoring (\citealp{Dan_2024};
+against the annotated seizures with SzCORE's event scoring (\citealp{Dan_2025};
 \nolinkurl{timescoring} 0.0.7, defaults: 30 s tolerance before onset and 60 s after offset, any
 overlap counts, events closer than 90 s merged, events longer than 5 min split).
 Seizure-level sensitivity is the share of seizures detected; the false alarm rate is
@@ -746,13 +746,17 @@ pipeline.
 
 \textbf{Pairwise comparisons.} Leave-one-subject-out folds share training data, so the
 standard paired test overstates significance; in a simulation of two equivalent
-classifiers the naive paired Wilcoxon test rejected in 37.6 percent of cases at a
-nominal 5 percent. On the Bonn corpus, studied in an
+classifiers under repeated five-fold cross-validation the naive paired Wilcoxon test
+rejected in 37.6 percent of cases at a nominal 5 percent, and the corrected test below in
+2.3 percent. On the Bonn corpus, studied in an
 earlier stage of this project, the naive test found 13 to 22 significant pairs among
 55 per task and the corrected test none among the deep models (Supplementary Note 1).
 Because LOSO training sets overlap substantially, pairs of operators are compared with
 the resampling-corrected paired t test (\citealp{Nadeau_2003}) rather than treating
-the held-out folds as independent observations. The test inflates the variance of the
+the held-out folds as independent observations. The correction was derived for
+independent random splits and extended to k-fold cross-validation by \citet{Bouckaert_2004}; applying it to the disjoint test folds of leave-one-subject-out evaluation is
+therefore an approximation, and because it assumes a fixed test-to-training ratio (a
+concern raised by \citealp{Del_Pup_2025}), we vary that ratio below. The test inflates the variance of the
 mean fold difference from var(d)/k to (1/k + n\_test/n\_train) var(d), on k - 1 degrees
 of freedom. We count subjects: n\_test/n\_train = 1/22 on CHB-MIT and 1/13 on Siena, the
 held-out subject against the subjects outside it. Since 4 (Siena: 3) of these serve as
@@ -1442,6 +1446,14 @@ does not necessarily imply stability in false-alarm burden. Because the addition
 event-level analyses were restricted to P0 and P1, their conclusions should not be
 generalised to all nine preprocessing pipelines.
 
+The sensitivity of precision-based evaluation to seizure prevalence is particularly
+relevant in light of standardised seizure-detection benchmarking, where differences in
+evaluation protocols and class distributions complicate comparisons with previously
+reported performance (\citealp{Samanos_2025}). We therefore examined whether the relative
+performance of fusion operators was preserved when the sampled evaluation distribution was
+reweighted to approximate the non-ictal window prevalence of the complete CHB-MIT
+recordings.
+
 Reweighting the existing CHB-MIT predictions to the non-ictal window counts of the
 complete recordings, a prevalence of 0.36 percent ictal windows instead of 20 percent,
 reduced the mean macro F1 of the fusion operators from 0.673 to 0.686 under the sampled
@@ -1556,7 +1568,9 @@ they rule out benefits from fusion under different training regimes. Instead, th
 indicate that increasing architectural complexity should be justified against
 appropriately controlled alternatives rather than assumed to improve seizure detection,
 in line with a broader evaluation of multimodal models, available as a preprint, in
-which added fusion complexity often did not pay off (\citealp{Rheude_2025}).
+which added fusion complexity often did not pay off (\citealp{Rheude_2025}), and with EEG and
+ECG emotion recognition, where no fusion strategy beat the best single modality
+(\citealp{Miantezila_Junior_2026}).
 
 One comparatively consistent architectural pattern emerged: early fusion produced the
 lowest AUPRC in all nine preprocessing pipelines of both datasets. Yet its window-level
@@ -1605,6 +1619,11 @@ did (p = 0.029). Conversely, score fusion ranked first in 82 percent of the Sien
 without establishing a significant advantage. A stable ranking can therefore coexist with
 uncertain performance differences, while practically similar operators may exchange
 ranks across runs; when two operators are equally good, their order is decided by noise.
+Recent work shows how easily the highest score is read as superiority: gated fusion was
+recommended as the default although no operator difference was significant
+(\citealp{Miantezila_Junior_2026}), and a full model was preferred over an ablated variant it exceeded by
+0.04 F1 points, against standard deviations of about 10, without a test between the two
+(\citealp{Tiwary_2026}).
 
 The dependence between leave-one-subject-out folds further complicates inference.
 Treating these folds as independent observations would understate uncertainty because
@@ -1721,9 +1740,9 @@ preprocessing. At the prespecified threshold the operators detected 68 to 79 per
 CHB-MIT's seizures with 5.2 to 7.7 false alarms per hour, that is 125 to 185 false alarms
 per day of monitoring, and no person reached a mean below one false alarm per hour.
 Generic scalp EEG detectors evaluated for clinical use have reported 0.1 to 5 false alarms
-per hour, most about 0.2 to 0.3, and patient-specific detectors fewer; a low false alarm
-rate is regarded as essential for clinical acceptance, and validation standards require
-it to be reported (\citealp{Baumgartner_2018}; \citealp{Beniczky_2018}). The person
+per hour, the largest evaluations about 0.2 to 0.3, and patient-specific detectors fewer; a low false alarm
+rate is regarded as essential for clinical acceptance (\citealp{Baumgartner_2018}), and the
+SzCORE evaluation standard requires false alarms per day to be reported (\citealp{Dan_2025}). The person
 mattered more than the choice of operator: mean sensitivity ranged from 0.24 (chb06) to
 1.00 across persons and the false alarm rate from 1.3 to 12.3 per hour, while the
 operators' means spanned 0.68 to 0.79 and 5.2 to 7.7, which motivates patient-specific adaptation, not tested here, rather than the search for a better generic operator; patient-specific classifiers
@@ -1867,11 +1886,7 @@ the cross-dataset experiment combines multiple sources of domain shift and canno
 identify their individual contributions. Further details concern the data: 13 of
 CHB-MIT's 198 seizures lie in recordings without the standard montage and were not used;
 Siena's summed recording time (141.0 h by the EDF headers) differs from the dataset
-description (128.4 h) for reasons that remain unexplained for three patients; and the
-title and abstract screening of the systematic literature search was done by an AI
-assistant (agreement with an independent AI pass, kappa 0.81), with the human screening
-and the full texts of the remaining candidates in progress, so that claims marked
-{[}abstract{]} in Section 1 rest on abstracts.
+description (128.4 h) for reasons that remain unexplained for three patients.
 
 \section{5. Conclusions}\label{conclusions}
 

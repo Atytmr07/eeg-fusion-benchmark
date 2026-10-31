@@ -11,8 +11,8 @@ python paper/latex/build.py --no-supplementary   # without paper/supplementary.m
 The source is `paper/manuscript_v2.md` by default. It is only read, never written.
 After every change to it, rerun the command; do not edit `main.tex` by hand.
 
-The PDF sent to the advisor is built with `--draft`, so the DRAFT note stays on page 1.
-The [ref] and [abstract] markers in the text are printed as written in every mode.
+Working drafts are built with `--draft`, so the DRAFT note stays on page 1; the version
+that leaves the authors (advisor, submission) is built without it.
 
 **Overleaf.** Every build also writes `overleaf/` and `overleaf.zip`. They contain
 `main.tex`, `main.bib` and `figures/`. Upload the zip as a new Overleaf project;
@@ -155,5 +155,5 @@ In option (a) no `.bbl` is needed, because the bibliography is inline. Upload
   added, change both `\author{...}` and `pdfauthor` in `template.tex`.
 - **Manuscript text vs natbib.** Five author-name differences and two reference
   list entries with incomplete author lists are listed in `citation_report.md`.
-  They can be fixed in `manuscript.md`; the PDF already prints the names from
+  They can be fixed in `manuscript_v2.md`; the PDF already prints the names from
   `references.bib`.
