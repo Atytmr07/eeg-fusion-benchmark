@@ -1,0 +1,27 @@
+{
+  "definition": "docs/EVENTS.md",
+  "threshold": 0.5,
+  "window_s": 10.0,
+  "scoring": "timescoring EventScoring defaults (SzCORE)",
+  "pipeline": {
+    "name": "P0",
+    "band": null,
+    "notch_hz": null,
+    "ica": null,
+    "reject": false,
+    "norm": "window",
+    "signal_tag": ""
+  },
+  "folds": 14,
+  "elapsed_s": 613.3,
+  "window_diff_vs_corpus": 0.0,
+  "window_check": "pass",
+  "decisions": {
+    "PN00_seizure3": "typo",
+    "PN10_seizure3_onset": "electric",
+    "PN10_seizure2_end": "first"
+  },
+  "dataset": "siena",
+  "reported": "seizure-level sensitivity only",
+  "false_alarms_per_hour": "not representative for Siena, not compared (recordings are cut around the seizures; docs/EVENTS.md)"
+}

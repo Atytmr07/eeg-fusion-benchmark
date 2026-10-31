@@ -1,0 +1,6 @@
+run,seed,ictal_rejected,ictal_total,nonictal_rejected,nonictal_total,ictal_share,nonictal_share
+loso_P4_cuda,0,0,328,1,1312,0.0,0.0007621951219512195
+loso_P4_r1_cuda,1,0,328,1,1312,0.0,0.0007621951219512195
+loso_P4_r2_cuda,2,0,328,1,1312,0.0,0.0007621951219512195
+loso_P4_r3_cuda,3,0,328,1,1312,0.0,0.0007621951219512195
+loso_P4_r4_cuda,4,0,328,1,1312,0.0,0.0007621951219512195

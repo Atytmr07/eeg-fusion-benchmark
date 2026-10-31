@@ -1,0 +1,332 @@
+{
+  "args": {
+    "split": "loso",
+    "folds": 5,
+    "limit_folds": null,
+    "models": [
+      "raw1d",
+      "spec2d",
+      "raw1d_wide",
+      "spec2d_wide",
+      "late",
+      "gated",
+      "attention",
+      "early"
+    ],
+    "norm": "window",
+    "notch": null,
+    "epochs": 60,
+    "threads": 6,
+    "outdir": null,
+    "tag": "loso_main",
+    "resume": true
+  },
+  "prep": {
+    "norm": "window",
+    "notch_hz": null,
+    "fmax": 64.0,
+    "fs": 256.0,
+    "x1d_shape": [
+      6380,
+      18,
+      2560
+    ],
+    "x2d_shape": [
+      6380,
+      18,
+      65,
+      19
+    ]
+  },
+  "corpus": {
+    "subjects": [
+      "chb01",
+      "chb02",
+      "chb03",
+      "chb04",
+      "chb05",
+      "chb06",
+      "chb07",
+      "chb08",
+      "chb09",
+      "chb10",
+      "chb11",
+      "chb12",
+      "chb13",
+      "chb14",
+      "chb15",
+      "chb16",
+      "chb17",
+      "chb18",
+      "chb19",
+      "chb20",
+      "chb21",
+      "chb22",
+      "chb23",
+      "chb24"
+    ],
+    "n_subjects": 24,
+    "channels": [
+      "FP1-F7",
+      "F7-T7",
+      "T7-P7",
+      "P7-O1",
+      "FP1-F3",
+      "F3-C3",
+      "C3-P3",
+      "P3-O1",
+      "FP2-F4",
+      "F4-C4",
+      "C4-P4",
+      "P4-O2",
+      "FP2-F8",
+      "F8-T8",
+      "T8-P8",
+      "P8-O2",
+      "FZ-CZ",
+      "CZ-PZ"
+    ],
+    "fs": 256.0,
+    "win_s": 10.0,
+    "stride_s": 10.0,
+    "guard_s": 0.0,
+    "neg_per_pos": 4.0,
+    "seed": 20260727,
+    "n_windows": 6380,
+    "n_ictal": 1276,
+    "n_seizures": 185,
+    "per_subject": {
+      "chb01": {
+        "n_files": 42,
+        "n_files_skipped_montage": 0,
+        "n_windows_total": 14598,
+        "n_ictal": 50,
+        "n_nonictal_kept": 200,
+        "n_seizures": 7,
+        "hours": 40.55
+      },
+      "chb02": {
+        "n_files": 36,
+        "n_files_skipped_montage": 0,
+        "n_windows_total": 12695,
+        "n_ictal": 20,
+        "n_nonictal_kept": 80,
+        "n_seizures": 3,
+        "hours": 35.263888888888886
+      },
+      "chb03": {
+        "n_files": 38,
+        "n_files_skipped_montage": 0,
+        "n_windows_total": 13680,
+        "n_ictal": 45,
+        "n_nonictal_kept": 180,
+        "n_seizures": 7,
+        "hours": 38.0
+      },
+      "chb04": {
+        "n_files": 42,
+        "n_files_skipped_montage": 0,
+        "n_windows_total": 56176,
+        "n_ictal": 42,
+        "n_nonictal_kept": 168,
+        "n_seizures": 4,
+        "hours": 156.04444444444445
+      },
+      "chb05": {
+        "n_files": 39,
+        "n_files_skipped_montage": 0,
+        "n_windows_total": 14041,
+        "n_ictal": 62,
+        "n_nonictal_kept": 248,
+        "n_seizures": 5,
+        "hours": 39.00277777777778
+      },
+      "chb06": {
+        "n_files": 18,
+        "n_files_skipped_montage": 0,
+        "n_windows_total": 24023,
+        "n_ictal": 24,
+        "n_nonictal_kept": 96,
+        "n_seizures": 10,
+        "hours": 66.73055555555555
+      },
+      "chb07": {
+        "n_files": 19,
+        "n_files_skipped_montage": 0,
+        "n_windows_total": 24138,
+        "n_ictal": 36,
+        "n_nonictal_kept": 144,
+        "n_seizures": 3,
+        "hours": 67.05
+      },
+      "chb08": {
+        "n_files": 20,
+        "n_files_skipped_montage": 0,
+        "n_windows_total": 7202,
+        "n_ictal": 97,
+        "n_nonictal_kept": 388,
+        "n_seizures": 5,
+        "hours": 20.005555555555556
+      },
+      "chb09": {
+        "n_files": 19,
+        "n_files_skipped_montage": 0,
+        "n_windows_total": 24430,
+        "n_ictal": 31,
+        "n_nonictal_kept": 124,
+        "n_seizures": 4,
+        "hours": 67.86111111111111
+      },
+      "chb10": {
+        "n_files": 25,
+        "n_files_skipped_montage": 0,
+        "n_windows_total": 18007,
+        "n_ictal": 49,
+        "n_nonictal_kept": 196,
+        "n_seizures": 7,
+        "hours": 50.019444444444446
+      },
+      "chb11": {
+        "n_files": 35,
+        "n_files_skipped_montage": 0,
+        "n_windows_total": 12524,
+        "n_ictal": 83,
+        "n_nonictal_kept": 332,
+        "n_seizures": 3,
+        "hours": 34.78888888888889
+      },
+      "chb12": {
+        "n_files": 21,
+        "n_files_skipped_montage": 3,
+        "n_windows_total": 7446,
+        "n_ictal": 123,
+        "n_nonictal_kept": 492,
+        "n_seizures": 27,
+        "hours": 20.683333333333334
+      },
+      "chb13": {
+        "n_files": 33,
+        "n_files_skipped_montage": 0,
+        "n_windows_total": 11880,
+        "n_ictal": 67,
+        "n_nonictal_kept": 268,
+        "n_seizures": 12,
+        "hours": 33.0
+      },
+      "chb14": {
+        "n_files": 26,
+        "n_files_skipped_montage": 0,
+        "n_windows_total": 9360,
+        "n_ictal": 24,
+        "n_nonictal_kept": 96,
+        "n_seizures": 8,
+        "hours": 26.0
+      },
+      "chb15": {
+        "n_files": 40,
+        "n_files_skipped_montage": 0,
+        "n_windows_total": 14402,
+        "n_ictal": 214,
+        "n_nonictal_kept": 856,
+        "n_seizures": 20,
+        "hours": 40.00555555555555
+      },
+      "chb16": {
+        "n_files": 19,
+        "n_files_skipped_montage": 0,
+        "n_windows_total": 6840,
+        "n_ictal": 14,
+        "n_nonictal_kept": 56,
+        "n_seizures": 10,
+        "hours": 19.0
+      },
+      "chb17": {
+        "n_files": 21,
+        "n_files_skipped_montage": 0,
+        "n_windows_total": 7562,
+        "n_ictal": 32,
+        "n_nonictal_kept": 128,
+        "n_seizures": 3,
+        "hours": 21.005555555555556
+      },
+      "chb18": {
+        "n_files": 36,
+        "n_files_skipped_montage": 0,
+        "n_windows_total": 12828,
+        "n_ictal": 38,
+        "n_nonictal_kept": 152,
+        "n_seizures": 6,
+        "hours": 35.63333333333333
+      },
+      "chb19": {
+        "n_files": 30,
+        "n_files_skipped_montage": 0,
+        "n_windows_total": 10774,
+        "n_ictal": 27,
+        "n_nonictal_kept": 108,
+        "n_seizures": 3,
+        "hours": 29.927777777777777
+      },
+      "chb20": {
+        "n_files": 29,
+        "n_files_skipped_montage": 0,
+        "n_windows_total": 9933,
+        "n_ictal": 36,
+        "n_nonictal_kept": 144,
+        "n_seizures": 8,
+        "hours": 27.591666666666665
+      },
+      "chb21": {
+        "n_files": 33,
+        "n_files_skipped_montage": 0,
+        "n_windows_total": 11818,
+        "n_ictal": 24,
+        "n_nonictal_kept": 96,
+        "n_seizures": 4,
+        "hours": 32.827777777777776
+      },
+      "chb22": {
+        "n_files": 31,
+        "n_files_skipped_montage": 0,
+        "n_windows_total": 11161,
+        "n_ictal": 24,
+        "n_nonictal_kept": 96,
+        "n_seizures": 3,
+        "hours": 31.002777777777776
+      },
+      "chb23": {
+        "n_files": 9,
+        "n_files_skipped_montage": 0,
+        "n_windows_total": 9558,
+        "n_ictal": 49,
+        "n_nonictal_kept": 196,
+        "n_seizures": 7,
+        "hours": 26.55
+      },
+      "chb24": {
+        "n_files": 22,
+        "n_files_skipped_montage": 0,
+        "n_windows_total": 7666,
+        "n_ictal": 65,
+        "n_nonictal_kept": 260,
+        "n_seizures": 16,
+        "hours": 21.294444444444444
+      }
+    }
+  },
+  "env": {
+    "python": "3.12.7",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "processor": "Intel64 Family 6 Model 170 Stepping 4, GenuineIntel",
+    "cpu_count": 14,
+    "omp_num_threads": null,
+    "mkl_num_threads": null,
+    "torch": "2.8.0+cpu",
+    "numpy": "1.26.4",
+    "scipy": "1.16.1",
+    "sklearn": "1.7.2",
+    "torch_num_threads_effective": 6,
+    "torch_num_interop_threads": 12
+  },
+  "elapsed_s": 64099.0
+}

@@ -1,0 +1,12 @@
+model,sensitivity_pooled,sensitivity_mean,detected,seizure_events,"fa_per_hour_mean (not representative for Siena, not compared)","fa_per_hour_median (not representative for Siena, not compared)","fa_per_hour_pooled (not representative for Siena, not compared)","false_alarms (not representative for Siena, not compared)","hours (not representative for Siena, not compared)"
+attention,0.8085,0.925,38,47,7.8984,8.6706,7.233,1020,141.0206
+early,0.8085,0.8833,38,47,11.1252,12.0878,10.7148,1511,141.0206
+gated,0.7872,0.8393,37,47,7.6436,9.0107,6.6657,940,141.0206
+late,0.766,0.9,36,47,9.5461,10.8791,8.786,1239,141.0206
+logvar,0.9574,0.9619,45,47,8.8723,9.5504,8.5661,1208,141.0206
+raw1d,0.8085,0.8548,38,47,8.4694,9.7225,8.3959,1184,141.0206
+raw1d_wide,0.7872,0.9071,37,47,8.2304,8.9003,7.155,1009,141.0206
+score,0.7234,0.8036,34,47,7.2039,7.6538,6.7792,956,141.0206
+shallow,0.9574,0.975,45,47,7.5875,7.9757,7.0486,994,141.0206
+spec2d,0.8298,0.8393,39,47,8.5582,8.6982,7.9776,1125,141.0206
+spec2d_wide,0.8085,0.8131,38,47,7.7733,9.27,7.0628,996,141.0206

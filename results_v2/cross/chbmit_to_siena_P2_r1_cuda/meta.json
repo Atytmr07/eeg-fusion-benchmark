@@ -1,0 +1,78 @@
+{
+  "args": {
+    "pipeline": "P2",
+    "repeat": 1,
+    "models": [
+      "raw1d",
+      "spec2d",
+      "raw1d_wide",
+      "spec2d_wide",
+      "late",
+      "gated",
+      "attention",
+      "early",
+      "score"
+    ],
+    "epochs": 60,
+    "threads": 16,
+    "device": "cuda",
+    "tag": "",
+    "siena_subjects": null
+  },
+  "pipeline": {
+    "name": "P2",
+    "band": [
+      0.5,
+      70.0
+    ],
+    "notch_hz": "mains",
+    "ica": null,
+    "reject": false,
+    "norm": "window",
+    "signal_tag": "bp0.5-70_nmains"
+  },
+  "prep": {
+    "norm": "window",
+    "notch_hz": null,
+    "fmax": 64.0,
+    "fs": 256.0,
+    "x1d_shape": [
+      8020,
+      18,
+      2560
+    ],
+    "x2d_shape": [
+      8020,
+      18,
+      65,
+      19
+    ]
+  },
+  "train": {
+    "corpus": "chbmit",
+    "windows": 4550,
+    "validation": 1830
+  },
+  "test": {
+    "corpus": "siena",
+    "windows": 1640,
+    "patients": 14
+  },
+  "score_blend_w": 0.65,
+  "env": {
+    "python": "3.12.10",
+    "platform": "Windows-10-10.0.19045-SP0",
+    "processor": "Intel64 Family 6 Model 85 Stepping 4, GenuineIntel",
+    "cpu_count": 64,
+    "omp_num_threads": null,
+    "mkl_num_threads": null,
+    "torch": "2.8.0+cu128",
+    "numpy": "1.26.4",
+    "scipy": "1.16.1",
+    "sklearn": "1.7.2",
+    "torch_num_threads_effective": 16,
+    "torch_num_interop_threads": 32,
+    "device": "cuda"
+  },
+  "elapsed_s": 360.6
+}

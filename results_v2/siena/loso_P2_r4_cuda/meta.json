@@ -1,0 +1,309 @@
+{
+  "args": {
+    "dataset": "siena",
+    "split": "loso",
+    "folds": 5,
+    "limit_folds": null,
+    "models": [
+      "raw1d",
+      "spec2d",
+      "raw1d_wide",
+      "spec2d_wide",
+      "late",
+      "gated",
+      "attention",
+      "early",
+      "score"
+    ],
+    "norm": "window",
+    "notch": null,
+    "epochs": 60,
+    "threads": 16,
+    "outdir": null,
+    "tag": "loso_P2_r4_cuda",
+    "pipeline": "P2",
+    "repeat": 4,
+    "device": "cuda",
+    "resume": false
+  },
+  "dataset": "siena",
+  "optimizer": "AdamW",
+  "pipeline": {
+    "name": "P2",
+    "band": [
+      0.5,
+      70.0
+    ],
+    "notch_hz": 50.0,
+    "ica": null,
+    "reject": false,
+    "norm": "window",
+    "signal_tag": "bp0.5-70_n50"
+  },
+  "rejection": null,
+  "prep": {
+    "norm": "window",
+    "notch_hz": null,
+    "fmax": 64.0,
+    "fs": 256.0,
+    "x1d_shape": [
+      1640,
+      18,
+      2560
+    ],
+    "x2d_shape": [
+      1640,
+      18,
+      65,
+      19
+    ]
+  },
+  "corpus": {
+    "corpus": "siena",
+    "subjects": [
+      "PN00",
+      "PN01",
+      "PN03",
+      "PN05",
+      "PN06",
+      "PN07",
+      "PN09",
+      "PN10",
+      "PN11",
+      "PN12",
+      "PN13",
+      "PN14",
+      "PN16",
+      "PN17"
+    ],
+    "n_subjects": 14,
+    "channels": [
+      "FP1-F7",
+      "F7-T7",
+      "T7-P7",
+      "P7-O1",
+      "FP1-F3",
+      "F3-C3",
+      "C3-P3",
+      "P3-O1",
+      "FP2-F4",
+      "F4-C4",
+      "C4-P4",
+      "P4-O2",
+      "FP2-F8",
+      "F8-T8",
+      "T8-P8",
+      "P8-O2",
+      "FZ-CZ",
+      "CZ-PZ"
+    ],
+    "derivation": {
+      "FP1-F7": "FP1 - F7",
+      "F7-T7": "F7 - T3",
+      "T7-P7": "T3 - T5",
+      "P7-O1": "T5 - O1",
+      "FP1-F3": "FP1 - F3",
+      "F3-C3": "F3 - C3",
+      "C3-P3": "C3 - P3",
+      "P3-O1": "P3 - O1",
+      "FP2-F4": "FP2 - F4",
+      "F4-C4": "F4 - C4",
+      "C4-P4": "C4 - P4",
+      "P4-O2": "P4 - O2",
+      "FP2-F8": "FP2 - F8",
+      "F8-T8": "F8 - T4",
+      "T8-P8": "T4 - T6",
+      "P8-O2": "T6 - O2",
+      "FZ-CZ": "FZ - CZ",
+      "CZ-PZ": "CZ - PZ"
+    },
+    "fs": 256.0,
+    "fs_source": 512.0,
+    "resampling": "scipy.signal.resample_poly(x, 1, 2), continuous recording",
+    "win_s": 10.0,
+    "stride_s": 10.0,
+    "guard_s": 0.0,
+    "neg_per_pos": 4.0,
+    "seed": 20260727,
+    "signal_tag": "bp0.5-70_n50",
+    "decisions": {
+      "PN00_seizure3": "typo",
+      "PN10_seizure3_onset": "electric",
+      "PN10_seizure2_end": "first"
+    },
+    "seizure_notes": {
+      "PN00-3.edf#1": [
+        "listed end 19.29.29 is after the recording end 18.57.13",
+        "read as 18.29.29 (DECISIONS: typo)"
+      ],
+      "PN10-3.edf#1": [
+        "onset chosen from '15.43.53 (CLINICAL ONSET); 15.43.59 (ELECTRIC ONSET)': 15.43.59"
+      ],
+      "PN10-4.5.6.edf#3": [
+        "clinical onset only; no electrical onset listed"
+      ]
+    },
+    "n_windows": 1640,
+    "n_ictal": 328,
+    "n_seizures": 47,
+    "per_subject": {
+      "PN00": {
+        "n_files": 5,
+        "n_windows_total": 1166,
+        "n_ictal": 37,
+        "n_nonictal_kept": 148,
+        "n_seizures": 5,
+        "seizure_seconds": 325.0,
+        "n_windows_excluded": 0,
+        "hours": 3.238888888888889
+      },
+      "PN01": {
+        "n_files": 1,
+        "n_windows_total": 4855,
+        "n_ictal": 15,
+        "n_nonictal_kept": 60,
+        "n_seizures": 2,
+        "seizure_seconds": 128.0,
+        "n_windows_excluded": 0,
+        "hours": 13.48611111111111
+      },
+      "PN03": {
+        "n_files": 2,
+        "n_windows_total": 8721,
+        "n_ictal": 26,
+        "n_nonictal_kept": 104,
+        "n_seizures": 2,
+        "seizure_seconds": 244.0,
+        "n_windows_excluded": 0,
+        "hours": 24.225
+      },
+      "PN05": {
+        "n_files": 3,
+        "n_windows_total": 2171,
+        "n_ictal": 13,
+        "n_nonictal_kept": 52,
+        "n_seizures": 3,
+        "seizure_seconds": 104.0,
+        "n_windows_excluded": 0,
+        "hours": 6.030555555555556
+      },
+      "PN06": {
+        "n_files": 5,
+        "n_windows_total": 4345,
+        "n_ictal": 32,
+        "n_nonictal_kept": 128,
+        "n_seizures": 5,
+        "seizure_seconds": 282.0,
+        "n_windows_excluded": 0,
+        "hours": 12.069444444444445
+      },
+      "PN07": {
+        "n_files": 1,
+        "n_windows_total": 3144,
+        "n_ictal": 8,
+        "n_nonictal_kept": 32,
+        "n_seizures": 1,
+        "seizure_seconds": 62.0,
+        "n_windows_excluded": 0,
+        "hours": 8.733333333333333
+      },
+      "PN09": {
+        "n_files": 3,
+        "n_windows_total": 2464,
+        "n_ictal": 23,
+        "n_nonictal_kept": 92,
+        "n_seizures": 3,
+        "seizure_seconds": 203.0,
+        "n_windows_excluded": 0,
+        "hours": 6.844444444444444
+      },
+      "PN10": {
+        "n_files": 6,
+        "n_windows_total": 6739,
+        "n_ictal": 47,
+        "n_nonictal_kept": 188,
+        "n_seizures": 10,
+        "seizure_seconds": 359.0,
+        "n_windows_excluded": 0,
+        "hours": 18.719444444444445
+      },
+      "PN11": {
+        "n_files": 1,
+        "n_windows_total": 867,
+        "n_ictal": 6,
+        "n_nonictal_kept": 24,
+        "n_seizures": 1,
+        "seizure_seconds": 55.0,
+        "n_windows_excluded": 0,
+        "hours": 2.408333333333333
+      },
+      "PN12": {
+        "n_files": 3,
+        "n_windows_total": 2194,
+        "n_ictal": 31,
+        "n_nonictal_kept": 124,
+        "n_seizures": 4,
+        "seizure_seconds": 290.0,
+        "n_windows_excluded": 0,
+        "hours": 6.094444444444444
+      },
+      "PN13": {
+        "n_files": 3,
+        "n_windows_total": 3118,
+        "n_ictal": 29,
+        "n_nonictal_kept": 116,
+        "n_seizures": 3,
+        "seizure_seconds": 264.0,
+        "n_windows_excluded": 0,
+        "hours": 8.661111111111111
+      },
+      "PN14": {
+        "n_files": 4,
+        "n_windows_total": 7365,
+        "n_ictal": 20,
+        "n_nonictal_kept": 80,
+        "n_seizures": 4,
+        "seizure_seconds": 163.0,
+        "n_windows_excluded": 0,
+        "hours": 20.458333333333332
+      },
+      "PN16": {
+        "n_files": 2,
+        "n_windows_total": 1756,
+        "n_ictal": 25,
+        "n_nonictal_kept": 100,
+        "n_seizures": 2,
+        "seizure_seconds": 230.0,
+        "n_windows_excluded": 0,
+        "hours": 4.877777777777778
+      },
+      "PN17": {
+        "n_files": 2,
+        "n_windows_total": 1844,
+        "n_ictal": 16,
+        "n_nonictal_kept": 64,
+        "n_seizures": 2,
+        "seizure_seconds": 153.0,
+        "n_windows_excluded": 0,
+        "hours": 5.122222222222222
+      }
+    }
+  },
+  "env": {
+    "python": "3.12.10",
+    "platform": "Windows-10-10.0.19045-SP0",
+    "processor": "Intel64 Family 6 Model 85 Stepping 4, GenuineIntel",
+    "cpu_count": 64,
+    "omp_num_threads": null,
+    "mkl_num_threads": null,
+    "torch": "2.8.0+cu128",
+    "numpy": "1.26.4",
+    "scipy": "1.16.1",
+    "sklearn": "1.7.2",
+    "torch_num_threads_effective": 16,
+    "torch_num_interop_threads": 32,
+    "device": "cuda",
+    "cuda_device": "NVIDIA GeForce RTX 5070"
+  },
+  "elapsed_s": 1342.8
+}

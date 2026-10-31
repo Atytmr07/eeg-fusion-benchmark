@@ -1,0 +1,35 @@
+{
+  "definition": "docs/EVENTS.md",
+  "threshold": 0.5,
+  "window_s": 10.0,
+  "scoring": "timescoring EventScoring defaults (SzCORE)",
+  "pipeline": {
+    "name": "P6c",
+    "band": [
+      0.5,
+      40.0
+    ],
+    "notch_hz": null,
+    "ica": "amica",
+    "reject": false,
+    "norm": "window",
+    "signal_tag": "bp0.5-40_amica",
+    "ica_settings": {
+      "n_components": 16,
+      "fit_decim": 8,
+      "max_iter": 300,
+      "rule": "find_bads_eog",
+      "eog_proxy": [
+        "FP1-F7",
+        "FP1-F3",
+        "FP2-F4",
+        "FP2-F8"
+      ],
+      "z": 3.0
+    }
+  },
+  "folds": 23,
+  "elapsed_s": 59444.3,
+  "window_diff_vs_corpus": 0.013761629350483418,
+  "window_check": "FAIL: the recomputed signal differs from the corpus by 1.4e-02 of its amplitude (tolerance 0.0001)"
+}

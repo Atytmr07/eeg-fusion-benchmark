@@ -1,0 +1,2 @@
+pipeline,method,recordings,median_s_per_recording,mean_s_per_recording,total_compute_h,components_removed_median,components_removed_mean
+P6a,Infomax (P6a),20,52.8,84.395,0.46886111111111106,2.0,1.85

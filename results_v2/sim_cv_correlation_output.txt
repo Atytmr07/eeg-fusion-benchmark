@@ -1,0 +1,17 @@
+  200/1000  (29s)
+  400/1000  (56s)
+  600/1000  (85s)
+  800/1000  (114s)
+  1000/1000  (142s)
+
+Design: n=500, 5 folds x 5 repeats, test/train = 1/4, 1000 simulations
+True difference: exactly zero. A well-calibrated test rejects about 5%.
+
+test                                false positive rate
+--------------------------------------------------------
+Wilcoxon (assumes independence)                  37.6%
+Paired t (assumes independence)                  38.6%
+Sign test (assumes independence)                 27.8%
+Corrected resampled t                             2.3%
+
+(simulation error for a nominal 5%: about +-1.4%)

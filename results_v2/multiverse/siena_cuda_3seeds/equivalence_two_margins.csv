@@ -1,0 +1,11 @@
+pair,n_pipelines,equivalent in (+-0.05),robust (+-0.05),equivalent in (+-0.02),robust (+-0.02),max delta_min,never significant
+early-late,9,0,no,0,no,0.11162638003045498,yes
+early-gated,9,0,no,0,no,0.12167216065873435,yes
+early-attention,9,0,no,0,no,0.09394032791508905,yes
+early-score,9,0,no,0,no,0.12249705300139518,yes
+late-gated,9,2,no,0,no,0.09727773393521413,yes
+late-attention,9,2,no,0,no,0.09576559531793856,yes
+late-score,9,0,no,0,no,0.1675830477168429,yes
+gated-attention,9,3,no,0,no,0.06543813621650213,yes
+gated-score,9,0,no,0,no,0.16353030304885496,yes
+attention-score,9,0,no,0,no,0.1615917452866606,yes

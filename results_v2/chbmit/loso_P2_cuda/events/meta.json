@@ -1,0 +1,22 @@
+{
+  "definition": "docs/EVENTS.md",
+  "threshold": 0.5,
+  "window_s": 10.0,
+  "scoring": "timescoring EventScoring defaults (SzCORE)",
+  "pipeline": {
+    "name": "P2",
+    "band": [
+      0.5,
+      70.0
+    ],
+    "notch_hz": 60.0,
+    "ica": null,
+    "reject": false,
+    "norm": "window",
+    "signal_tag": "bp0.5-70_n60"
+  },
+  "folds": 23,
+  "elapsed_s": 3482.3,
+  "window_diff_vs_corpus": 3.3298641621826164e-09,
+  "window_check": "pass"
+}

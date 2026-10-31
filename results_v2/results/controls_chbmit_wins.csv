@@ -1,0 +1,7 @@
+control,runs,runs_above_best_fusion,pipelines_above_every_fusion,pipelines
+raw1d,45,0,0,9
+spec2d,45,1,0,9
+raw1d_wide,45,0,0,9
+spec2d_wide,45,9,1,9
+logvar,45,0,0,9
+shallow,45,12,5,9

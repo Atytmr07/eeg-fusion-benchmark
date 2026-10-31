@@ -1,0 +1,2 @@
+pipeline,method,recordings,power_kept_median,q25,q75,min,share_below_0.5,share_below_0.9,components_removed_mean,share_none_removed
+P6a,Infomax (P6a),20,0.7560090789377205,0.5739723637525693,0.8289639351409008,0.08499121710755166,0.15,0.8,1.85,0.05

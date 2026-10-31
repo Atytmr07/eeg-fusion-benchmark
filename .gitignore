@@ -1,0 +1,56 @@
+# Raw data (CHB-MIT ~43 GB, Bonn ~19 MB). Downloadable from the original sources;
+# see README.md and docs/PIPELINE.md for how to obtain and verify it.
+data/
+
+# Run logs
+logs/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+~$*
+
+# Temporary files
+*.tmp
+*.log.gz
+.venv-ica/
+.venv-gpu/
+results_v2/ica_repro/*/*.npz
+results_v2/_events_partial/
+
+# trained models of the multiverse runs (4.6 GB); results, predictions and event metrics are tracked
+results_v2/**/models/
+
+# per run statistics written by chbmit_stats after each run (regenerable; the grouped run is tracked)
+results_v2/*/phase0_loso_P*/
+# self-test output of make_results and the early P0 check run
+results_v2/results_selftest/
+results_v2/chbmit/p0_check/
+
+# LaTeX build outputs (python paper/latex/build.py regenerates them)
+paper/latex/main.tex
+paper/latex/main.pdf
+paper/latex/main.md
+paper/latex/main.bib
+paper/latex/main.bbl
+paper/latex/arxiv/
+paper/latex/overleaf/
+paper/latex/*.zip
+paper/latex/*.aux
+paper/latex/*.log
+paper/latex/*.out
+paper/latex/*.toc
+paper/latex/*.blg

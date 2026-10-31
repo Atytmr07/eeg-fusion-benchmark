@@ -1,0 +1,26 @@
+{
+  "definition": "docs/EVENTS.md",
+  "threshold": 0.5,
+  "window_s": 10.0,
+  "scoring": "timescoring EventScoring defaults (SzCORE)",
+  "pipeline": {
+    "name": "P6b",
+    "band": [
+      0.5,
+      40.0
+    ],
+    "notch_hz": null,
+    "ica": "gedai",
+    "reject": false,
+    "norm": "window",
+    "signal_tag": "bp0.5-40_gedai-conservative",
+    "ica_settings": {
+      "noise_multiplier": "auto-",
+      "reference": "fsaverage leadfield covariance mapped to the bipolar montage"
+    }
+  },
+  "folds": 23,
+  "elapsed_s": 9018.1,
+  "window_diff_vs_corpus": 0.0,
+  "window_check": "pass"
+}

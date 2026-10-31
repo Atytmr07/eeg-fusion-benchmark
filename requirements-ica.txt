@@ -1,0 +1,14 @@
+# Extra packages needed only to BUILD the P6 corpus caches (src/preprocess.py: P6a
+# Extended Infomax, P6b GEDAI, P6c AMICA). Training and statistics do not need them.
+#
+# They require a newer numpy than requirements.txt pins, so install them into a separate
+# environment and build the P6 caches there:
+#   python -m venv .venv-ica
+#   .venv-ica/Scripts/python -m pip install -r requirements.txt
+#   .venv-ica/Scripts/python -m pip install -r requirements-ica.txt
+#   .venv-ica/Scripts/python -m src.preprocess --build P6a P6b P6c --jobs 6
+# Versions the P6 caches were built with:
+numpy==2.5.3
+mne==1.13.2
+gedai==0.60
+jamica==0.3.0

@@ -1,0 +1,8 @@
+run,pairs,sig_naive,sig_corrected,sig_corrected_conservative
+T1_N2,55,22,10,10
+T2_N2,55,20,0,0
+T3_N2,55,13,0,0
+sens_stft_fine,45,11,9,9
+sens_stft_coarse,45,11,9,9
+sens_budget_small,45,11,9,9
+sens_budget_large,45,10,9,9

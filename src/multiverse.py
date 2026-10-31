@@ -1,0 +1,1907 @@
+"""Multiverse analysis: how robust are the fusion comparisons to preprocessing and seeds?
+
+The project's question: how robust are the results between fusion
+operators to preprocessing and to stochastic training decisions? The main output is
+therefore the stability of the fusion RANKING, next to mean performance. This module
+reads every pipeline x seed run of one dataset and produces all analyses and figures:
+
+  1. performance     pipeline x seed x model means of macro F1, AUROC, AUPRC, balanced
+                     accuracy (the macro-averaged recall: the mean of sensitivity and
+                     specificity), sensitivity, specificity, Brier, log loss (AUPRC from
+                     the stored test probabilities, per fold, then averaged)
+  2. rank stability  (main analysis) ranking of the five fusion operators per run;
+                     Kendall's W and pairwise tau between seeds of one pipeline; tau
+                     between the seed-averaged rankings of the pipelines (heatmap);
+                     within-pipeline versus between-pipeline tau on the same scale,
+                     with a permutation test; the same restricted to P6a/P6b/P6c
+  3. interaction     Fusion x Preprocessing: interaction plot and repeated-measures
+                     ANOVA (folds as subjects, Greenhouse-Geisser corrected)
+  4. variance        variance components of the fully crossed fold x pipeline x fusion
+                     x seed design (method of moments), every component unrounded, for
+                     macro F1, AUPRC and balanced accuracy
+  5. equivalence     corrected test and equivalence bound for every fusion pair in
+                     every pipeline; "robust equivalence" = equivalent in all
+  6. robustness      mean F1 against the SD (and CV) of the pipeline means
+  7. prediction      window-level agreement of predicted classes between pipelines
+                     and, as the noise reference, between seeds
+  8. P4 rejection    windows rejected by P4's technical artefact rule, in total (from
+                     meta.json) and per person (artifact_mask on the P0 corpus)
+  9. P6 logs         signal retention of Infomax, GEDAI and AMICA and their
+                     computational cost (for the supplementary material)
+
+The rank analysis also gives each operator's rank DISTRIBUTION over all runs, per
+pipeline and per seed (not only the mean rank), and summary.md opens with the three
+effects reported separately: preprocessing, seed, and Fusion x Preprocessing.
+--first-report produces only a first report of three items (P4
+rejection, P6 signal retention, first rank stability table) from whatever runs exist.
+
+Runs are found by name in results_v2/<dataset>/: loso_<P> (seed 0), loso_<P>_r<k>
+(seed k), and loso_grouped for P0 seed 0 (src/run_queue.py: tag_for). With --device
+cuda, only GPU runs are read (the same names with a _cuda suffix, P0 seed 0 being
+loso_P0_cuda): CPU and GPU runs are never mixed in one analysis. Missing runs are
+skipped: every analysis uses the largest complete (balanced) subset that exists and
+says which runs it used, so the module can be run while results arrive.
+
+Usage:
+    python -m src.multiverse --dataset chbmit
+    python -m src.multiverse --dataset chbmit --first-report
+    python -m src.multiverse --synthetic          # validation on synthetic runs
+
+Outputs (CSV + PNG + summary.md) go to results_v2/multiverse/<dataset>/.
+"""
+from __future__ import annotations
+
+import argparse
+import itertools
+import json
+import re
+import shutil
+import sys
+import tempfile
+from dataclasses import dataclass
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+from scipy import stats as sps
+
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+except (AttributeError, ValueError):
+    pass
+
+from .chbmit_stats import FUSION, ratios
+from .config import RESULTS_ROOT
+from .stats import corrected_equivalence_bound, corrected_ttest, holm
+
+PIPELINE_ORDER = ("P0", "P1", "P2", "P3", "P4", "P5", "P6a", "P6b", "P6c")
+P6_FAMILY = ("P6a", "P6b", "P6c")
+OTHER_MODELS = ("raw1d", "spec2d", "raw1d_wide", "spec2d_wide", "logvar", "shallow")
+METRICS = ("f1_macro", "auc", "auprc", "balanced_accuracy", "sensitivity", "specificity",
+           "brier", "log_loss")
+# Variance components are reported for the three primary window-level metrics.
+VC_METRICS = ("f1_macro", "auprc", "balanced_accuracy")
+# Equivalence margins in macro F1, fixed before any multiverse result existed
+# (4 October 2026): +-0.05 for the main analysis, +-0.02
+# as a strict sensitivity analysis showing how much the conclusion depends on the margin.
+EQUIV_MARGIN = 0.05
+STRICT_MARGIN = 0.02
+N_PERM = 10000
+SEED = 20260727
+
+RUN_NAME = {"cpu": re.compile(r"^loso_(P\d[a-z]?)(?:_r(\d+))?$"),
+            "cuda": re.compile(r"^loso_(P\d[a-z]?)(?:_r(\d+))?_cuda$")}
+
+
+# --- Loading ------------------------------------------------------------------------------
+
+@dataclass
+class Run:
+    name: str
+    pipeline: str
+    seed: int
+    path: Path
+
+
+def parse_run_name(name: str, device: str = "cpu") -> tuple[str, int] | None:
+    """(pipeline, seed) of a run folder name on the given device, or None for anything
+    else (loso_main, runs of the other device, timing runs)."""
+    if name == "loso_grouped":
+        return ("P0", 0) if device == "cpu" else None
+    m = RUN_NAME[device].match(name)
+    return (m.group(1), int(m.group(2) or 0)) if m else None
+
+
+def _pipeline_key(p: str) -> tuple[int, str]:
+    return (PIPELINE_ORDER.index(p), p) if p in PIPELINE_ORDER else (len(PIPELINE_ORDER), p)
+
+
+def discover_runs(root: Path, pipelines=None, seeds=None, device: str = "cpu") -> list[Run]:
+    runs = []
+    for d in sorted(root.iterdir()) if root.exists() else []:
+        key = parse_run_name(d.name, device)
+        if key is None or not (d / "perfold.csv").exists():
+            continue
+        p, s = key
+        if (pipelines and p not in pipelines) or (seeds is not None and s not in seeds):
+            continue
+        runs.append(Run(d.name, p, s, d))
+    # loso_grouped is the earlier P0 seed 0 run; loso_P0 repeats it with saved models.
+    if any(r.name == "loso_P0" for r in runs):
+        runs = [r for r in runs if r.name != "loso_grouped"]
+    if len({(r.pipeline, r.seed) for r in runs}) != len(runs):
+        raise RuntimeError(f"two runs map to the same (pipeline, seed) in {root}")
+    return sorted(runs, key=lambda r: (_pipeline_key(r.pipeline), r.seed))
+
+
+def load_preds(run: Run) -> dict[int, dict[str, np.ndarray]]:
+    """Stored test predictions per fold: idx_te, y_te and (N, 2) probabilities per model."""
+    out = {}
+    for f in sorted((run.path / "preds").glob("fold*.npz")):
+        d = np.load(f)
+        out[int(f.stem[4:])] = {k: d[k] for k in d.files}
+    return out
+
+
+def load_long(runs: list[Run]) -> pd.DataFrame:
+    """One row per (pipeline, seed, model, fold) with all METRICS; AUPRC from preds."""
+    from sklearn.metrics import average_precision_score
+
+    frames = []
+    for r in runs:
+        df = pd.read_csv(r.path / "perfold.csv")
+        preds = load_preds(r)
+        ap = {}
+        for fold, d in preds.items():
+            for m in d:
+                if m in ("idx_te", "y_te") or d["y_te"].sum() == 0:
+                    continue
+                ap[(m, fold)] = average_precision_score(d["y_te"], d[m][:, 1])
+        df["auprc"] = [ap.get((m, f), np.nan) for m, f in zip(df.model, df.fold)]
+        # binary task: balanced accuracy = mean of the two class recalls = macro recall
+        df["balanced_accuracy"] = df["recall_macro"] if "recall_macro" in df else np.nan
+        df["pipeline"], df["seed"], df["run"] = r.pipeline, r.seed, r.name
+        frames.append(df[["pipeline", "seed", "run", "model", "fold", *METRICS]])
+    return pd.concat(frames, ignore_index=True)
+
+
+def balanced_subset(long: pd.DataFrame, models, pipelines=None
+                    ) -> tuple[list[str], list[int], list[int]]:
+    """The largest fully crossed (pipelines, seeds, folds) block for `models`.
+
+    A seed set is chosen among the subsets of available seeds to maximise
+    pipelines x seeds, with every included pipeline having all of those seeds and every
+    model on the common folds.
+    """
+    sub = long[long.model.isin(models)]
+    if pipelines is not None:
+        sub = sub[sub.pipeline.isin(pipelines)]
+    cells = sub.groupby(["pipeline", "seed"])
+    folds_of = {k: set(g.fold[g.model.isin(models)].unique()) for k, g in cells
+                if set(models) <= set(g.model)}
+    all_seeds = sorted({s for _, s in folds_of})
+    best = ([], [], [])
+    for k in range(len(all_seeds), 0, -1):
+        for seeds in itertools.combinations(all_seeds, k):
+            pipes = sorted({p for p, _ in folds_of
+                            if all((p, s) in folds_of for s in seeds)}, key=_pipeline_key)
+            if not pipes:
+                continue
+            folds = set.intersection(*[folds_of[(p, s)] for p in pipes for s in seeds])
+            if len(pipes) * len(seeds) > len(best[0]) * len(best[1]) and folds:
+                best = (pipes, list(seeds), sorted(folds))
+    return best
+
+
+def to_array(long: pd.DataFrame, metric: str, models, pipes, seeds, folds) -> np.ndarray:
+    """Array (fold, pipeline, model, seed) of one metric."""
+    sub = long[long.model.isin(models) & long.pipeline.isin(pipes) & long.seed.isin(seeds)
+               & long.fold.isin(folds)]
+    piv = sub.set_index(["fold", "pipeline", "model", "seed"])[metric]
+    idx = pd.MultiIndex.from_product([folds, pipes, list(models), seeds])
+    a = piv.reindex(idx).to_numpy().reshape(len(folds), len(pipes), len(models), len(seeds))
+    if np.isnan(a).any():
+        raise RuntimeError(f"{metric}: missing values in the balanced block")
+    return a
+
+
+def md_table(df: pd.DataFrame, index: bool = False, digits: int = 4) -> str:
+    """A DataFrame as a Markdown table (pandas' to_markdown needs tabulate, which is not
+    a dependency of this project)."""
+    d = df.reset_index() if index else df
+    def fmt(v) -> str:
+        if isinstance(v, (float, np.floating)):
+            return "" if np.isnan(v) else f"{v:.{digits}f}"
+        return str(v)
+    head = "| " + " | ".join(map(str, d.columns)) + " |"
+    sep = "|" + "---|" * len(d.columns)
+    body = ["| " + " | ".join(fmt(v) for v in row) + " |" for row in d.itertuples(index=False)]
+    return "\n".join([head, sep, *body])
+
+
+# --- Balanced ANOVA machinery -----------------------------------------------------------------
+
+def effect_table(y: np.ndarray, names: tuple[str, ...]) -> dict[tuple[str, ...], dict]:
+    """Sums of squares, df and mean squares of every main effect and interaction of a
+    fully crossed design with one observation per cell (balanced, so the decomposition
+    is orthogonal). Effects are estimated by inclusion-exclusion over marginal means."""
+    k = y.ndim
+    n = y.shape
+    means = {}
+    for r in range(k + 1):
+        for sub in itertools.combinations(range(k), r):
+            other = tuple(i for i in range(k) if i not in sub)
+            means[sub] = y.mean(axis=other, keepdims=True) if other else y
+    out = {}
+    for r in range(1, k + 1):
+        for sub in itertools.combinations(range(k), r):
+            eff = 0.0
+            for rr in range(r + 1):
+                for z in itertools.combinations(sub, rr):
+                    eff = eff + (-1) ** (r - rr) * means[z]
+            ss = float((np.broadcast_to(eff, y.shape) ** 2).sum())
+            df = int(np.prod([n[i] - 1 for i in sub]))
+            out[tuple(names[i] for i in sub)] = {"ss": ss, "df": df,
+                                                 "ms": ss / df if df else np.nan}
+    return out
+
+
+def _contrasts(k: int) -> np.ndarray:
+    """Orthonormal contrasts (k, k-1): orthogonal to the constant vector."""
+    q, _ = np.linalg.qr(np.column_stack([np.ones(k), np.eye(k)[:, :k - 1]]))
+    return q[:, 1:k]
+
+
+def gg_epsilon(cells: np.ndarray, contrast: np.ndarray) -> float:
+    """Greenhouse-Geisser epsilon from subject x cell data and an orthonormal contrast."""
+    z = cells @ contrast
+    s = np.atleast_2d(np.cov(z, rowvar=False))
+    df1 = contrast.shape[1]
+    eps = np.trace(s) ** 2 / (df1 * np.trace(s @ s))
+    return float(np.clip(eps, 1.0 / df1, 1.0))
+
+
+def rm_anova(y: np.ndarray) -> pd.DataFrame:
+    """Repeated-measures ANOVA of y (fold, pipeline, model), seeds already averaged.
+
+    Folds (held-out persons) are the subjects; pipeline and model are within-subject
+    factors. Each effect is tested against its interaction with fold, the correct error
+    term when folds are random and both factors fixed. Seed noise enters numerator and
+    denominator alike, so averaging seeds first keeps the F tests valid. Greenhouse-
+    Geisser epsilon corrects for non-sphericity.
+    """
+    nf, npip, nm = y.shape
+    t = effect_table(y, ("fold", "pipeline", "model"))
+    cp, cm = _contrasts(npip), _contrasts(nm)
+    designs = {
+        ("pipeline",): (y.mean(axis=2), cp),
+        ("model",): (y.mean(axis=1), cm),
+        ("pipeline", "model"): (y.reshape(nf, npip * nm), np.kron(cp, cm)),
+    }
+    rows = []
+    for eff, (cells, con) in designs.items():
+        err = ("fold", *eff)
+        e, r = t[eff], t[err]
+        f = e["ms"] / r["ms"]
+        eps = gg_epsilon(cells, con)
+        rows.append({
+            "effect": " x ".join(eff), "ss": e["ss"], "df": e["df"], "ms": e["ms"],
+            "error": " x ".join(err), "ss_error": r["ss"], "df_error": r["df"],
+            "ms_error": r["ms"], "F": f, "p": float(sps.f.sf(f, e["df"], r["df"])),
+            "gg_epsilon": eps,
+            "p_gg": float(sps.f.sf(f, eps * e["df"], eps * r["df"])),
+            "partial_eta2": e["ss"] / (e["ss"] + r["ss"]),
+        })
+    return pd.DataFrame(rows)
+
+
+def variance_components(y: np.ndarray, names: tuple[str, ...]) -> pd.DataFrame:
+    """Variance components of a fully crossed design by the method of moments.
+
+    All factors are treated as random facets (generalizability theory), so a fixed
+    factor's component is the variance of its effects. With one observation per cell
+    the highest interaction is the residual. For an effect X,
+        sigma2_X = sum over effects Y containing X of (-1)^|Y - X| MS_Y / prod_{f not in X} n_f
+    Negative estimates are set to zero for the shares (and reported).
+    """
+    t = effect_table(y, names)
+    n = dict(zip(names, y.shape))
+    rows = []
+    for x in t:
+        acc = 0.0
+        for yk, v in t.items():
+            if set(x) <= set(yk):
+                acc += (-1) ** (len(yk) - len(x)) * v["ms"]
+        k = np.prod([n[f] for f in names if f not in x])
+        rows.append({"component": " x ".join(x), "sigma2_raw": acc / k})
+    df = pd.DataFrame(rows)
+    full = " x ".join(names)
+    df.loc[df.component == full, "component"] = "residual (" + full + ")"
+    df["sigma2"] = df.sigma2_raw.clip(lower=0.0)
+    df["share"] = df.sigma2 / df.sigma2.sum()
+    # the component as a standard deviation, in the metric's own units: a practical size
+    df["sd"] = np.sqrt(df.sigma2)
+    return df
+
+
+def group_components(vc: pd.DataFrame) -> pd.DataFrame:
+    """The main variance components, with the rest grouped."""
+    def label(c: str) -> str:
+        if c.startswith("residual"):
+            return "residual"
+        parts = set(c.split(" x "))
+        if parts == {"fold"}:
+            return "fold (subject)"
+        if parts == {"pipeline"}:
+            return "pipeline"
+        if parts == {"model"}:
+            return "fusion"
+        if parts == {"pipeline", "model"}:
+            return "fusion x pipeline"
+        if "seed" in parts:
+            return "seed (all seed terms)"
+        return "fold x (pipeline, fusion)"
+    g = vc.assign(group=vc.component.map(label)).groupby("group", sort=False)[
+        ["sigma2", "share"]].sum()
+    g["sd"] = np.sqrt(g.sigma2)
+    order = ["fold (subject)", "pipeline", "fusion", "fusion x pipeline",
+             "seed (all seed terms)", "fold x (pipeline, fusion)", "residual"]
+    return g.reindex([o for o in order if o in g.index]).reset_index()
+
+
+# --- Rank stability -----------------------------------------------------------------------------
+
+def ranks_of(means: np.ndarray) -> np.ndarray:
+    """Ranks, 1 = best (highest mean); ties get the average rank."""
+    return sps.rankdata(-np.asarray(means), method="average")
+
+
+def kendall_w(rank_matrix: np.ndarray) -> float:
+    """Kendall's W for m raters (rows) ranking n items (columns), tie-corrected."""
+    m, n = rank_matrix.shape
+    if m < 2:
+        return np.nan
+    s = ((rank_matrix.sum(axis=0) - m * (n + 1) / 2) ** 2).sum()
+    ties = 0.0
+    for row in rank_matrix:
+        _, c = np.unique(row, return_counts=True)
+        ties += (c ** 3 - c).sum()
+    return float(12 * s / (m ** 2 * (n ** 3 - n) - m * ties))
+
+
+def tau(a: np.ndarray, b: np.ndarray) -> float:
+    return float(sps.kendalltau(a, b).statistic)
+
+
+def rank_stability(run_means: pd.DataFrame, models, n_perm: int = N_PERM,
+                   seed: int = SEED, family: tuple[str, ...] | None = None) -> dict:
+    """Within-seed and between-pipeline stability of the fusion ranking.
+
+    run_means: one row per (pipeline, seed) with a column per model (mean F1 over the
+    common folds). Within: pairs of runs of the same pipeline (different seeds).
+    Between: pairs of runs of different pipelines. Both use single-run rankings, so the
+    two mean taus are on the same scale. D = mean within tau - mean between tau.
+
+    Permutation test of H0 "the pipeline does not change the ranking beyond seed noise":
+    pipeline labels are permuted among the runs of each seed (which keeps the seed
+    structure and any pairing by seed, and breaks only the pipeline structure), and D is
+    recomputed. Shuffling seed labels within a pipeline would leave every run in its
+    pipeline and so could not produce a null for the between-pipeline tau.
+    """
+    rm = run_means
+    if family is not None:
+        rm = rm[rm.pipeline.isin(family)]
+    rows = rm.reset_index(drop=True)
+    r = np.array([ranks_of(rows.loc[i, list(models)].to_numpy(float)) for i in range(len(rows))])
+    pip = rows.pipeline.to_numpy()
+    sd = rows.seed.to_numpy()
+    n = len(rows)
+    tmat = np.full((n, n), np.nan)
+    for i, j in itertools.combinations(range(n), 2):
+        tmat[i, j] = tmat[j, i] = tau(r[i], r[j])
+    iu = np.triu_indices(n, 1)
+
+    def d_stat(p: np.ndarray) -> tuple[float, float, float]:
+        same = (p[:, None] == p[None, :])[iu]
+        tv = tmat[iu]
+        w = tv[same].mean() if same.any() else np.nan
+        b = tv[~same].mean() if (~same).any() else np.nan
+        return w, b, w - b
+
+    w_obs, b_obs, d_obs = d_stat(pip)
+    per_pipe = []
+    for p in dict.fromkeys(pip):
+        m = pip == p
+        pairs = [tmat[i, j] for i, j in itertools.combinations(np.flatnonzero(m), 2)]
+        per_pipe.append({"pipeline": p, "n_seeds": int(m.sum()),
+                         "kendall_w": kendall_w(r[m]),
+                         "mean_pairwise_tau": float(np.mean(pairs)) if pairs else np.nan})
+
+    p_value, null = np.nan, np.array([])
+    if np.isfinite(d_obs):
+        rng = np.random.default_rng(seed)
+        null = np.empty(n_perm)
+        strata = [np.flatnonzero(sd == s) for s in np.unique(sd)]
+        for k in range(n_perm):
+            perm = pip.copy()
+            for idx in strata:
+                perm[idx] = pip[rng.permutation(idx)]
+            null[k] = d_stat(perm)[2]
+        p_value = float((1 + (null >= d_obs - 1e-12).sum()) / (1 + n_perm))
+
+    return {"ranks": pd.concat([rows[["pipeline", "seed"]],
+                                pd.DataFrame(r, columns=list(models))], axis=1),
+            "within": per_pipe, "tau_within": w_obs, "tau_between": b_obs,
+            "D": d_obs, "p_perm": p_value, "null": null, "n_runs": n}
+
+
+def rank_distribution(run_means: pd.DataFrame, models) -> dict:
+    """Distribution of each fusion operator's rank over all (pipeline, seed) runs.
+
+    Ranks are integers 1..k here (1 = best; ties, which need two identical means, share
+    the better rank), so they can be counted. Returns the per-run ranks, the counts per
+    operator and rank over all runs, per pipeline (over its seeds) and per seed (over
+    the pipelines), and a summary: mean, median, best and worst rank and the share of
+    runs in which the operator ranks first.
+    """
+    rows = run_means.reset_index(drop=True)
+    r = np.array([sps.rankdata(-rows.loc[i, list(models)].to_numpy(float), method="min")
+                  for i in range(len(rows))], dtype=int)
+    ranks = pd.concat([rows[["pipeline", "seed"]], pd.DataFrame(r, columns=list(models))],
+                      axis=1)
+    longr = ranks.melt(id_vars=["pipeline", "seed"], var_name="model", value_name="rank")
+    k = len(models)
+    dist = []
+    for scope, key in (("all", None), ("pipeline", "pipeline"), ("seed", "seed")):
+        groups = [("", longr)] if key is None else list(longr.groupby(key, sort=False))
+        for g, sub in groups:
+            ct = pd.crosstab(sub.model, sub["rank"]).reindex(index=list(models),
+                                                             columns=range(1, k + 1),
+                                                             fill_value=0)
+            for m in models:
+                for rk in range(1, k + 1):
+                    dist.append({"scope": scope, "group": g, "model": m, "rank": rk,
+                                 "count": int(ct.at[m, rk])})
+    g = longr.groupby("model", sort=False)["rank"]
+    summary = pd.DataFrame({
+        "n_runs": g.size(), "mean_rank": g.mean(), "median_rank": g.median(),
+        "best_rank": g.min(), "worst_rank": g.max(),
+        "share_first": g.apply(lambda v: float((v == 1).mean())),
+        "share_last": g.apply(lambda v: float((v == k).mean())),
+    }).reindex(list(models)).reset_index()
+    return {"ranks": ranks, "distribution": pd.DataFrame(dist), "summary": summary}
+
+
+def rank_count_table(rd: dict, models) -> pd.DataFrame:
+    """Operator x rank counts over all runs, as a wide table for the report."""
+    d = rd["distribution"]
+    w = d[d.scope == "all"].pivot(index="model", columns="rank", values="count")
+    w = w.reindex(list(models))
+    w.columns = [f"rank {c}" for c in w.columns]
+    return w.reset_index()
+
+
+def pipeline_tau_matrix(run_means: pd.DataFrame, models) -> pd.DataFrame:
+    """Kendall tau between the seed-averaged fusion rankings of every pair of pipelines."""
+    avg = run_means.groupby("pipeline", sort=False)[list(models)].mean()
+    pipes = list(avg.index)
+    rk = {p: ranks_of(avg.loc[p].to_numpy(float)) for p in pipes}
+    return pd.DataFrame([[tau(rk[a], rk[b]) for b in pipes] for a in pipes],
+                        index=pd.Index(pipes, name="pipeline"), columns=pipes)
+
+
+# --- Equivalence -----------------------------------------------------------------------------------
+
+def equivalence(y: np.ndarray, pipes, models, margin: float) -> pd.DataFrame:
+    """Corrected test and equivalence bound for every fusion pair in every pipeline.
+
+    y: (fold, pipeline, model) with seeds averaged. Test/train ratio 1/(k-1) for LOSO
+    with k folds (src/chbmit_stats.py: ratios). Holm across the pairs of one pipeline.
+    """
+    nf = y.shape[0]
+    ratio, _ = ratios(nf)
+    rows = []
+    for pi, p in enumerate(pipes):
+        block = []
+        for (ia, a), (ib, b) in itertools.combinations(enumerate(models), 2):
+            xa, xb = y[:, pi, ia], y[:, pi, ib]
+            _, pv = corrected_ttest(xa, xb, ratio)
+            dmin = corrected_equivalence_bound(xa, xb, ratio)
+            block.append({"pipeline": p, "pair": f"{a}-{b}", "model_a": a, "model_b": b,
+                          "mean_diff": float((xa - xb).mean()), "p_corrected": pv,
+                          "delta_min": dmin, "equivalent": dmin <= margin})
+        ph = holm(np.array([r["p_corrected"] for r in block]))
+        for r, h in zip(block, ph):
+            r["p_holm"] = float(h)
+            r["significant"] = bool(h < 0.05)
+        rows += block
+    return pd.DataFrame(rows)
+
+
+def robust_equivalence(eq: pd.DataFrame) -> pd.DataFrame:
+    g = eq.groupby("pair", sort=False)
+    return pd.DataFrame({
+        "n_pipelines": g.size(),
+        "equivalent_in": g.equivalent.sum(),
+        "robust_equivalent": g.equivalent.all(),
+        "never_significant": ~g.significant.any(),
+        "max_delta_min": g.delta_min.max(),
+    }).reset_index()
+
+
+# --- Prediction stability ------------------------------------------------------------------------
+
+def _aligned_classes(preds: dict, runs: list[tuple[str, int]], model: str
+                     ) -> tuple[np.ndarray, list[int]] | None:
+    """Predicted classes (run, window) on the windows common to all runs, folds pooled."""
+    folds = set.intersection(*[set(preds[k]) for k in runs])
+    cols = []
+    for fold in sorted(folds):
+        ds = [preds[k][fold] for k in runs]
+        if any(model not in d for d in ds):
+            return None
+        common = ds[0]["idx_te"]
+        for d in ds[1:]:
+            common = np.intersect1d(common, d["idx_te"])
+        block = []
+        for d in ds:
+            pos = {v: i for i, v in enumerate(d["idx_te"])}
+            sel = np.array([pos[v] for v in common])
+            block.append((d[model][sel, 1] > 0.5).astype(np.int8))
+        cols.append(np.vstack(block))
+    if not cols:
+        return None
+    return np.hstack(cols), sorted(folds)
+
+
+def prediction_stability(preds: dict, pipes, seeds, models) -> tuple[pd.DataFrame, dict]:
+    """Agreement of window-level predicted classes between pipelines and between seeds.
+
+    Between pipelines: pairs of runs with the same seed and different pipelines.
+    Between seeds: pairs with the same pipeline and different seeds (the noise
+    reference). Pairwise agreement and Cohen's kappa are on the same scale for both;
+    the share of windows on which ALL runs agree is reported too, but depends on the
+    number of runs compared.
+    """
+    from sklearn.metrics import cohen_kappa_score
+
+    rows, kappa_mats = [], {}
+    for m in models:
+        for kind in ("pipelines", "seeds"):
+            groups = ([[(p, s) for p in pipes] for s in seeds] if kind == "pipelines"
+                      else [[(p, s) for s in seeds] for p in pipes])
+            for grp in groups:
+                grp = [k for k in grp if k in preds]
+                if len(grp) < 2:
+                    continue
+                al = _aligned_classes(preds, grp, m)
+                if al is None:
+                    continue
+                cls, _ = al
+                same_all = float((cls == cls[0]).all(axis=0).mean())
+                for (i, a), (j, b) in itertools.combinations(enumerate(grp), 2):
+                    with np.errstate(all="ignore"):
+                        k = cohen_kappa_score(cls[i], cls[j])
+                    rows.append({"model": m, "between": kind, "run_a": f"{a[0]}/s{a[1]}",
+                                 "run_b": f"{b[0]}/s{b[1]}", "n_windows": cls.shape[1],
+                                 "agreement": float((cls[i] == cls[j]).mean()),
+                                 "kappa": float(k), "all_agree_in_group": same_all})
+                if kind == "pipelines":
+                    km = np.eye(len(grp))
+                    for (i, _), (j, _) in itertools.combinations(enumerate(grp), 2):
+                        with np.errstate(all="ignore"):
+                            km[i, j] = km[j, i] = cohen_kappa_score(cls[i], cls[j])
+                    kappa_mats.setdefault(m, []).append(
+                        pd.DataFrame(km, index=[g[0] for g in grp], columns=[g[0] for g in grp]))
+    return pd.DataFrame(rows), kappa_mats
+
+
+# --- P4 rejection and P6 artefact removal logs ------------------------------------------------------
+
+P6_LABELS = {"P6a": "Infomax (P6a)", "P6b": "GEDAI auto- (P6b, used)",
+             "P6b-default": "GEDAI default (not used)", "P6c": "AMICA (P6c)"}
+P6_CSV = RESULTS_ROOT / "qc" / "p6_recording_logs.csv"
+RECORD_PREFIX = {"chbmit": "chb", "siena": "PN"}
+
+
+def default_corpus_fn(dataset: str):
+    """The unfiltered P0 corpus of a dataset (from its cache or the raw EDF files)."""
+    def fn():
+        from .datasets import corpus_builder
+        return corpus_builder(dataset)(verbose=False)
+    return fn
+
+
+def p4_rejection(runs: list[Run], corpus_fn=None) -> dict:
+    """What P4's technical artefact rule rejects.
+
+    From each P4 run's meta.json (field "rejection") the totals; and, if the P0 corpus
+    can be loaded (corpus_fn), the rejected windows per person, recomputed with the
+    same rule (src/preprocess.py: artifact_mask on the unfiltered signal). Rejection is
+    decided on the signal, not by the model, so it is the same in every P4 seed; the
+    per-person totals are checked against the meta.json totals.
+    """
+    out = {"meta": None, "per_person": None, "notes": []}
+    rows = []
+    for r in runs:
+        if r.pipeline != "P4":
+            continue
+        mf = r.path / "meta.json"
+        rej = json.loads(mf.read_text(encoding="utf-8")).get("rejection") if mf.exists() else None
+        if not rej:
+            out["notes"].append(f"{r.name}: no rejection field in meta.json")
+            continue
+        rows.append({"run": r.name, "seed": r.seed,
+                     **{k: rej[k] for k in ("ictal_rejected", "ictal_total",
+                                            "nonictal_rejected", "nonictal_total")}})
+    if rows:
+        m = pd.DataFrame(rows)
+        m["ictal_share"] = m.ictal_rejected / m.ictal_total
+        m["nonictal_share"] = m.nonictal_rejected / m.nonictal_total
+        out["meta"] = m
+    else:
+        out["notes"].append("no P4 run with a rejection record yet")
+    if corpus_fn is None:
+        out["notes"].append("per-person rejection not computed (no corpus given)")
+        return out
+    try:
+        from .preprocess import artifact_mask
+        d = corpus_fn()
+        mask = artifact_mask(d["X"])
+    except Exception as e:                                   # no cache and no EDF files
+        out["notes"].append(f"per-person rejection skipped: the P0 corpus could not be "
+                            f"loaded ({type(e).__name__}: {e})")
+        return out
+    y, grp = np.asarray(d["y"]), np.asarray(d["group"])
+    pp = []
+    for g in dict.fromkeys(grp):
+        s = grp == g
+        pp.append({"person": g, "windows": int(s.sum()),
+                   "ictal_total": int((s & (y == 1)).sum()),
+                   "ictal_rejected": int((s & (y == 1) & mask).sum()),
+                   "nonictal_total": int((s & (y == 0)).sum()),
+                   "nonictal_rejected": int((s & (y == 0) & mask).sum())})
+    pp = pd.DataFrame(pp)
+    pp["rejected_share"] = (pp.ictal_rejected + pp.nonictal_rejected) / pp.windows
+    out["per_person"] = pp
+    if out["meta"] is not None:
+        tot = (int(pp.ictal_rejected.sum()), int(pp.nonictal_rejected.sum()))
+        for _, row in out["meta"].iterrows():
+            if (row.ictal_rejected, row.nonictal_rejected) != tot:
+                out["notes"].append(f"{row.run}: meta.json totals {row.ictal_rejected}/"
+                                    f"{row.nonictal_rejected} differ from the recomputed "
+                                    f"{tot[0]}/{tot[1]}")
+    return out
+
+
+def p4_lines(p4: dict) -> list[str]:
+    lines = []
+    if p4["meta"] is not None:
+        m = p4["meta"].iloc[0]
+        same = p4["meta"][["ictal_rejected", "nonictal_rejected"]].nunique().max() == 1
+        lines += [f"Rejected by the rule (from meta.json of {len(p4['meta'])} P4 run(s)"
+                  + (", identical in all" if same else ", NOT identical across runs") + "): "
+                  f"{m.ictal_rejected} of {m.ictal_total} ictal windows "
+                  f"({100 * m.ictal_share:.1f} %) and {m.nonictal_rejected} of "
+                  f"{m.nonictal_total} non-ictal windows ({100 * m.nonictal_share:.1f} %). "
+                  "Rejected windows leave training and validation only; the test windows "
+                  "are those of every other pipeline.", ""]
+    pp = p4["per_person"]
+    if pp is not None:
+        hit = pp[(pp.ictal_rejected + pp.nonictal_rejected) > 0]
+        lines += [f"Per person ({len(pp)} persons; {len(hit)} with at least one rejected "
+                  f"window; median share {100 * pp.rejected_share.median():.2f} %, maximum "
+                  f"{100 * pp.rejected_share.max():.1f} % ({pp.loc[pp.rejected_share.idxmax(), 'person']})):",
+                  "", md_table(pp.assign(rejected_pct=100 * pp.rejected_share)
+                               .drop(columns="rejected_share"), digits=2), ""]
+    lines += [f"- {n}" for n in p4["notes"]] + ([""] if p4["notes"] else [])
+    return lines
+
+
+def load_p6_logs(dataset: str, log_root: Path | None, csv_path: Path | None
+                 ) -> tuple[pd.DataFrame | None, str]:
+    """Per-recording logs of the P6 artefact removal: pipeline, method, record, person,
+    power_kept, seconds, n_removed (NaN for GEDAI, which removes no components).
+
+    Read from data/ica_logs/<signal tag>/*.json (written when the caches are built) if
+    present for this dataset, otherwise from the collected copy in the repository
+    (results_v2/qc/p6_recording_logs.csv, CHB-MIT). Returns (None, reason) if neither.
+    """
+    from .preprocess import GEDAI_TAG, PIPELINES
+    prefix = RECORD_PREFIX.get(dataset, "")
+    tags = {PIPELINES[p].signal_tag: (p, PIPELINES[p].ica) for p in P6_FAMILY}
+    base = PIPELINES["P6b"].signal_tag.rsplit("_", 1)[0]
+    tags.setdefault(f"{base}_{GEDAI_TAG['auto']}", ("P6b-default", "gedai"))
+    rows = []
+    if log_root is not None and log_root.exists():
+        for tag, (p, method) in tags.items():
+            for f in sorted((log_root / tag).glob(f"{prefix}*.json")):
+                g = json.loads(f.read_text(encoding="utf-8"))
+                rec = f.stem
+                rows.append({"pipeline": p, "method": method, "record": rec,
+                             "person": re.split(r"[_-]", rec)[0],
+                             "power_kept": g.get("power_kept"), "seconds": g.get("seconds"),
+                             "n_removed": g.get("n_removed", np.nan)})
+        if rows:
+            shown = (log_root.relative_to(RESULTS_ROOT.parent).as_posix()
+                     if log_root.is_relative_to(RESULTS_ROOT.parent) else log_root.name)
+            return pd.DataFrame(rows), f"{shown} ({len(rows)} logs)"
+    if csv_path is not None and csv_path.exists():
+        df = pd.read_csv(csv_path)
+        df = df[df.record.astype(str).str.startswith(prefix)]
+        if len(df):
+            df = df.rename(columns={"subject": "person"})
+            src = (str(csv_path.relative_to(RESULTS_ROOT.parent))
+                   if csv_path.is_relative_to(RESULTS_ROOT.parent) else str(csv_path))
+            cols = ["pipeline", "method", "record", "person", "power_kept", "seconds",
+                    "n_removed"]
+            return df[cols], f"{src} ({len(df)} logs; data/ica_logs not found)"
+    where = " or ".join(str(x) for x in (log_root, csv_path) if x is not None)
+    return None, f"no P6 logs for {dataset} found ({where}); P6 section skipped"
+
+
+def p6_tables(logs: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Signal retention and cost per P6 variant."""
+    order = [p for p in P6_LABELS if p in set(logs.pipeline)]
+    ret, cost = [], []
+    for p in order:
+        g = logs[logs.pipeline == p]
+        k, s, n = g.power_kept.to_numpy(float), g.seconds.to_numpy(float), g.n_removed
+        ret.append({"pipeline": p, "method": P6_LABELS[p], "recordings": len(g),
+                    "power_kept_median": np.median(k), "q25": np.quantile(k, 0.25),
+                    "q75": np.quantile(k, 0.75), "min": k.min(),
+                    "share_below_0.5": float((k < 0.5).mean()),
+                    "share_below_0.9": float((k < 0.9).mean()),
+                    "components_removed_mean": float(n.mean()) if n.notna().any() else np.nan,
+                    "share_none_removed": float((n == 0).mean()) if n.notna().any() else np.nan})
+        cost.append({"pipeline": p, "method": P6_LABELS[p], "recordings": len(g),
+                     "median_s_per_recording": float(np.median(s)),
+                     "mean_s_per_recording": float(s.mean()),
+                     "total_compute_h": float(s.sum() / 3600),
+                     "components_removed_median": float(n.median()) if n.notna().any() else np.nan,
+                     "components_removed_mean": float(n.mean()) if n.notna().any() else np.nan})
+    return pd.DataFrame(ret), pd.DataFrame(cost)
+
+
+def p6_lines(ret: pd.DataFrame, cost: pd.DataFrame, source: str) -> list[str]:
+    lines = [f"Source: {source}. Power kept = signal power after cleaning / before, per "
+             "recording.", "", md_table(ret, digits=3), "",
+             "Computational cost (for the supplementary material; `p6_cost.csv`). Seconds "
+             "are the logged processing time of each recording, summed for the total:", "",
+             md_table(cost, digits=2), ""]
+    return lines
+
+
+# --- Figures --------------------------------------------------------------------------------------
+
+def _plt():
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    return plt
+
+
+COLORS = {"early": "#8172b2", "late": "#4c72b0", "gated": "#55a868",
+          "attention": "#c44e52", "score": "#dd8452"}
+
+
+def fig_interaction(y: np.ndarray, pipes, models, out: Path, title: str) -> None:
+    plt = _plt()
+    fig, ax = plt.subplots(figsize=(1.1 * len(pipes) + 3, 4.5))
+    x = np.arange(len(pipes))
+    for mi, m in enumerate(models):
+        v = y[:, :, mi]                                      # (fold, pipeline)
+        mean = v.mean(axis=0)
+        se = v.std(axis=0, ddof=1) / np.sqrt(v.shape[0])
+        ax.errorbar(x + (mi - 2) * 0.06, mean, yerr=se, marker="o", ms=4, capsize=2,
+                    lw=1.5, label=m, color=COLORS.get(m))
+    ax.set_xticks(x)
+    ax.set_xticklabels(pipes)
+    ax.set_xlabel("preprocessing pipeline")
+    ax.set_ylabel("macro F1 (seed mean; bars: SE over folds)")
+    ax.set_title(title, fontsize=10)
+    ax.legend(fontsize=8, ncol=5, loc="lower center", bbox_to_anchor=(0.5, 1.08))
+    ax.grid(alpha=0.3)
+    fig.savefig(out, dpi=130, bbox_inches="tight")
+    plt.close(fig)
+
+
+def fig_tau_heatmap(tm: pd.DataFrame, out: Path, title: str) -> None:
+    plt = _plt()
+    k = len(tm)
+    fig, ax = plt.subplots(figsize=(0.6 * k + 2.5, 0.55 * k + 1.8))
+    im = ax.imshow(tm.to_numpy(), cmap="RdBu", vmin=-1, vmax=1)
+    ax.set_xticks(range(k))
+    ax.set_xticklabels(tm.columns)
+    ax.set_yticks(range(k))
+    ax.set_yticklabels(tm.index)
+    for i in range(k):
+        for j in range(k):
+            ax.text(j, i, f"{tm.iat[i, j]:.2f}", ha="center", va="center", fontsize=7,
+                    color="white" if abs(tm.iat[i, j]) > 0.6 else "black")
+    fig.colorbar(im, ax=ax, fraction=0.046, label="Kendall tau")
+    ax.set_title(title, fontsize=10)
+    fig.savefig(out, dpi=130, bbox_inches="tight")
+    plt.close(fig)
+
+
+def fig_rank_null(rs: dict, out: Path, title: str) -> None:
+    plt = _plt()
+    fig, ax = plt.subplots(figsize=(6.5, 3.6))
+    ax.hist(rs["null"], bins=40, color="0.7", label="permutation null of D")
+    ax.axvline(rs["D"], color="#c44e52", lw=2,
+               label=f"observed D = {rs['D']:.3f} (p = {rs['p_perm']:.4f})")
+    ax.set_xlabel("D = mean within-pipeline tau - mean between-pipeline tau")
+    ax.set_ylabel("permutations")
+    ax.set_title(title + f"\nwithin tau {rs['tau_within']:.3f}, between tau "
+                 f"{rs['tau_between']:.3f}", fontsize=10)
+    ax.legend(fontsize=8)
+    fig.savefig(out, dpi=130, bbox_inches="tight")
+    plt.close(fig)
+
+
+def fig_variance(groups: pd.DataFrame, out: Path, title: str) -> None:
+    plt = _plt()
+    fig, ax = plt.subplots(figsize=(7.5, 3.6))
+    ax.barh(groups.group[::-1], 100 * groups.share[::-1], color="#4c72b0")
+    for i, v in enumerate(100 * groups.share[::-1]):
+        ax.text(v + 0.5, i, f"{v:.1f}%", va="center", fontsize=8)
+    ax.set_xlabel("share of variance (%)")
+    ax.set_title(title, fontsize=10)
+    ax.set_xlim(0, max(100 * groups.share.max() * 1.18, 5))
+    fig.savefig(out, dpi=130, bbox_inches="tight")
+    plt.close(fig)
+
+
+def fig_robustness(rp: pd.DataFrame, out: Path, title: str) -> None:
+    plt = _plt()
+    fig, ax = plt.subplots(figsize=(5.5, 4.2))
+    for _, r in rp.iterrows():
+        ax.scatter(r.mean_f1, r.sd_across_pipelines, s=60, color=COLORS.get(r.model, "0.4"))
+        ax.annotate(r.model, (r.mean_f1, r.sd_across_pipelines), xytext=(5, 4),
+                    textcoords="offset points", fontsize=9)
+    ax.set_xlabel("mean macro F1 over pipelines and seeds")
+    ax.set_ylabel("SD of pipeline means (preprocessing sensitivity)")
+    ax.set_title(title, fontsize=10)
+    ax.grid(alpha=0.3)
+    ax.margins(0.25)
+    fig.savefig(out, dpi=130, bbox_inches="tight")
+    plt.close(fig)
+
+
+def fig_prediction(ps: pd.DataFrame, out: Path, title: str) -> None:
+    plt = _plt()
+    g = ps.groupby(["model", "between"]).kappa.mean().unstack()
+    g = g.reindex([m for m in FUSION if m in g.index] +
+                  [m for m in g.index if m not in FUSION])
+    fig, ax = plt.subplots(figsize=(1.0 * len(g) + 2.5, 3.8))
+    x = np.arange(len(g))
+    for k, (col, c) in enumerate((("seeds", "0.6"), ("pipelines", "#c44e52"))):
+        if col in g:
+            ax.bar(x + (k - 0.5) * 0.38, g[col], width=0.38, color=c,
+                   label=f"between {col}" + (" (noise reference)" if col == "seeds" else ""))
+    ax.set_xticks(x)
+    ax.set_xticklabels(g.index, rotation=30, ha="right")
+    ax.set_ylabel("mean pairwise Cohen's kappa")
+    ax.set_title(title, fontsize=10)
+    ax.legend(fontsize=8)
+    ax.set_ylim(0, 1)
+    fig.savefig(out, dpi=130, bbox_inches="tight")
+    plt.close(fig)
+
+
+def fig_rank_distribution(rd: dict, models, out: Path, title: str) -> None:
+    """Left: stacked counts of each operator's ranks over all runs. Right: the rank map,
+    every run's rank of every operator on the pipeline x seed grid."""
+    plt = _plt()
+    from matplotlib.colors import BoundaryNorm, ListedColormap
+    k = len(models)
+    cols = plt.get_cmap("RdYlGn_r")(np.linspace(0.05, 0.95, k))
+    ranks = rd["ranks"]
+    pipes = list(dict.fromkeys(ranks.pipeline))
+    seeds = sorted(ranks.seed.unique())
+    ct = rank_count_table(rd, models).set_index("model")
+    fig, (a1, a2) = plt.subplots(1, 2, figsize=(4.2 + 0.55 * k * len(seeds) + 4.5,
+                                                max(3.6, 0.42 * len(pipes) + 1.8)),
+                                 gridspec_kw={"width_ratios": [1.0, 0.25 * k * len(seeds) + 0.4]})
+    left = np.zeros(k)
+    for j in range(k):
+        v = ct.iloc[:, j].to_numpy(float)
+        a1.barh(range(k), v, left=left, color=cols[j], edgecolor="white", label=f"rank {j + 1}")
+        for i in range(k):
+            if v[i] > 0:
+                a1.text(left[i] + v[i] / 2, i, f"{int(v[i])}", ha="center", va="center",
+                        fontsize=7)
+        left += v
+    a1.set_yticks(range(k))
+    a1.set_yticklabels(models)
+    a1.invert_yaxis()
+    full = len(ranks) == len(pipes) * len(seeds)
+    a1.set_xlabel(f"runs ({len(ranks)} = {len(pipes)} pipelines x {len(seeds)} seeds)" if full
+                  else f"runs ({len(ranks)}; {len(pipes)} pipelines, up to {len(seeds)} seeds)")
+    a1.set_title("rank counts (1 = best)", fontsize=9)
+    a1.legend(fontsize=7, ncol=k, loc="lower center", bbox_to_anchor=(0.5, 1.07),
+              handlelength=1)
+    grid = np.full((len(pipes), k * len(seeds)), np.nan)
+    for _, r in ranks.iterrows():
+        pi, si = pipes.index(r.pipeline), seeds.index(r.seed)
+        for mi, m in enumerate(models):
+            grid[pi, mi * len(seeds) + si] = r[m]
+    cmap = ListedColormap(cols)
+    a2.imshow(grid, cmap=cmap, norm=BoundaryNorm(np.arange(0.5, k + 1), k), aspect="auto")
+    for i in range(grid.shape[0]):
+        for j in range(grid.shape[1]):
+            a2.text(j, i, f"{int(grid[i, j])}" if np.isfinite(grid[i, j]) else "-",
+                    ha="center", va="center", fontsize=7)
+    for mi in range(1, k):
+        a2.axvline(mi * len(seeds) - 0.5, color="black", lw=1.2)
+    a2.set_xticks(range(grid.shape[1]))
+    a2.set_xticklabels([f"s{s}" for _ in models for s in seeds], fontsize=7)
+    a2.tick_params(axis="x", length=0)
+    for mi, m in enumerate(models):
+        a2.text(mi * len(seeds) + (len(seeds) - 1) / 2, -0.7, m, ha="center", va="bottom",
+                fontsize=9, fontweight="bold")
+    a2.set_yticks(range(len(pipes)))
+    a2.set_yticklabels(pipes)
+    a2.set_xlabel("seed")
+    a2.set_title("rank map: rank of each operator in each run (pipeline x seed)",
+                 fontsize=9, pad=22)
+    fig.suptitle(title, fontsize=10, y=1.06)
+    fig.savefig(out, dpi=130, bbox_inches="tight")
+    plt.close(fig)
+
+
+def fig_p4(p4: dict, out: Path, title: str) -> bool:
+    pp = p4["per_person"]
+    if pp is None and p4["meta"] is None:
+        return False
+    plt = _plt()
+    if pp is not None:
+        fig, ax = plt.subplots(figsize=(0.32 * len(pp) + 2.5, 3.4))
+        x = np.arange(len(pp))
+        ic = 100 * pp.ictal_rejected / pp.ictal_total.where(pp.ictal_total > 0)
+        ni = 100 * pp.nonictal_rejected / pp.nonictal_total.where(pp.nonictal_total > 0)
+        ax.bar(x - 0.2, ic, width=0.4, color="#c44e52", label="ictal windows")
+        ax.bar(x + 0.2, ni, width=0.4, color="#4c72b0", label="non-ictal windows")
+        ax.set_xticks(x)
+        ax.set_xticklabels(pp.person, rotation=60, ha="right", fontsize=7)
+        ax.set_ylabel("rejected (%)")
+    else:
+        m = p4["meta"].iloc[0]
+        fig, ax = plt.subplots(figsize=(4, 3.2))
+        ax.bar([0, 1], [100 * m.ictal_share, 100 * m.nonictal_share],
+               color=["#c44e52", "#4c72b0"])
+        ax.set_xticks([0, 1])
+        ax.set_xticklabels(["ictal", "non-ictal"])
+        ax.set_ylabel("rejected (%), all persons")
+    ax.set_title(title, fontsize=10)
+    if pp is not None:
+        ax.legend(fontsize=8)
+    ax.grid(alpha=0.3, axis="y")
+    fig.savefig(out, dpi=130, bbox_inches="tight")
+    plt.close(fig)
+    return True
+
+
+def fig_p6(logs: pd.DataFrame, out: Path, title: str) -> None:
+    plt = _plt()
+    order = [p for p in P6_LABELS if p in set(logs.pipeline)]
+    fig, (a1, a2) = plt.subplots(1, 2, figsize=(10, 3.8))
+    data = [logs.loc[logs.pipeline == p, "power_kept"].to_numpy(float) for p in order]
+    parts = a1.violinplot(data, showmedians=True, widths=0.8)
+    for b in parts["bodies"]:
+        b.set_alpha(0.4)
+    rng = np.random.default_rng(0)
+    for i, d in enumerate(data):
+        a1.scatter(i + 1 + rng.uniform(-0.12, 0.12, len(d)), d, s=3, color="0.3", alpha=0.4)
+    a1.axhline(0.5, color="#c44e52", lw=0.8, ls="--")
+    a1.set_xticks(range(1, len(order) + 1))
+    a1.set_xticklabels([P6_LABELS[p] for p in order], rotation=20, ha="right", fontsize=8)
+    a1.set_ylabel("power kept per recording")
+    a1.set_ylim(0, 1.05)
+    a1.set_title("signal retention", fontsize=9)
+    secs = [logs.loc[logs.pipeline == p, "seconds"].to_numpy(float) for p in order]
+    a2.boxplot(secs, showfliers=False)
+    a2.set_yscale("log")
+    from matplotlib.ticker import NullFormatter, ScalarFormatter
+    a2.yaxis.set_major_formatter(ScalarFormatter())
+    a2.yaxis.set_minor_formatter(NullFormatter())
+    a2.set_xticks(range(1, len(order) + 1))
+    a2.set_xticklabels([P6_LABELS[p] for p in order], rotation=20, ha="right", fontsize=8)
+    a2.set_ylabel("seconds per recording (log)")
+    a2.set_title("computational cost", fontsize=9)
+    fig.suptitle(title, fontsize=10)
+    fig.savefig(out, dpi=130, bbox_inches="tight")
+    plt.close(fig)
+
+
+def fig_equivalence(eq: pd.DataFrame, margin: float, out: Path, title: str) -> None:
+    plt = _plt()
+    piv = eq.pivot(index="pair", columns="pipeline", values="delta_min")
+    piv = piv[[p for p in eq.pipeline.unique()]].reindex(eq.pair.unique())
+    fig, ax = plt.subplots(figsize=(0.75 * piv.shape[1] + 3, 0.4 * piv.shape[0] + 1.6))
+    im = ax.imshow(piv.to_numpy(), cmap="viridis_r", vmin=0,
+                   vmax=max(2 * margin, float(np.nanmax(piv.to_numpy()))))
+    for i in range(piv.shape[0]):
+        for j in range(piv.shape[1]):
+            v = piv.iat[i, j]
+            ax.text(j, i, f"{v:.3f}" + ("*" if v <= margin else ""), ha="center",
+                    va="center", fontsize=7, color="white" if v > 1.2 * margin else "black")
+    ax.set_xticks(range(piv.shape[1]))
+    ax.set_xticklabels(piv.columns)
+    ax.set_yticks(range(piv.shape[0]))
+    ax.set_yticklabels(piv.index)
+    fig.colorbar(im, ax=ax, fraction=0.046, label="equivalence bound delta_min (F1)")
+    ax.set_title(title + f"\n* equivalent within {margin}", fontsize=10)
+    fig.savefig(out, dpi=130, bbox_inches="tight")
+    plt.close(fig)
+
+
+# --- Summary helpers -------------------------------------------------------------------------------
+
+def _p(p: float) -> str:
+    return "n/a" if not np.isfinite(p) else (f"{p:.3f}" if p >= 0.001 else f"{p:.1e}")
+
+
+def effect_sentences(aov: pd.DataFrame | None, gv: pd.DataFrame | None, rs: dict,
+                     n_pipes: int, n_seeds: int) -> dict[str, str]:
+    """One sentence with numbers for each of the three effects reported
+    separately: preprocessing, seed, and Fusion x Preprocessing."""
+    share = dict(zip(gv.group, gv.share)) if gv is not None else {}
+    row = ({e: r for e, r in zip(aov.effect, aov.itertuples())} if aov is not None else {})
+    out = {}
+    if n_pipes >= 2 and "pipeline" in row:
+        r = row["pipeline"]
+        out["preprocessing"] = (
+            f"Pipeline main effect on macro F1: F({r.df}, {r.df_error}) = {r.F:.2f}, "
+            f"p_GG = {_p(r.p_gg)}, {100 * share.get('pipeline', np.nan):.1f} % of the variance; "
+            f"the fusion ranking agrees between runs of different pipelines with mean "
+            f"Kendall tau {rs['tau_between']:.2f}, against {rs['tau_within']:.2f} between "
+            f"seeds of the same pipeline (D = {rs['D']:.2f}, permutation p = {_p(rs['p_perm'])}).")
+    else:
+        out["preprocessing"] = "Only one pipeline in the balanced block: not estimable yet."
+    if n_seeds >= 2:
+        ws = [w["kendall_w"] for w in rs["within"] if np.isfinite(w["kendall_w"])]
+        seed_share = share.get("seed (all seed terms)", np.nan)
+        out["seed"] = (
+            f"All seed terms together hold {100 * seed_share:.1f} % of the variance of macro "
+            f"F1; rankings from different seeds of the same pipeline agree with mean Kendall "
+            f"tau {rs['tau_within']:.2f} (Kendall's W over seeds, median over "
+            f"{len(ws)} pipelines: {np.median(ws):.2f}).")
+    else:
+        out["seed"] = "Only one seed per pipeline in the balanced block: not estimable yet."
+    if n_pipes >= 2 and "pipeline x model" in row:
+        r = row["pipeline x model"]
+        out["interaction"] = (
+            f"Fusion x Preprocessing: F({r.df}, {r.df_error}) = {r.F:.2f}, p_GG = "
+            f"{_p(r.p_gg)} (GG epsilon {r.gg_epsilon:.2f}), partial eta squared "
+            f"{r.partial_eta2:.3f}; the fusion x pipeline component holds "
+            f"{100 * share.get('fusion x pipeline', np.nan):.1f} % of the variance.")
+    else:
+        out["interaction"] = "Only one pipeline in the balanced block: not estimable yet."
+    return out
+
+
+def equivalence_side_by_side(reqs: dict[float, pd.DataFrame]) -> pd.DataFrame:
+    """Robust equivalence of every fusion pair at each margin, in one table."""
+    margins = list(reqs)
+    base = reqs[margins[0]][["pair", "n_pipelines"]].copy()
+    for m in margins:
+        r = reqs[m].set_index("pair")
+        base[f"equivalent in (+-{m:g})"] = base.pair.map(r.equivalent_in).astype(int)
+        base[f"robust (+-{m:g})"] = base.pair.map(r.robust_equivalent).map(
+            {True: "yes", False: "no"})
+    r0 = reqs[margins[0]].set_index("pair")
+    base["max delta_min"] = base.pair.map(r0.max_delta_min)
+    base["never significant"] = base.pair.map(r0.never_significant).map(
+        {True: "yes", False: "no"})
+    return base
+
+
+# --- Driver ---------------------------------------------------------------------------------------
+
+def analyze(root: Path, out: Path, label: str, pipelines=None, seeds=None,
+            margin: float = EQUIV_MARGIN, n_perm: int = N_PERM, verbose: bool = True,
+            device: str = "cpu", strict_margin: float | None = STRICT_MARGIN,
+            dataset: str = "chbmit", corpus_fn=None, log_root: Path | None = None,
+            p6_csv: Path | None = None) -> dict:
+    """Run every analysis on the runs under `root`; write CSV, PNG and summary.md to
+    `out`. Returns the key numbers (used by the synthetic validation).
+
+    corpus_fn loads the unfiltered P0 corpus for P4's per-person rejection; log_root
+    and p6_csv locate the P6 logs (load_p6_logs). Sections whose inputs are missing are
+    skipped with a note."""
+    def say(msg=""):
+        if verbose:
+            print(msg)
+
+    runs = discover_runs(root, pipelines, seeds, device)
+    if not runs:
+        raise SystemExit(f"no pipeline runs under {root}")
+    out.mkdir(parents=True, exist_ok=True)
+    long = load_long(runs)
+    models = [m for m in FUSION if m in set(long.model)]
+    res: dict = {"runs": [r.name for r in runs]}
+    lines = [f"# Multiverse analysis: {label}", "",
+             f"Runs found ({len(runs)}): " + ", ".join(f"{r.name} ({r.pipeline}, seed {r.seed})"
+                                                    for r in runs), ""]
+    say(f"{len(runs)} runs: " + ", ".join(r.name for r in runs))
+
+    # 1. performance
+    perf = (long.groupby(["pipeline", "seed", "model"], sort=False)[list(METRICS)]
+            .mean().reset_index())
+    perf["n_folds"] = long.groupby(["pipeline", "seed", "model"], sort=False).fold.nunique().values
+    perf.to_csv(out / "performance.csv", index=False)
+    by_pipe = (long.groupby(["pipeline", "model", "seed"], sort=False)[list(METRICS)].mean()
+               .groupby(["pipeline", "model"], sort=False).agg(["mean", "std"]))
+    by_pipe.columns = [f"{a}_{b}" for a, b in by_pipe.columns]
+    by_pipe.reset_index().to_csv(out / "performance_by_pipeline.csv", index=False)
+    lines += ["## 1. Performance", "",
+              "Means over folds per pipeline, seed and model: `performance.csv`; seed mean "
+              "and SD per pipeline and model: `performance_by_pipeline.csv`. AUPRC is "
+              "computed from the stored test probabilities (logvar and shallow store none).",
+              ""]
+    say("1. performance.csv, performance_by_pipeline.csv")
+
+    pipes, seeds_used, folds = balanced_subset(long, models)
+    res.update(pipelines=pipes, seeds=seeds_used, n_folds=len(folds))
+    lines += [f"Balanced block for the analyses below: pipelines {', '.join(pipes)}; "
+              f"seeds {', '.join(map(str, seeds_used))}; {len(folds)} folds; fusion models "
+              f"{', '.join(models)}.", ""]
+    say(f"balanced block: pipelines {pipes}, seeds {seeds_used}, {len(folds)} folds")
+    a4 = to_array(long, "f1_macro", models, pipes, seeds_used, folds)   # fold,pipe,model,seed
+    y3 = a4.mean(axis=3)
+    effects_at = len(lines)          # the three-effects section is inserted here at the end
+    aov = gv = None
+
+    # 2. rank stability
+    run_means = pd.DataFrame(
+        [{"pipeline": p, "seed": s, **{m: a4[:, pi, mi, si].mean() for mi, m in enumerate(models)}}
+         for pi, p in enumerate(pipes) for si, s in enumerate(seeds_used)])
+    rs = rank_stability(run_means, models, n_perm=n_perm)
+    rs["ranks"].to_csv(out / "rank_per_run.csv", index=False)
+    pd.DataFrame(rs["within"]).to_csv(out / "rank_within_pipeline.csv", index=False)
+    tm = pipeline_tau_matrix(run_means, models)
+    tm.to_csv(out / "rank_tau_between_pipelines.csv")
+    res.update(tau_within=rs["tau_within"], tau_between=rs["tau_between"], D=rs["D"],
+               p_perm=rs["p_perm"])
+    lines += ["## 2. Rank stability (main analysis)", "",
+              "Ranking of the fusion operators by mean macro F1 per run: `rank_per_run.csv`.",
+              "",
+              "| | value |", "|---|---|",
+              f"| mean Kendall tau, same pipeline, different seeds | {rs['tau_within']:.3f} |",
+              f"| mean Kendall tau, different pipelines | {rs['tau_between']:.3f} |",
+              f"| D = within - between | {rs['D']:.3f} |",
+              f"| permutation p (pipeline labels permuted within seeds, {n_perm} permutations) "
+              f"| {rs['p_perm']:.4f} |", ""]
+    if len(tm) > 1:
+        fig_tau_heatmap(tm, out / "rank_stability_heatmap.png",
+                        f"{label}: Kendall tau between seed-averaged fusion rankings")
+    if np.isfinite(rs["D"]):
+        fig_rank_null(rs, out / "rank_stability_permutation.png", f"{label}: rank stability")
+    for w in rs["within"]:
+        lines.append(f"- {w['pipeline']}: Kendall's W over {w['n_seeds']} seeds = "
+                     f"{w['kendall_w']:.3f}, mean pairwise tau = {w['mean_pairwise_tau']:.3f}")
+    lines.append("")
+    rd = rank_distribution(run_means, models)
+    rd["distribution"].to_csv(out / "rank_distribution.csv", index=False)
+    rd["summary"].to_csv(out / "rank_summary.csv", index=False)
+    fig_rank_distribution(rd, models, out / "rank_distribution.png",
+                          f"{label}: rank of each fusion operator over pipelines and seeds")
+    res["rank_summary"] = rd["summary"].set_index("model").to_dict("index")
+    res["rank_counts"] = int(rd["distribution"].query("scope == 'all'")["count"].sum())
+    res["mean_rank_by_pipeline"] = (rd["ranks"].groupby("pipeline", sort=False)[models].mean()
+                                    .to_dict("index"))
+    lines += ["### Rank distribution", "",
+              f"Rank of each operator in each of the {len(run_means)} runs (1 = best). Not only "
+              "the mean rank: the counts per rank over all runs, the median, the best and "
+              "worst rank, and the share of runs the operator wins. Counts per pipeline "
+              "(over seeds) and per seed (over pipelines) are in `rank_distribution.csv`; "
+              "`rank_distribution.png` shows the counts and the rank map of every run.", "",
+              md_table(rank_count_table(rd, models)), "",
+              md_table(rd["summary"], digits=2), ""]
+    fam = [p for p in P6_FAMILY if p in pipes]
+    if len(fam) >= 2:
+        rs6 = rank_stability(run_means, models, n_perm=n_perm, family=tuple(fam))
+        tm6 = tm.loc[fam, fam]
+        res.update(p6_D=rs6["D"], p6_p_perm=rs6["p_perm"])
+        lines += [f"ICA algorithm ({', '.join(fam)}): within tau {rs6['tau_within']:.3f}, "
+                  f"between tau {rs6['tau_between']:.3f}, D {rs6['D']:.3f}, permutation p "
+                  f"{rs6['p_perm']:.4f}; seed-averaged tau matrix:", "",
+                  md_table(tm6, index=True, digits=3), ""]
+    say(f"2. rank stability: within tau {rs['tau_within']:.3f}, between tau "
+        f"{rs['tau_between']:.3f}, D {rs['D']:.3f}, p {rs['p_perm']:.4f}")
+
+    # 3. interaction
+    fig_interaction(y3, pipes, models, out / "interaction.png",
+                    f"{label}: Fusion x Preprocessing")
+    lines += ["## 3. Fusion x Preprocessing", ""]
+    if len(pipes) >= 2:
+        aov = rm_anova(y3)
+        aov.to_csv(out / "anova.csv", index=False)
+        inter = aov[aov.effect == "pipeline x model"].iloc[0]
+        res.update(interaction_F=float(inter.F), interaction_p=float(inter.p_gg))
+        lines += ["Repeated-measures ANOVA on macro F1 (seed means; folds as subjects; each "
+                  "effect tested against its interaction with fold; Greenhouse-Geisser):", "",
+                  md_table(aov[["effect", "df", "df_error", "F", "p", "gg_epsilon", "p_gg",
+                                "partial_eta2"]]), ""]
+        say(f"3. interaction: F = {inter.F:.2f}, p_GG = {inter.p_gg:.4g}")
+    else:
+        lines += ["Only one pipeline: no ANOVA.", ""]
+
+    # 4. variance components
+    lines += ["## 4. Variance components", ""]
+    if len(pipes) >= 2:
+        names = ("fold", "pipeline", "model") + (("seed",) if len(seeds_used) > 1 else ())
+        lines += [
+            "Model: every fold (held-out person) x pipeline x fusion operator x seed cell holds "
+            "one value of the metric, y_fpms = mu + a_f + b_p + c_m + d_s + every two-, three- "
+            "and four-way interaction of these terms. All terms are treated as random effects "
+            "(generalizability theory) and estimated by the method of moments from the "
+            "expected mean squares of the fully crossed, balanced design. With one "
+            "observation per cell the four-way interaction is confounded with the residual. "
+            "A fixed factor's component (pipeline, operator) is then the variance of its "
+            "effects. Negative estimates are set to 0 for the shares and listed. `sd` is the "
+            "square root of the component, in the metric's own units, as a practical size; "
+            "`share` is its part of the summed components. Grouped: 'fold x (pipeline, "
+            "fusion)' sums the interactions of fold with pipeline, operator and both; "
+            "'seed (all seed terms)' sums every term containing seed.", ""]
+        for metric in VC_METRICS:
+            try:
+                am = (a4 if metric == "f1_macro"
+                      else to_array(long, metric, models, pipes, seeds_used, folds))
+            except RuntimeError:                  # e.g. runs without recall_macro
+                am = None
+            if am is None or not np.isfinite(am).all():
+                lines += [f"{metric}: missing values, no decomposition.", ""]
+                continue
+            yv = am if len(seeds_used) > 1 else am.mean(axis=3)
+            vc = variance_components(yv, names)
+            gvm = group_components(vc)
+            suffix = "" if metric == "f1_macro" else f"_{metric}"
+            vc.to_csv(out / f"variance_components{suffix}.csv", index=False)
+            gvm.to_csv(out / f"variance_components_grouped{suffix}.csv", index=False)
+            if metric == "f1_macro":
+                gv = gvm
+                fig_variance(gv, out / "variance_components.png", f"{label}: variance of macro F1")
+                res["variance"] = dict(zip(gv.group, gv.share))
+                res["variance_raw"] = dict(zip(vc.component, vc.sigma2_raw))
+            res.setdefault("variance_by_metric", {})[metric] = dict(zip(gvm.group, gvm.share))
+            lines += [f"### {metric}", "", "Grouped:", "",
+                      md_table(gvm.assign(share_pct=100 * gvm.share).drop(columns="share"),
+                               digits=6), "",
+                      "Every component, unrounded estimate first:", "",
+                      "| component | sigma2_raw | sigma2 | sd | share_pct |",
+                      "|---|---|---|---|---|"]
+            lines += [f"| {r.component} | {r.sigma2_raw:.6e} | {r.sigma2:.6e} | {r.sd:.6f} | "
+                      f"{100 * r.share:.6f} |" for r in vc.itertuples()]
+            lines += ["", "Negative raw estimates (set to 0): " +
+                      (", ".join(vc.component[vc.sigma2_raw < 0]) or "none"), ""]
+            say(f"4. variance ({metric}): " + ", ".join(
+                f"{g} {100 * s:.3f}%" for g, s in zip(gvm.group, gvm.share)))
+    else:
+        lines += ["Only one pipeline: no decomposition.", ""]
+
+    # 5. equivalence, at the main margin and at the strict one
+    eq = equivalence(y3, pipes, models, margin)
+    eq.to_csv(out / "equivalence.csv", index=False)
+    req = robust_equivalence(eq)
+    req.to_csv(out / "equivalence_robust.csv", index=False)
+    fig_equivalence(eq, margin, out / "equivalence.png",
+                    f"{label}: fusion pairs, equivalence bound per pipeline")
+    res["robust_equivalent"] = req.loc[req.robust_equivalent, "pair"].tolist()
+    lines += ["## 5. Equivalence and robust equivalence", "",
+              f"Equivalent = corrected equivalence bound delta_min <= {margin} macro F1 "
+              f"(test/train ratio 1/{len(folds) - 1}). Robust equivalence = equivalent in "
+              f"every pipeline.", "", md_table(req), ""]
+    say(f"5. robust equivalent pairs (margin {margin}): {res['robust_equivalent'] or 'none'}")
+    if strict_margin is not None and strict_margin != margin:
+        eqs = equivalence(y3, pipes, models, strict_margin)
+        eqs.to_csv(out / "equivalence_strict.csv", index=False)
+        reqs = robust_equivalence(eqs)
+        reqs.to_csv(out / "equivalence_robust_strict.csv", index=False)
+        res["robust_equivalent_strict"] = reqs.loc[reqs.robust_equivalent, "pair"].tolist()
+        lines += [f"Strict sensitivity analysis, margin {strict_margin}:", "", md_table(reqs), ""]
+        say(f"   strict (margin {strict_margin}): "
+            f"{res['robust_equivalent_strict'] or 'none'}")
+        side = equivalence_side_by_side({margin: req, strict_margin: reqs})
+        side.to_csv(out / "equivalence_two_margins.csv", index=False)
+        n = len(side)
+        lines += [f"Both margins side by side: robustly equivalent pairs "
+                  f"{int(req.robust_equivalent.sum())}/{n} at +-{margin:g} and "
+                  f"{int(reqs.robust_equivalent.sum())}/{n} at +-{strict_margin:g}.", "",
+                  md_table(side, digits=3), ""]
+
+    # 6. robustness-performance
+    pm = y3.mean(axis=0)                                     # (pipeline, model)
+    rp = pd.DataFrame({"model": models, "mean_f1": pm.mean(axis=0),
+                       "sd_across_pipelines": pm.std(axis=0, ddof=1) if len(pipes) > 1
+                       else np.nan})
+    rp["cv_across_pipelines"] = rp.sd_across_pipelines / rp.mean_f1
+    rp["robustness"] = 1 - rp.sd_across_pipelines
+    rp.to_csv(out / "robustness_performance.csv", index=False)
+    if len(pipes) > 1:
+        fig_robustness(rp, out / "robustness_performance.png",
+                       f"{label}: performance vs preprocessing sensitivity")
+    lines += ["## 6. Robustness and performance", "", md_table(rp), ""]
+    say("6. robustness_performance.csv")
+
+    # 7. prediction stability
+    preds = {}
+    for r in runs:
+        if r.pipeline in pipes and r.seed in seeds_used:
+            preds[(r.pipeline, r.seed)] = load_preds(r)
+    pmodels = models + [m for m in OTHER_MODELS if m not in ("logvar", "shallow")]
+    ps, kmats = prediction_stability(preds, pipes, seeds_used, pmodels)
+    lines += ["## 7. Prediction stability", ""]
+    if len(ps):
+        ps.to_csv(out / "prediction_stability_pairs.csv", index=False)
+        summ = (ps.groupby(["model", "between"]).agg(
+            agreement=("agreement", "mean"), kappa=("kappa", "mean"),
+            all_agree=("all_agree_in_group", "mean"), pairs=("kappa", "size"))
+            .reset_index())
+        summ.to_csv(out / "prediction_stability.csv", index=False)
+        fig_prediction(ps, out / "prediction_stability.png",
+                       f"{label}: window-level agreement of predicted classes")
+        for m, mats in kmats.items():
+            if m in models:
+                avg = sum(mats) / len(mats)
+                avg.to_csv(out / f"prediction_kappa_pipelines_{m}.csv")
+        fk = summ[summ.model.isin(models)].groupby("between").kappa.mean()
+        res.update(kappa_pipelines=float(fk.get("pipelines", np.nan)),
+                   kappa_seeds=float(fk.get("seeds", np.nan)))
+        lines += ["Pairwise agreement and Cohen's kappa of predicted classes (p > 0.5), "
+                  "between pipelines (same seed) and between seeds (same pipeline):", "",
+                  md_table(summ), ""]
+        say(f"7. prediction stability: kappa between pipelines "
+            f"{res['kappa_pipelines']:.3f}, between seeds {res['kappa_seeds']:.3f}")
+    else:
+        lines += ["Fewer than two runs with predictions: no comparison.", ""]
+
+    # 8. P4 rejection
+    p4 = p4_rejection([r for r in runs], corpus_fn)
+    lines += ["## 8. P4: technical artefact rejection", ""] + p4_lines(p4)
+    if p4["meta"] is not None:
+        p4["meta"].to_csv(out / "p4_rejection.csv", index=False)
+    if p4["per_person"] is not None:
+        p4["per_person"].to_csv(out / "p4_rejection_per_person.csv", index=False)
+        res["p4_per_person"] = p4["per_person"].set_index("person")[
+            ["ictal_rejected", "nonictal_rejected"]].to_dict("index")
+    if fig_p4(p4, out / "p4_rejection.png", f"{label}: windows rejected by P4"):
+        lines += ["Figure: `p4_rejection.png`.", ""]
+    say("8. P4 rejection" + ("" if p4["per_person"] is not None else ": " + "; ".join(p4["notes"])))
+
+    # 9. P6 signal retention and cost
+    logs, source = load_p6_logs(dataset, log_root, p6_csv)
+    lines += ["## 9. P6: signal retention and computational cost", ""]
+    if logs is not None:
+        ret, cost = p6_tables(logs)
+        ret.to_csv(out / "p6_signal_retention.csv", index=False)
+        cost.to_csv(out / "p6_cost.csv", index=False)
+        fig_p6(logs, out / "p6_signal_retention.png", f"{label}: P6 artefact removal")
+        res["p6_retention"] = ret.set_index("pipeline").to_dict("index")
+        lines += p6_lines(ret, cost, source) + ["Figure: `p6_signal_retention.png`.", ""]
+        say(f"9. P6 logs: {source}")
+    else:
+        lines += [f"Skipped: {source}.", ""]
+        say(f"9. P6: {source}")
+
+    # the three effects, separately, at the top of the report
+    eff = effect_sentences(aov, gv, rs, len(pipes), len(seeds_used))
+    res["effect_sentences"] = eff
+    lines[effects_at:effects_at] = [
+        "## Effects, separately", "",
+        "### Preprocessing effect (pipeline main effect, rank agreement between pipelines)",
+        "", eff["preprocessing"], "",
+        "### Seed effect (seed variance components, rank agreement between seeds)", "",
+        eff["seed"], "",
+        "### Fusion x Preprocessing interaction (RM-ANOVA, variance share)", "",
+        eff["interaction"], ""]
+
+    (out / "summary.md").write_text("\n".join(lines), encoding="utf-8")
+    (out / "summary.json").write_text(json.dumps(
+        {k: v for k, v in res.items() if not isinstance(v, np.ndarray)}, indent=2,
+        default=float), encoding="utf-8")
+    say(f"\nwritten: {out}")
+    return res
+
+
+def first_report(root: Path, out: Path, label: str, dataset: str = "chbmit",
+                 device: str = "cpu", corpus_fn=None, log_root: Path | None = None,
+                 p6_csv: Path | None = None, verbose: bool = True) -> dict:
+    """A first report of three items, from whatever runs exist:
+    P4's rejection distribution, P6's signal retention (with cost), and the first rank
+    stability table of the pipelines.
+
+    Runs arrive one by one, so no balanced block is required: a run is included when it
+    has every fold (the most folds any run has) for all five fusion operators; runs
+    still in progress are listed as excluded. Ranks use the folds common to the
+    included runs.
+    """
+    def say(msg=""):
+        if verbose:
+            print(msg)
+
+    out.mkdir(parents=True, exist_ok=True)
+    runs = discover_runs(root, device=device)
+    res: dict = {"included": [], "excluded": []}
+    lines = [f"# First results: {label}", "",
+             "Three items: P4's rejection distribution, P6's signal "
+             "retention, and the first rank stability table of the pipelines. Generated "
+             "from the runs available now; rerun as more arrive (`python -m src.multiverse "
+             f"--dataset {dataset} --first-report`).", ""]
+
+    # which runs are complete
+    long = load_long(runs) if runs else pd.DataFrame()
+    models = [m for m in FUSION if len(long) and m in set(long.model)]
+    folds_of = {}
+    for r in runs:
+        sub = long[(long.run == r.name) & long.model.isin(models)]
+        per_model = [set(sub.fold[sub.model == m]) for m in models]
+        folds_of[r.name] = set.intersection(*per_model) if per_model else set()
+    n_full = max((len(f) for f in folds_of.values()), default=0)
+    inc = [r for r in runs if n_full and len(folds_of[r.name]) == n_full]
+    exc = [r for r in runs if r not in inc]
+    res["included"] = [r.name for r in inc]
+    res["excluded"] = [r.name for r in exc]
+    pipes = sorted({r.pipeline for r in runs} | set(PIPELINE_ORDER), key=_pipeline_key)
+    seeds = sorted({r.seed for r in runs}) or [0]
+    grid = pd.DataFrame("-", index=pd.Index(pipes, name="pipeline"),
+                        columns=[f"seed {s}" for s in seeds])
+    for r in runs:
+        grid.at[r.pipeline, f"seed {r.seed}"] = ("yes" if r in inc else
+                                                 f"partial ({len(folds_of[r.name])}/{n_full})")
+    lines += ["## Runs included", "",
+              f"{len(inc)} complete run(s) ({n_full} folds each) are included; "
+              f"{len(exc)} incomplete run(s) are not"
+              + (f" ({', '.join(r.name for r in exc)})" if exc else "") + ". "
+              "`-` = not run yet.", "", md_table(grid, index=True), ""]
+    say(f"{len(inc)} complete runs, {len(exc)} incomplete")
+
+    # 1. P4
+    p4 = p4_rejection(inc, corpus_fn)
+    lines += ["## 1. P4: windows rejected as technical artefacts", ""] + p4_lines(p4)
+    if p4["per_person"] is not None:
+        p4["per_person"].to_csv(out / "p4_rejection_per_person.csv", index=False)
+        res["p4_per_person"] = p4["per_person"]
+    if p4["meta"] is not None:
+        p4["meta"].to_csv(out / "p4_rejection.csv", index=False)
+    if fig_p4(p4, out / "p4_rejection.png", f"{label}: windows rejected by P4"):
+        lines += ["![P4 rejection](p4_rejection.png)", ""]
+
+    # 2. P6
+    logs, source = load_p6_logs(dataset, log_root, p6_csv)
+    lines += ["## 2. P6: signal retention of Infomax, GEDAI and AMICA", ""]
+    if logs is not None:
+        ret, cost = p6_tables(logs)
+        ret.to_csv(out / "p6_signal_retention.csv", index=False)
+        cost.to_csv(out / "p6_cost.csv", index=False)
+        fig_p6(logs, out / "p6_signal_retention.png", f"{label}: P6 artefact removal")
+        res["p6_retention"] = ret
+        lines += p6_lines(ret, cost, source) + ["![P6 signal retention](p6_signal_retention.png)", ""]
+    else:
+        lines += [f"Skipped: {source}.", ""]
+    say(f"P6: {source}")
+
+    # 3. rank stability table
+    lines += ["## 3. Rank stability of the fusion operators (first table)", ""]
+    if inc:
+        common = set.intersection(*[folds_of[r.name] for r in inc])
+        sub = long[long.run.isin(res["included"]) & long.model.isin(models)
+                   & long.fold.isin(common)]
+        run_means = (sub.groupby(["pipeline", "seed", "model"]).f1_macro.mean()
+                     .unstack("model")[models].reset_index())
+        order = sorted(range(len(run_means)), key=lambda i: (
+            _pipeline_key(run_means.pipeline.iat[i]), run_means.seed.iat[i]))
+        run_means = run_means.iloc[order].reset_index(drop=True)
+        rd = rank_distribution(run_means, models)
+        rows = []
+        for p, g in run_means.groupby("pipeline", sort=False):
+            mean = g[models].mean()
+            rk = ranks_of(mean.to_numpy(float))
+            rr = rd["ranks"][rd["ranks"].pipeline == p]
+            row = {"pipeline": p, "seeds": len(g)}
+            for m, v, k in zip(models, mean, rk):
+                lo, hi = int(rr[m].min()), int(rr[m].max())
+                row[m] = f"{v:.3f} ({k:g}" + (f"; {lo}-{hi}" if lo != hi else "") + ")"
+            row["best"] = models[int(np.argmin(rk))]
+            row["Kendall W (seeds)"] = (f"{kendall_w(rr[models].to_numpy(float)):.2f}"
+                                        if len(g) > 1 else "")
+            rows.append(row)
+        table = pd.DataFrame(rows)
+        table.to_csv(out / "rank_table.csv", index=False)
+        rd["ranks"].to_csv(out / "rank_per_run.csv", index=False)
+        rd["summary"].to_csv(out / "rank_summary.csv", index=False)
+        rd["distribution"].to_csv(out / "rank_distribution.csv", index=False)
+        fig_rank_distribution(rd, models, out / "rank_distribution.png",
+                              f"{label}: ranks of the fusion operators (complete runs)")
+        auprc = (sub.groupby(["pipeline", "seed", "model"]).auprc.mean()
+                 .groupby(["pipeline", "model"]).mean().unstack("model")[models])
+        auprc = auprc.reindex([p for p in table.pipeline])
+        auprc.to_csv(out / "auprc_table.csv")
+        res.update(rank_table=table, rank_summary=rd["summary"], n_folds=len(common))
+        lines += [f"Mean macro F1 over {len(common)} folds and the available seeds, with "
+                  "the operator's rank in that pipeline (1 = best) and, where seeds "
+                  "disagree, the range of its single-seed ranks:", "",
+                  md_table(table), "",
+                  "AUPRC (the second primary metric), seed mean per pipeline and operator:",
+                  "", md_table(auprc, index=True, digits=3), "",
+                  "Over all included runs (rank counts, median, best and worst rank, share of "
+                  "runs won):", "", md_table(rank_count_table(rd, models)), "",
+                  md_table(rd["summary"], digits=2), ""]
+        if run_means.pipeline.nunique() > 1:
+            tm = pipeline_tau_matrix(run_means, models)
+            tm.to_csv(out / "rank_tau_between_pipelines.csv")
+            lines += ["Kendall tau between the seed-averaged rankings of the pipelines:", "",
+                      md_table(tm, index=True, digits=2), ""]
+        lines += ["![rank distribution](rank_distribution.png)", ""]
+        say(f"rank table: {len(table)} pipelines, {len(common)} folds")
+    else:
+        lines += ["No complete run yet.", ""]
+    lines += ["Window-level macro F1 (seed means) is the metric here; AUPRC and the full "
+              "multiverse analysis follow in `python -m src.multiverse` once the balanced "
+              "block is complete. Event-based metrics are secondary (docs/EVENTS.md).", ""]
+    (out / "first_report.md").write_text("\n".join(lines), encoding="utf-8")
+    say(f"written: {out / 'first_report.md'}")
+    return res
+
+
+# --- Synthetic validation -------------------------------------------------------------------------
+
+def make_synthetic(root: Path, effect: bool, seed: int = SEED, n_folds: int = 23,
+                   pipelines=PIPELINE_ORDER, n_seeds: int = 3) -> dict:
+    """Synthetic runs in the layout of results_v2/chbmit/loso_grouped, with known effects.
+
+    Per-fold macro F1 of fusion model m, pipeline p, fold f, seed s:
+        F1 = 0.68 + fold_f + pipe_p + model_m + inter_pm + (fold x model)_fm + seed noise
+    with fold SD 0.12 (CHB-MIT's between-subject spread), pipeline SD 0.02, fixed model
+    effects, fold x model SD 0.015 and seed noise SD 0.02 per (fold, pipeline, model,
+    seed). With effect=True an interaction reverses the ranking of early/late/score in
+    P2-P4 and changes it differently in each of P6a, P6b and P6c (an ICA-algorithm
+    effect); late and attention get identical effects everywhere
+    (a truly equivalent pair). Predictions: window logits share a per-window difficulty;
+    each pipeline adds its own window-level perturbation (SD 1.0 with effect=True, 0
+    without) and each run an independent seed perturbation (SD 0.4). The perfold metrics
+    and the predictions are generated independently; each serves its own analyses.
+
+    Returns the true values the analyses should recover.
+    """
+    rng = np.random.default_rng(seed + (1 if effect else 0))
+    models = list(FUSION) + list(OTHER_MODELS)
+    pips = list(pipelines)
+    npip, nfus = len(pips), len(FUSION)
+    fold_eff = rng.normal(0, 0.12, n_folds)
+    pipe_eff = rng.normal(0, 0.02, npip)
+    model_eff = dict(zip(FUSION, (-0.030, 0.010, 0.020, 0.010, -0.010)))
+    inter = np.zeros((npip, nfus))
+    if effect:
+        for p in ("P2", "P3", "P4"):
+            if p in pips:
+                inter[pips.index(p)] = (0.050, -0.030, 0.0, -0.030, 0.040)
+        # the three ICA algorithms change the ranking in different ways
+        for p, row in (("P6a", (0.0, 0.0, -0.045, 0.0, 0.0)),
+                       ("P6b", (0.0, -0.035, 0.0, -0.035, 0.045)),
+                       ("P6c", (0.050, 0.0, 0.0, 0.0, -0.030))):
+            if p in pips:
+                inter[pips.index(p)] = row
+    inter[:, FUSION.index("attention")] = inter[:, FUSION.index("late")]
+    inter -= inter.mean(axis=0, keepdims=True)          # pure interaction: zero margins
+    inter -= inter.mean(axis=1, keepdims=True)
+    fm = rng.normal(0, 0.015, (n_folds, nfus))
+    fm[:, FUSION.index("attention")] = fm[:, FUSION.index("late")]
+    seed_sd = 0.02
+
+    # separate generator, so the per-fold metrics are the same realisation as before
+    aux = np.random.default_rng(seed + 100)
+    p4_truth = make_synthetic_corpus(root, n_folds, aux)
+    p6_truth = make_synthetic_p6_logs(root / "_ica_logs", aux)
+
+    n_win = rng.integers(150, 500, n_folds)
+    difficulty = [rng.normal(0, 1, n) for n in n_win]
+    labels = [(rng.random(n) < 0.2).astype(np.int64) for n in n_win]
+    pipe_pert = {p: [rng.normal(0, 1.0 if effect else 0.0, n) for n in n_win] for p in pips}
+    seed_noise = {}
+
+    for pi, p in enumerate(pips):
+        for s in range(n_seeds):
+            name = "loso_grouped" if (p == "P0" and s == 0) else (
+                f"loso_{p}" + (f"_r{s}" if s else ""))
+            d = root / name
+            (d / "preds").mkdir(parents=True, exist_ok=True)
+            rows = []
+            for f in range(n_folds):
+                for m in models:
+                    if m in FUSION:
+                        mi = FUSION.index(m)
+                        e = rng.normal(0, seed_sd)
+                        seed_noise[(f, pi, mi, s)] = e
+                        f1 = (0.68 + fold_eff[f] + pipe_eff[pi] + model_eff[m] + inter[pi, mi]
+                              + fm[f, mi] + e)
+                    else:
+                        f1 = 0.64 + fold_eff[f] + rng.normal(0, 0.03)
+                    rows.append({"f1_macro": f1, "auc": min(0.99, f1 + 0.15),
+                                 "brier": 0.3 - 0.2 * f1, "log_loss": 1.2 - f1,
+                                 "sensitivity": f1 - 0.1, "specificity": min(1, f1 + 0.2),
+                                 "model": m, "fold": f})
+            pd.DataFrame(rows).to_csv(d / "perfold.csv", index=False)
+            for f in range(n_folds):
+                arrs = {"idx_te": np.arange(n_win[f]) + 1000 * f, "y_te": labels[f]}
+                for m in models:
+                    if m in ("logvar", "shallow"):
+                        continue
+                    z = (2.0 * labels[f] - 1.0 + 0.8 * difficulty[f] + pipe_pert[p][f]
+                         + rng.normal(0, 0.4, n_win[f]))
+                    p1 = 1 / (1 + np.exp(-z))
+                    arrs[m] = np.column_stack([1 - p1, p1]).astype(np.float32)
+                np.savez(d / "preds" / f"fold{f}.npz", **arrs)
+            meta = {"synthetic": True, "effect": effect}
+            if p == "P4":
+                meta["rejection"] = p4_truth["meta"]
+            (d / "meta.json").write_text(json.dumps(meta))
+
+    # true values on the scale of the method-of-moments estimators: sample variances of
+    # the realised effects (ddof = 1 for main effects; interaction df for the rest)
+    noise = np.array(list(seed_noise.values()))
+    true = {
+        "fold": float(np.var(fold_eff, ddof=1)),
+        "pipeline": float(np.var(pipe_eff, ddof=1)),
+        "model": float(np.var(list(model_eff.values()), ddof=1)),
+        "pipeline x model": float((inter ** 2).sum() / ((npip - 1) * (nfus - 1))),
+        "fold x model": float(((fm - fm.mean(0) - fm.mean(1, keepdims=True) + fm.mean()) ** 2
+                               ).sum() / ((n_folds - 1) * (nfus - 1))),
+        "residual": float(np.var(noise, ddof=1)),
+        "interaction_present": effect,
+        "equivalent_pair": "late-attention",
+        "nonequivalent_pair": "early-late",
+        "p4": p4_truth,
+        "p6": p6_truth,
+    }
+    return true
+
+
+def make_synthetic_corpus(root: Path, n_persons: int, rng) -> dict:
+    """A small unfiltered corpus (window, channel, time) at 256 Hz with technical
+    artefacts injected at known windows: a flat channel (SD 0.1 uV) or a 1 s dropout
+    at 0 uV. Saved as root/_synthetic_corpus.npz; returns the injected counts per person
+    and the totals in the meta.json format of a P4 run."""
+    xs, ys, gs, per = [], [], [], {}
+    for i in range(n_persons):
+        person = f"p{i:02d}"
+        n = int(rng.integers(30, 70))
+        x = rng.normal(0, 25, (n, 3, 512)).astype(np.float32)
+        y = (rng.random(n) < 0.2).astype(np.int64)
+        k = int(rng.integers(0, 4)) if i % 3 else 0           # every third person: none
+        bad = rng.choice(n, size=k, replace=False)
+        for j, w in enumerate(bad):
+            if j % 2 == 0:
+                x[w, 1] = 5.0 + rng.normal(0, 0.1, 512)          # flat channel
+            else:
+                x[w, 2, 100:356] = 0.0                            # 1 s dropout
+        per[person] = {"ictal_rejected": int(y[bad].sum()),
+                       "nonictal_rejected": int((1 - y[bad]).sum())}
+        xs.append(x)
+        ys.append(y)
+        gs += [person] * n
+    y = np.concatenate(ys)
+    np.savez(root / "_synthetic_corpus.npz", X=np.concatenate(xs), y=y, group=np.array(gs))
+    ir = sum(v["ictal_rejected"] for v in per.values())
+    nr = sum(v["nonictal_rejected"] for v in per.values())
+    return {"per_person": per,
+            "meta": {"ictal_rejected": ir, "ictal_total": int(y.sum()),
+                     "nonictal_rejected": nr, "nonictal_total": int((1 - y).sum())}}
+
+
+def make_synthetic_p6_logs(log_root: Path, rng, n_records: int = 40) -> dict:
+    """Per-recording logs in the data/ica_logs layout for the four P6 variants, with
+    known power-kept distributions (beta) and times; returns the true medians."""
+    from .preprocess import GEDAI_TAG, PIPELINES
+    base = PIPELINES["P6b"].signal_tag.rsplit("_", 1)[0]
+    spec = {PIPELINES["P6a"].signal_tag: ("P6a", (8, 2), 30, True),
+            PIPELINES["P6b"].signal_tag: ("P6b", (6, 3), 60, False),
+            f"{base}_{GEDAI_TAG['auto']}": ("P6b-default", (2, 2), 60, False),
+            PIPELINES["P6c"].signal_tag: ("P6c", (8, 2), 90, True)}
+    truth = {}
+    for tag, (p, (a, b), sec, ica) in spec.items():
+        d = log_root / tag
+        d.mkdir(parents=True, exist_ok=True)
+        kept = rng.beta(a, b, n_records)
+        for j, k in enumerate(kept):
+            log = {"power_kept": float(k), "seconds": float(sec * rng.uniform(0.5, 1.5))}
+            if ica:
+                log["n_removed"] = int(rng.integers(0, 4))
+            (d / f"chb{j // 10 + 1:02d}_{j % 10 + 1:02d}.json").write_text(json.dumps(log))
+        truth[p] = {"median": float(np.median(kept)), "n": n_records}
+    return truth
+
+
+def synthetic_validation(out: Path, n_perm: int = 2000) -> bool:
+    """Generate both scenarios, run every analysis, check the known effects are found."""
+    checks, report = [], ["# Synthetic validation of src/multiverse.py", "",
+                          "Synthetic runs with the structure of `loso_grouped` (23 folds, "
+                          "9 pipelines, 3 seeds, 11 models) are generated twice: with an "
+                          "injected Fusion x Preprocessing interaction and pipeline-specific "
+                          "prediction changes (effect), and without them (null). Every "
+                          "analysis is then run unchanged on the files. "
+                          "(`src/multiverse.py: make_synthetic` documents the generator.)", ""]
+
+    def check(name: str, ok: bool, detail: str) -> None:
+        checks.append(ok)
+        report.append(f"| {name} | {detail} | {'PASS' if ok else 'FAIL'} |")
+
+    results, first = {}, None
+    for scenario in ("effect", "null"):
+        tmp = Path(tempfile.mkdtemp(prefix=f"multiverse_{scenario}_"))
+        try:
+            true = make_synthetic(tmp, effect=scenario == "effect")
+            corpus = tmp / "_synthetic_corpus.npz"
+            cfn = (lambda c=corpus: dict(np.load(c)))
+            # the real configuration: main margin 0.05, strict 0.02
+            res = analyze(tmp, out / scenario, f"synthetic ({scenario})", n_perm=n_perm,
+                          verbose=False, margin=EQUIV_MARGIN, strict_margin=STRICT_MARGIN,
+                          corpus_fn=cfn, log_root=tmp / "_ica_logs", p6_csv=None)
+            if scenario == "effect":
+                # runs arriving piecemeal: P6b not run, one run missing, one in progress
+                for d in tmp.glob("loso_P6b*"):
+                    shutil.rmtree(d)
+                shutil.rmtree(tmp / "loso_P6c_r2")
+                pf = tmp / "loso_P5_r1" / "perfold.csv"
+                df = pd.read_csv(pf)
+                df[df.fold < 10].to_csv(pf, index=False)
+                first = first_report(tmp, out / "first_report", "synthetic (effect), partial runs",
+                                     corpus_fn=cfn, log_root=tmp / "_ica_logs", verbose=False)
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+        results[scenario] = (true, res)
+
+    report += ["## Checks", "", "| check | result | |", "|---|---|---|"]
+    te, re_ = results["effect"]
+    tn, rn = results["null"]
+    check("effect: interaction detected", re_["interaction_p"] < 0.05,
+          f"F = {re_['interaction_F']:.2f}, p_GG = {re_['interaction_p']:.2g}")
+    check("null: no false interaction", rn["interaction_p"] >= 0.05,
+          f"F = {rn['interaction_F']:.2f}, p_GG = {rn['interaction_p']:.3f}")
+    check("effect: rankings differ more between pipelines than between seeds",
+          re_["D"] > 0 and re_["p_perm"] < 0.05,
+          f"tau within {re_['tau_within']:.3f}, between {re_['tau_between']:.3f}, "
+          f"p_perm = {re_['p_perm']:.4f}")
+    check("null: no pipeline effect on rankings", rn["p_perm"] >= 0.05,
+          f"tau within {rn['tau_within']:.3f}, between {rn['tau_between']:.3f}, "
+          f"p_perm = {rn['p_perm']:.3f}")
+    check("effect: ICA-algorithm effect on rankings (P6a-c)",
+          re_["p6_D"] > 0 and re_["p6_p_perm"] < 0.05,
+          f"D = {re_['p6_D']:.3f}, p_perm = {re_['p6_p_perm']:.4f} (3 pipelines x 3 seeds)")
+    check("null: no ICA-algorithm effect on rankings", rn["p6_p_perm"] >= 0.05,
+          f"D = {rn['p6_D']:.3f}, p_perm = {rn['p6_p_perm']:.3f}")
+    check("effect: predictions change more between pipelines than seeds",
+          re_["kappa_pipelines"] < re_["kappa_seeds"] - 0.05,
+          f"kappa pipelines {re_['kappa_pipelines']:.3f}, seeds {re_['kappa_seeds']:.3f}")
+    check("null: pipeline and seed agreement alike",
+          abs(rn["kappa_pipelines"] - rn["kappa_seeds"]) < 0.02,
+          f"kappa pipelines {rn['kappa_pipelines']:.3f}, seeds {rn['kappa_seeds']:.3f}")
+    check(f"effect: identical pair is robustly equivalent (+-{STRICT_MARGIN})",
+          te["equivalent_pair"] in re_["robust_equivalent_strict"],
+          f"robust equivalent: {', '.join(re_['robust_equivalent_strict']) or 'none'}")
+    check(f"effect: pair with interaction is not robustly equivalent (+-{STRICT_MARGIN})",
+          te["nonequivalent_pair"] not in re_["robust_equivalent_strict"],
+          f"{te['nonequivalent_pair']} not in the list")
+    check(f"effect: identical pair is robustly equivalent at the main margin (+-{EQUIV_MARGIN})",
+          te["equivalent_pair"] in re_["robust_equivalent"],
+          f"robust equivalent: {', '.join(re_['robust_equivalent']) or 'none'}")
+
+    # rank distribution
+    n_runs = len(PIPELINE_ORDER) * 3
+    for scen, r in (("effect", re_), ("null", rn)):
+        rsum = r["rank_summary"]
+        ok = (r["rank_counts"] == n_runs * len(FUSION)
+              and all(v["n_runs"] == n_runs for v in rsum.values())
+              and abs(sum(v["share_first"] for v in rsum.values()) - 1) < 1e-9)
+        check(f"{scen}: rank distribution counts every run once per operator", ok,
+              f"{r['rank_counts']} ranks = {n_runs} runs x {len(FUSION)} operators; "
+              f"shares of first place sum to 1")
+    def shift(r, m):       # mean rank in P0/P1/P5 minus in P2-P4 (injected: score better)
+        mr = r["mean_rank_by_pipeline"]
+        return (np.mean([mr[p][m] for p in ("P0", "P1", "P5")])
+                - np.mean([mr[p][m] for p in ("P2", "P3", "P4")]))
+    se, sn = shift(re_, "score"), shift(rn, "score")
+    check("effect: rank distribution shows score's injected gain in P2-P4", se >= 1.5,
+          f"score's mean rank {se:.2f} places better in P2-P4 than in P0/P1/P5; "
+          f"ranks {re_['rank_summary']['score']['best_rank']}-"
+          f"{re_['rank_summary']['score']['worst_rank']}")
+    check("null: score's rank does not depend on the pipeline", abs(sn) < 0.5,
+          f"difference {sn:.2f}; ranks {rn['rank_summary']['score']['best_rank']}-"
+          f"{rn['rank_summary']['score']['worst_rank']}")
+    check("all three effects reported with numbers",
+          all("not estimable" not in v for v in re_["effect_sentences"].values()),
+          "; ".join(k for k in re_["effect_sentences"]))
+
+    # P4 and P6 inputs
+    got = re_.get("p4_per_person", {})
+    check("P4: per-person rejections recovered exactly",
+          got == te["p4"]["per_person"],
+          f"{sum(v['ictal_rejected'] + v['nonictal_rejected'] for v in got.values())} "
+          f"rejected windows over {len(got)} persons")
+    p6 = re_.get("p6_retention", {})
+    check("P6: median power kept and record counts recovered",
+          set(p6) == set(te["p6"]) and all(
+              abs(p6[p]["power_kept_median"] - t["median"]) < 1e-12
+              and p6[p]["recordings"] == t["n"] for p, t in te["p6"].items()),
+          ", ".join(f"{p} {v['power_kept_median']:.3f}" for p, v in p6.items()))
+
+    # first report with partial runs
+    exp_exc = ["loso_P5_r1"]
+    exp_inc = n_runs - 3 - 1 - 1
+    check("first report: works with partial runs and lists them",
+          first is not None and first["excluded"] == exp_exc
+          and len(first["included"]) == exp_inc
+          and len(first["rank_table"]) == len(PIPELINE_ORDER) - 1,
+          f"{len(first['included'])} complete runs included, excluded {first['excluded']}, "
+          f"rank table for {len(first['rank_table'])} pipelines (P6b not run)")
+
+    report += ["", "## Variance components: injected against estimated", "",
+               "| component | scenario | injected | estimated | |", "|---|---|---|---|---|"]
+    for scenario, (t, r) in results.items():
+        raw = r["variance_raw"]
+        total = sum(max(v, 0) for v in raw.values())
+        for comp, key in (("fold", "fold"), ("pipeline", "pipeline"), ("model", "model"),
+                          ("pipeline x model", "pipeline x model"),
+                          ("fold x model", "fold x model"),
+                          ("residual", "residual (fold x pipeline x model x seed)")):
+            est, tv = raw[key], t[comp]
+            ok = abs(est - tv) <= max(0.25 * tv, 0.01 * total)
+            checks.append(ok)
+            report.append(f"| {comp} | {scenario} | {tv:.6f} | {est:.6f} | "
+                          f"{'PASS' if ok else 'FAIL'} |")
+        for key in ("seed", "fold x seed", "pipeline x seed", "model x seed"):
+            est = raw[key]
+            ok = abs(est) <= 0.01 * total
+            checks.append(ok)
+            report.append(f"| {key} | {scenario} | 0 | {est:.6f} | {'PASS' if ok else 'FAIL'} |")
+
+    report += ["", f"**{sum(checks)}/{len(checks)} checks passed.** Figures and tables of "
+               f"each scenario are in `effect/` and `null/` next to this report; the first "
+               f"report on a partial set of runs is in `first_report/`.", ""]
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "validation.md").write_text("\n".join(report), encoding="utf-8")
+    print("\n".join(report))
+    print(f"\nwritten: {out}")
+    return all(checks)
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    ap.add_argument("--dataset", default="chbmit", help="results_v2/<dataset>")
+    ap.add_argument("--pipelines", nargs="*", default=None)
+    ap.add_argument("--seeds", nargs="*", type=int, default=None)
+    ap.add_argument("--margin", type=float, default=EQUIV_MARGIN,
+                    help="main equivalence margin in macro F1 (fixed: 0.05)")
+    ap.add_argument("--perms", type=int, default=N_PERM)
+    ap.add_argument("--device", default="cpu", choices=["cpu", "cuda"],
+                    help="analyse the CPU runs or the GPU (_cuda) runs")
+    ap.add_argument("--out", default=None, help="output folder")
+    ap.add_argument("--synthetic", action="store_true",
+                    help="validate the analyses on synthetic runs with known effects")
+    ap.add_argument("--first-report", action="store_true",
+                    help="only the first-results report (P4 rejection, P6 signal retention "
+                         "and cost, first rank stability table) from the runs available")
+    ap.add_argument("--no-corpus", action="store_true",
+                    help="do not load the P0 corpus (skips P4's per-person rejection)")
+    args = ap.parse_args()
+    if args.synthetic:
+        out = Path(args.out) if args.out else RESULTS_ROOT / "multiverse" / "synthetic"
+        ok = synthetic_validation(out, n_perm=min(args.perms, 2000))
+        sys.exit(0 if ok else 1)
+    from .preprocess import ICA_LOG_ROOT
+    name = args.dataset + ("_cuda" if args.device == "cuda" else "")
+    out = Path(args.out) if args.out else RESULTS_ROOT / "multiverse" / name
+    inputs = {"corpus_fn": None if args.no_corpus else default_corpus_fn(args.dataset),
+              "log_root": ICA_LOG_ROOT, "p6_csv": P6_CSV}
+    if args.first_report:
+        first_report(RESULTS_ROOT / args.dataset, out / "first_report", name,
+                     dataset=args.dataset, device=args.device, **inputs)
+        return
+    analyze(RESULTS_ROOT / args.dataset, out, name, args.pipelines, args.seeds,
+            args.margin, args.perms, device=args.device, dataset=args.dataset, **inputs)
+
+
+if __name__ == "__main__":
+    main()
