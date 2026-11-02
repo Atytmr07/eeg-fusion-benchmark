@@ -12,8 +12,8 @@ python paper/latex/build.py --journal cbm   # Computers in Biology and Medicine 
 **Journal format (`--journal cbm`).** Computers in Biology and Medicine submission:
 
 - `template_cbm.tex` with Elsevier's `elsarticle` class and line numbers; the title
-  page names the corresponding author, whose affiliation, address and e-mail come
-  from `paper/submission_cbm.md`, with the keywords.
+  page lists the three affiliations (fixed in the template); the address, the
+  corresponding author's e-mail and the keywords come from `paper/submission_cbm.md`.
 - Numbered citations in order of appearance (`elsarticle-num-names`, which also
   gives `\citet` its author names). A parenthesis that
   holds only citations becomes one bracket, "[3,6]"; "Author et al. (Year)" becomes
@@ -23,9 +23,6 @@ python paper/latex/build.py --journal cbm   # Computers in Biology and Medicine 
   replace the manuscript's "Use of AI assistance" section.
 - The highlights are written to `highlights.docx`, a separate file as the journal
   requires.
-- The supplement is not appended; it goes to `supplementary.tex` and
-  `supplementary.pdf`, a separate file under the article's title. Its citations
-  print their number in the article's reference list.
 - The build checks the abstract (at most 250 words), the keywords (1 to 7), the
   highlights (3 to 5, at most 85 characters each) and any TODO left in
   `submission_cbm.md`. No arXiv bundle is written; `overleaf/` is.
@@ -100,7 +97,11 @@ with plain `pdflatex`, which is what arXiv uses.
   definitions in the template. The report lists any non-ASCII character that is
   covered by neither.
 - **Supplementary material.** `paper/supplementary.md` is appended after the
-  references, on a new page under "Supplementary Material".
+  references, on a new page under "Supplementary Material". With `--journal` it goes
+  to the journal as a file of its own: `main.pdf` ends with the references and
+  `supplementary.pdf` holds the supplement, with pages S1, S2, ... and line numbers
+  from 1. Both are cut from the one compiled PDF, so the citation numbers agree; the
+  cut uses plain `pdftex`, no extra LaTeX package.
   - Its tables are numbered S1, S2, ... by LaTeX.
   - Each "## Table Sk. Title" heading and the paragraph under it become the caption
     of the table that follows.
