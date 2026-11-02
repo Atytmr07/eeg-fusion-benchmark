@@ -935,7 +935,7 @@ def build(draft: bool, make_pdf: bool, bibmode: str = "natbib", supplement: bool
             refs = [{"bibkey": k, "surname": "", "year": "", "entry": ""}
                     for k in report["used_keys"]]
         write_main_bib(refs, report["bib"], HERE / "main.bib")
-        report["bibstyle"] = "elsarticle-num" if journal else "plainnat"
+        report["bibstyle"] = "elsarticle-num-names" if journal else "plainnat"
         bibliography = (f"```{{=latex}}\n\\bibliographystyle{{{report['bibstyle']}}}\n"
                         "\\bibliography{main}\n```\n")
     else:
