@@ -56,3 +56,5 @@ paper/latex/*.toc
 paper/latex/*.blg
 paper/latex/citation_report.md
 paper/latex/highlights.docx
+paper/latex/supplementary.pdf
+paper/latex/main.spl
