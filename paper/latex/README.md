@@ -14,7 +14,8 @@ python paper/latex/build.py --journal cbm   # Computers in Biology and Medicine 
 - `template_cbm.tex` with Elsevier's `elsarticle` class and line numbers; the title
   page names the corresponding author, whose affiliation, address and e-mail come
   from `paper/submission_cbm.md`, with the keywords.
-- Numbered citations in order of appearance (`elsarticle-num`). A parenthesis that
+- Numbered citations in order of appearance (`elsarticle-num-names`, which also
+  gives `\citet` its author names). A parenthesis that
   holds only citations becomes one bracket, "[3,6]"; "Author et al. (Year)" becomes
   "Author et al. [3]".
 - The declarations in `paper/submission_cbm.md` (CRediT, ethics, competing interest,
