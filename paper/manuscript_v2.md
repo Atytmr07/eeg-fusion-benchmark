@@ -154,7 +154,7 @@ rankings.
 | Camastra et al. (2026), *Brain Sciences* | Controlled fusion benchmark: strategy matters more than architecture | Tabular neuroimaging features; no paired or equivalence testing |
 | Ali et al. (2024) | CHB-MIT results depend heavily on evaluation choices | Not about fusion operators |
 | Dan et al. (2025), SzCORE | Standard datasets, event-based scoring and metrics for seizure detection | An evaluation framework |
-| Kontras et al. (2026), NeuroAtlas | Bonn is saturated (eleven models at AUROC >= 0.99) and has no subject identifiers | Not a fusion comparison |
+| Kontras et al. (2026), NeuroAtlas | Bonn is saturated (eleven models at AUROC ≥ 0.99) and has no subject identifiers | Not a fusion comparison |
 
 ### 1.3 Statistical superiority, practical equivalence and ranking stability are distinct
 

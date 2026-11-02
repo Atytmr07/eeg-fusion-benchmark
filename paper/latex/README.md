@@ -23,6 +23,9 @@ python paper/latex/build.py --journal cbm   # Computers in Biology and Medicine 
   replace the manuscript's "Use of AI assistance" section.
 - The highlights are written to `highlights.docx`, a separate file as the journal
   requires.
+- The supplement is not appended; it goes to `supplementary.tex` and
+  `supplementary.pdf`, a separate file under the article's title. Its citations
+  print their number in the article's reference list.
 - The build checks the abstract (at most 250 words), the keywords (1 to 7), the
   highlights (3 to 5, at most 85 characters each) and any TODO left in
   `submission_cbm.md`. No arXiv bundle is written; `overleaf/` is.
