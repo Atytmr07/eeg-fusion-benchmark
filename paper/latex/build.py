@@ -936,7 +936,15 @@ def build(draft: bool, make_pdf: bool, bibmode: str = "natbib", supplement: bool
                     for k in report["used_keys"]]
         write_main_bib(refs, report["bib"], HERE / "main.bib")
         report["bibstyle"] = "elsarticle-num-names" if journal else "plainnat"
-        bibliography = (f"```{{=latex}}\n\\bibliographystyle{{{report['bibstyle']}}}\n"
+        nocite = ""
+        if journal and supp:
+            # works cited only in the separate supplement stay in the article's list,
+            # numbered last, as write_supplement prints them
+            in_main = {k for g in re.findall(r"\\cite[tp]?\{([^}]+)\}", body + abstract)
+                       for k in g.split(",")}
+            only = [k for k in report["used_keys"] if k not in in_main]
+            nocite = f"\\nocite{{{','.join(only)}}}\n" if only else ""
+        bibliography = (f"```{{=latex}}\n{nocite}\\bibliographystyle{{{report['bibstyle']}}}\n"
                         "\\bibliography{main}\n```\n")
     else:
         bibliography = bibliography_markdown(refs)
@@ -966,6 +974,9 @@ def build(draft: bool, make_pdf: bool, bibmode: str = "natbib", supplement: bool
                  f"address: {yaml_block(a['Address'])}", "keywords:"]
         meta += ["  - '" + k.replace("'", "''") + "'" for k in sub["keywords"]]
     meta.append("---")
+    if journal and appendix:   # the journal takes the supplement as a separate file
+        write_supplement(appendix, title, report, make_pdf)
+        appendix = ""
     md = "\n".join(meta) + "\n\n" + body + "\n\n" + bibliography + "\n\n" + appendix
 
     template = HERE / ("template_cbm.tex" if journal == "cbm" else "template.tex")
@@ -993,6 +1004,31 @@ def build(draft: bool, make_pdf: bool, bibmode: str = "natbib", supplement: bool
         write_highlights(sub["highlights"], HERE / "highlights.docx")
 
     print_report(report, pages, warnings, len(refs))
+
+
+def write_supplement(appendix: str, title: str, report: dict, make_pdf: bool):
+    """supplementary.tex and .pdf for a journal submission: the supplement on its own,
+    under the article's title, with template.tex. Its citations print the number they
+    have in the article's reference list, the order of first appearance."""
+    numbers = {k: i + 1 for i, k in enumerate(report["used_keys"])}
+    text = re.sub(r"`\\cite\{([^}]+)\}`\{=latex\}",
+                  lambda m: "[" + ",".join(str(numbers[k]) for k in m.group(1).split(","))
+                  + "]", appendix)
+    text = text.replace("\\clearpage\n\\section*{Supplementary Material}\n", "")
+    note = "Reference numbers refer to the reference list of the article."
+    md = (f"---\ntitle: |\n  Supplementary Material: {rewrite_math(title)}\n---\n\n"
+          f"{note}\n\n{text}")
+    src = HERE / "supplementary.md"
+    src.write_text(md, encoding="utf-8")
+    run([find_tool("pandoc"), str(src), "-f", "markdown-implicit_figures+implicit_figures",
+         "-t", "latex", "--template", str(HERE / "template.tex"),
+         "--lua-filter", str(HERE / "filters.lua"), "--shift-heading-level-by=-1",
+         "--wrap=preserve", "-o", str(HERE / "supplementary.tex")])
+    src.unlink()
+    if make_pdf:
+        report["supp_pages"], _ = pdflatex(HERE / "supplementary.tex")
+        for suffix in (".aux", ".log", ".out"):
+            (HERE / "supplementary").with_suffix(suffix).unlink(missing_ok=True)
 
 
 def placeholder_figures(tex_path: Path, missing: list):
@@ -1059,7 +1095,10 @@ def print_report(r: dict, pages: int, w, nrefs: int):
     if pages:
         print(f"main.pdf: {pages} pages")
     print(f"tables captioned: {r['tables']}, figures captioned: {r['figures']}")
-    print("supplement: " + (f"appended after the references, tables "
+    where = ("in supplementary.tex" + (f" ({r['supp_pages']} pages)" if r.get("supp_pages")
+                                       else "") if r.get("journal")
+             else "appended after the references")
+    print("supplement: " + (f"{where}, tables "
                             f"{', '.join(f'S{n}' for n in r.get('supp_tables', []))}"
                             if r.get("supplement") else "not included"))
     print("numbering: " + ("ok" if not r["numbering"] else "; ".join(r["numbering"])))
