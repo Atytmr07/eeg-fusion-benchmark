@@ -1,7 +1,7 @@
 > Working draft. Every number below is traceable to a file in the repository
 > (Supplementary Table S11).
 
-# Do Fusion Operators Matter, and Does the Answer Survive Preprocessing? A Parameter-Matched Multiverse Comparison of Multimodal CNN Fusion for EEG Seizure Detection
+# Do Fusion Methods Really Matter? A Robustness Benchmark for EEG-Based Seizure Detection
 
 Emre Atay Tümer, Hasan Berk Berber, Sevgi Şengül Ayan
 Antalya Bilim University

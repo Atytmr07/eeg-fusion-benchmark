@@ -6,7 +6,26 @@ python paper/latex/build.py --draft    # keeps the DRAFT note as a box on page 1
 python paper/latex/build.py --no-pdf   # main.tex only (no LaTeX needed)
 python paper/latex/build.py --bib plain   # reference list as written (option a)
 python paper/latex/build.py --no-supplementary   # without paper/supplementary.md
+python paper/latex/build.py --journal cbm   # Computers in Biology and Medicine format
 ```
+
+**Journal format (`--journal cbm`).** Computers in Biology and Medicine submission:
+
+- `template_cbm.tex` with Elsevier's `elsarticle` class and line numbers; the title
+  page names the corresponding author, whose affiliation, address and e-mail come
+  from `paper/submission_cbm.md`, with the keywords.
+- Numbered citations in order of appearance (`elsarticle-num`). A parenthesis that
+  holds only citations becomes one bracket, "[3,6]"; "Author et al. (Year)" becomes
+  "Author et al. [3]".
+- The declarations in `paper/submission_cbm.md` (CRediT, ethics, competing interest,
+  funding, data availability, generative AI) are placed before the references and
+  replace the manuscript's "Use of AI assistance" section.
+- The highlights are written to `highlights.docx`, a separate file as the journal
+  requires.
+- The build checks the abstract (at most 250 words), the keywords (1 to 7), the
+  highlights (3 to 5, at most 85 characters each) and any TODO left in
+  `submission_cbm.md`. No arXiv bundle is written; `overleaf/` is.
+- Needs the `elsarticle` and `lineno` TeX packages (`tlmgr install elsarticle lineno`).
 
 The source is `paper/manuscript_v2.md` by default. It is only read, never written.
 After every change to it, rerun the command; do not edit `main.tex` by hand.

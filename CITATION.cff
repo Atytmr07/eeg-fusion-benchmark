@@ -1,6 +1,6 @@
 cff-version: 1.2.0
 message: "If you use this code or the stored results, please cite it as below."
-title: "Do Fusion Operators Matter? EEG Seizure Detection Benchmark"
+title: "Do Fusion Methods Really Matter? A Robustness Benchmark for EEG-Based Seizure Detection"
 type: software
 authors:
   - family-names: "Tümer"

@@ -41,6 +41,7 @@ SUPPLEMENT = PAPER / "supplementary.md"
 FIGDIR = PAPER / "figures_manuscript"
 BIBFILE = PAPER / "references.bib"
 ARXIV = HERE / "arxiv"
+SUBMISSION_CBM = PAPER / "submission_cbm.md"   # --journal cbm
 
 # Unicode and ASCII math in the running text -> TeX math. Applied outside code
 # spans only, in this order.
@@ -581,6 +582,20 @@ def natbib_body(body: str, refs, bib: dict, report: dict) -> str:
     return out
 
 
+CITEALP = r"`\\citealp\{([^}]+)\}`\{=latex\}"
+
+
+def numbered_citations(md: str) -> str:
+    r"""For a numbered style (--journal cbm). A parenthesis holding only citations,
+    "(Author Year; Author Year)", becomes one \cite printed "[3,6]"; any other \citealp
+    becomes \cite, printed "[3]", so "(Lee 1999; MNE-Python, Gramfort 2013)" reads
+    "([10]; MNE-Python, [11])". \citet keeps the author name: "Author et al. [3]"."""
+    group = re.compile(r"\((?:\s*" + CITEALP + r"\s*;?)+\s*\)")
+    md = group.sub(lambda m: "`\\cite{" + ",".join(re.findall(CITEALP, m.group(0)))
+                   + "}`{=latex}", md)
+    return re.sub(CITEALP, lambda m: f"`\\cite{{{m.group(1)}}}`{{=latex}}", md)
+
+
 def resolve_by_venue(keys: list[str], bib: dict, after: str) -> str | None:
     """Among several references.bib entries with the same first author and year, the one
     whose journal or booktitle is written right after the citation (e.g. "Wang et al.
@@ -833,13 +848,64 @@ def compile_tex(tex: Path, use_bibtex: bool, report: dict):
     return pdflatex(tex)
 
 
+# ------------------------------------------------------- journal submission
+
+def read_submission(path: Path) -> dict:
+    """paper/submission_cbm.md: corresponding author, keywords, highlights (bullet lists
+    under "## " headings) and the declarations, whose "### " headings become sections
+    placed before the references."""
+    parts = dict(re.findall(r"^## (.+?)\s*\n(.*?)(?=^## |\Z)",
+                            path.read_text(encoding="utf-8"), re.M | re.S))
+
+    def items(name):
+        return [" ".join(i.split()) for i in
+                re.findall(r"^- (.+?)(?=^- |\Z)", parts[name].strip() + "\n", re.M | re.S)]
+    author = dict(i.split(": ", 1) for i in items("Corresponding author"))
+    decl = re.sub(r"^### ", "## ", parts["Declarations"].strip(), flags=re.M)
+    return {"author": author, "keywords": items("Keywords"),
+            "highlights": items("Highlights"), "declarations": decl}
+
+
+def check_submission(sub: dict, abstract: str, report: dict):
+    """The journal's limits: abstract up to 250 words, 1 to 7 keywords, 3 to 5
+    highlights of at most 85 characters; TODO placeholders left in the file."""
+    issues = []
+    words = len(re.sub(r"`[^`]*`\{=latex\}", "x", abstract).split())
+    if words > 250:
+        issues.append(f"abstract has {words} words (limit 250)")
+    if not 1 <= len(sub["keywords"]) <= 7:
+        issues.append(f"{len(sub['keywords'])} keywords (1 to 7)")
+    if not 3 <= len(sub["highlights"]) <= 5:
+        issues.append(f"{len(sub['highlights'])} highlights (3 to 5)")
+    issues += [f"highlight of {len(h)} characters (limit 85): {h}"
+               for h in sub["highlights"] if len(h) > 85]
+    issues += [f"{k} still TODO" for k, v in sub["author"].items() if "TODO" in v]
+    report["submission"] = {"abstract_words": words, "issues": issues}
+
+
+def write_highlights(highlights: list[str], dest: Path):
+    """The highlights as a separate editable file, as the journal requires."""
+    src = dest.with_suffix(".md")
+    src.write_text("# Highlights\n\n" + "\n".join(f"- {h}" for h in highlights) + "\n",
+                   encoding="utf-8")
+    run([find_tool("pandoc"), str(src), "-o", str(dest)])
+    src.unlink()
+
+
 # --------------------------------------------------------------------- main
 
 def build(draft: bool, make_pdf: bool, bibmode: str = "natbib", supplement: bool = True,
-          manuscript: Path = MANUSCRIPT):
+          manuscript: Path = MANUSCRIPT, journal: str | None = None):
     text = manuscript.read_text(encoding="utf-8")
     draftnote, title, abstract, body, refs_md = split_manuscript(text)
-    report = {"missing_figures": []}
+    report = {"missing_figures": [], "journal": journal}
+    sub = None
+    if journal == "cbm":
+        sub = read_submission(SUBMISSION_CBM)
+        check_submission(sub, abstract, report)
+        # the declarations replace the manuscript's own AI statement
+        body = re.sub(r"^## Use of AI assistance\s*\n.*?(?=^## |\Z)", "", body,
+                      flags=re.M | re.S).rstrip() + "\n\n" + sub["declarations"] + "\n"
     supp = SUPPLEMENT.read_text(encoding="utf-8") if supplement and SUPPLEMENT.exists() else ""
     report["supplement"] = bool(supp)
     SEP = "\n\n<!-- supplement -->\n\n"
@@ -857,15 +923,21 @@ def build(draft: bool, make_pdf: bool, bibmode: str = "natbib", supplement: bool
         print("natbib needs every reference in references.bib; missing: "
               + ", ".join(report["bib_unmapped"]) + ". Falling back to option (a).")
         bibmode = "plain"
+    if journal and bibmode != "natbib":
+        raise SystemExit("--journal needs every citation in references.bib (natbib mode)")
     report["bibmode"] = bibmode
     if bibmode == "natbib":
         body, supp = natbib_body(body + SEP + supp, refs, report["bib"], report).split(SEP)
         abstract = natbib_body(abstract, refs, report["bib"], dict(report))
+        if journal:
+            body, supp, abstract = (numbered_citations(s) for s in (body, supp, abstract))
         if derived:
             refs = [{"bibkey": k, "surname": "", "year": "", "entry": ""}
                     for k in report["used_keys"]]
         write_main_bib(refs, report["bib"], HERE / "main.bib")
-        bibliography = "```{=latex}\n\\bibliographystyle{plainnat}\n\\bibliography{main}\n```\n"
+        report["bibstyle"] = "elsarticle-num" if journal else "plainnat"
+        bibliography = (f"```{{=latex}}\n\\bibliographystyle{{{report['bibstyle']}}}\n"
+                        "\\bibliography{main}\n```\n")
     else:
         bibliography = bibliography_markdown(refs)
     finish_citation_report(refs, report)
@@ -887,13 +959,20 @@ def build(draft: bool, make_pdf: bool, bibmode: str = "natbib", supplement: bool
         meta.append(f"draftnote: {yaml_block(rewrite_math(draftnote))}")
     if bibmode == "natbib":
         meta.append("natbib: true")
+    if sub:
+        a = sub["author"]
+        meta += [f"corresponding-email: {yaml_block(a['E-mail'])}",
+                 f"affiliation: {yaml_block(a['Affiliation'])}",
+                 f"address: {yaml_block(a['Address'])}", "keywords:"]
+        meta += ["  - '" + k.replace("'", "''") + "'" for k in sub["keywords"]]
     meta.append("---")
     md = "\n".join(meta) + "\n\n" + body + "\n\n" + bibliography + "\n\n" + appendix
 
+    template = HERE / ("template_cbm.tex" if journal == "cbm" else "template.tex")
     src = HERE / "main.md"
     src.write_text(md, encoding="utf-8")
     run([find_tool("pandoc"), str(src), "-f", "markdown-implicit_figures+implicit_figures",
-         "-t", "latex", "--template", str(HERE / "template.tex"),
+         "-t", "latex", "--template", str(template),
          "--lua-filter", str(HERE / "filters.lua"), "--shift-heading-level-by=-1",
          "--wrap=preserve", "-o", str(HERE / "main.tex")])
     src.unlink()
@@ -907,8 +986,11 @@ def build(draft: bool, make_pdf: bool, bibmode: str = "natbib", supplement: bool
     if make_pdf:
         pages, log = compile_tex(HERE / "main.tex", bibmode == "natbib", report)
         warnings = latex_warnings(log)
-        bundle_arxiv(report)
+        if not journal:
+            bundle_arxiv(report)
         bundle_overleaf(report)
+    if sub:
+        write_highlights(sub["highlights"], HERE / "highlights.docx")
 
     print_report(report, pages, warnings, len(refs))
 
@@ -1002,7 +1084,7 @@ def print_report(r: dict, pages: int, w, nrefs: int):
     print("cited in text, not in reference list: " + (", ".join(r["cited_not_in_refs"]) or "none"))
     print("in reference list, not found cited in text: " + (", ".join(r["refs_not_cited"]) or "none"))
     if r["bibmode"] == "natbib":
-        print("bibliography: natbib + plainnat from references.bib (option b); "
+        print(f"bibliography: natbib + {r['bibstyle']} from references.bib (option b); "
               f"bibtex warnings: {len(r.get('bibtex_warnings', []))}")
         for w_ in r.get("bibtex_warnings", []):
             print(f"  bibtex: {w_}")
@@ -1021,6 +1103,10 @@ def print_report(r: dict, pages: int, w, nrefs: int):
     if "arxiv_pages" in r:
         print(f"arxiv/: compiles on its own, {r['arxiv_pages']} pages; missing files: "
               + (", ".join(r["arxiv_missing"]) or "none") + "; zipped to arxiv.zip")
+    if "submission" in r:
+        s = r["submission"]
+        print(f"journal {r['journal']}: abstract {s['abstract_words']} words; highlights in "
+              "highlights.docx; " + ("checks ok" if not s["issues"] else "; ".join(s["issues"])))
 
 
 def main():
@@ -1034,8 +1120,12 @@ def main():
                     help="leave out paper/supplementary.md (appended by default)")
     ap.add_argument("--manuscript", default=str(MANUSCRIPT),
                     help="Markdown source (default paper/manuscript_v2.md)")
+    ap.add_argument("--journal", choices=["cbm"],
+                    help="submission format: cbm = Computers in Biology and Medicine "
+                         "(elsarticle, numbered citations, paper/submission_cbm.md)")
     a = ap.parse_args()
-    build(a.draft, not a.no_pdf, a.bib, not a.no_supplementary, Path(a.manuscript))
+    build(a.draft, not a.no_pdf, a.bib, not a.no_supplementary, Path(a.manuscript),
+          a.journal)
 
 
 if __name__ == "__main__":

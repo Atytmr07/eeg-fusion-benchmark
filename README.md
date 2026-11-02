@@ -1,4 +1,4 @@
-# Do Fusion Operators Matter? EEG Seizure Detection Benchmark
+# Do Fusion Methods Really Matter? A Robustness Benchmark for EEG-Based Seizure Detection
 
 Code, stored results and manuscript for a parameter-matched, statistically controlled
 comparison of CNN fusion operators (early, late, gated, attention and score fusion) that
@@ -161,7 +161,7 @@ If you use this code or the stored results, please cite:
 ```bibtex
 @misc{tumer2026fusion,
   author       = {T{\"u}mer, Emre Atay and Berber, Hasan Berk and Ayan, Sevgi {\c{S}}eng{\"u}l},
-  title        = {Do Fusion Operators Matter? {EEG} Seizure Detection Benchmark},
+  title        = {Do Fusion Methods Really Matter? A Robustness Benchmark for {EEG}-Based Seizure Detection},
   year         = {2026},
   howpublished = {\url{https://github.com/Atytmr07/eeg-fusion-benchmark}}
 }
