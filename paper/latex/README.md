@@ -96,7 +96,11 @@ with plain `pdflatex`, which is what arXiv uses.
   definitions in the template. The report lists any non-ASCII character that is
   covered by neither.
 - **Supplementary material.** `paper/supplementary.md` is appended after the
-  references, on a new page under "Supplementary Material".
+  references, on a new page under "Supplementary Material". With `--journal` it goes
+  to the journal as a file of its own: `main.pdf` ends with the references and
+  `supplementary.pdf` holds the supplement, with pages S1, S2, ... and line numbers
+  from 1. Both are cut from the one compiled PDF, so the citation numbers agree; the
+  cut uses plain `pdftex`, no extra LaTeX package.
   - Its tables are numbered S1, S2, ... by LaTeX.
   - Each "## Table Sk. Title" heading and the paragraph under it become the caption
     of the table that follows.
