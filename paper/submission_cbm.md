@@ -34,9 +34,11 @@ the highlights are written to a separate file, as the journal requires.
 **Emre Atay Tümer:** Conceptualization, Methodology, Software, Formal analysis,
 Investigation, Data curation, Validation, Visualization, Writing – original draft,
 Writing – review and editing.
+
 **Hasan Berk Berber:** Methodology, Software, Formal analysis, Investigation,
 Data curation, Validation, Visualization, Writing – original draft,
 Writing – review and editing.
+
 **Sevgi Şengül Ayan:** Conceptualization, Methodology, Formal analysis, Visualization,
 Supervision, Project administration, Writing – original draft, Writing – review and
 editing.
