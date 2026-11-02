@@ -962,7 +962,6 @@ def build(draft: bool, make_pdf: bool, bibmode: str = "natbib", supplement: bool
     if sub:
         a = sub["author"]
         meta += [f"corresponding-email: {yaml_block(a['E-mail'])}",
-                 f"affiliation: {yaml_block(a['Affiliation'])}",
                  f"address: {yaml_block(a['Address'])}", "keywords:"]
         meta += ["  - '" + k.replace("'", "''") + "'" for k in sub["keywords"]]
     meta.append("---")

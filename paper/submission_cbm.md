@@ -6,7 +6,6 @@ the highlights are written to a separate file, as the journal requires.
 
 ## Corresponding author
 
-- Affiliation: TODO department, Antalya Bilim University
 - Address: Çıplaklı Mah. Farabi Cad. No: 23, Döşemealtı
 - E-mail: TODO
 
