@@ -10,6 +10,10 @@ Batch: `scripts/run_iclabel_siena.cmd`. Per patient output in `results_v2/iclabe
 - All recordings of each patient. Seizure times and excluded intervals as in the main
   pipeline (`src/siena.py`: `seizures_in_record`); excluded intervals count as neither
   seizure nor background.
+- Whether P6 itself removed a component: `src/iclabel_p6_match.py` recomputes the P6a ICA
+  (must reproduce the cache log, docs/ICA_REPRO.md) and reports, per ICLabel component,
+  the share of its bipolar 0.5 to 40 Hz signal that P6 removes. Runs after the batch,
+  alone on the laptop that built the P6 caches.
 - CHB-MIT: not run yet. Bipolar montage; FT9-FT10 links the left and right chains, so an
   exact common average over the 18 lateral electrodes is possible where FT9-FT10 exists;
   FZ, CZ, PZ form a separate group and must be dropped. Per-recording check pending.
@@ -22,7 +26,7 @@ Batch: `scripts/run_iclabel_siena.cmd`. Per patient output in `results_v2/iclabe
 | band-pass | 1 to 100 Hz (ICLabel's training preprocessing) |
 | reference | common average |
 | algorithm | extended Infomax (MNE), max_iter 1000 |
-| components | number of EEG electrodes minus 1 (rank after average reference): 28 for 29 electrodes, 19 for PN10 |
+| components | number of EEG electrodes in the file minus 1 (rank after average reference): 28 for PN00 (29 electrodes), 30 for PN12 and PN14 (31: P9 and P10 as well), 19 for PN10 (20) |
 | fit | every 8th sample (`ICA_FIT_DECIM = 8`, as P6) |
 | seed | CRC32 of the recording name |
 | classifier | mne-icalabel 0.10.0 (torch backend); class = argmax of the 7 probabilities |

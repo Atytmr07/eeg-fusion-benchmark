@@ -10,9 +10,10 @@ or other.
 ICLabel needs electrode positions, a common average reference, a 1 to 100 Hz band-pass
 and an extended Infomax decomposition (mne-icalabel documentation). The P6 decompositions
 themselves cannot be labelled: they are fitted on the 18 bipolar channels at 0.5 to 40
-Hz. CHB-MIT cannot be labelled at all: it was recorded in the bipolar montage, and its
-18 channels form three unconnected electrode groups (left chains, right chains, midline),
-so the referential signals and a common average cannot be recovered. Siena was recorded
+Hz. CHB-MIT was recorded in the bipolar montage: the 18 channels used in the paper form
+three unconnected electrode groups (left chains, right chains, midline). Recordings that
+also carry FT9-FT10 link the left and right groups, so an exact common average over the
+18 lateral electrodes exists there (without FZ, CZ, PZ); that is not done here. Siena was recorded
 referentially, so here each recording is read with all its EEG electrodes and prepared
 as ICLabel requires:
 
