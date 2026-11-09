@@ -1,0 +1,6 @@
+﻿PN00-1.edf: 28 components, 1 seizures, P6 rule [0, 1, 8, 12], ICLabel eye [0, 1, 8, 19], 186 s
+PN00-2.edf: 28 components, 1 seizures, P6 rule [0, 1, 11], ICLabel eye [1, 20], 144 s
+PN00-3.edf: 28 components, 1 seizures, P6 rule [0, 2, 19], ICLabel eye [0, 2], 183 s
+PN00-4.edf: 28 components, 1 seizures, P6 rule [0, 1, 2, 4], ICLabel eye [0, 1, 4], 195 s
+PN00-5.edf: 28 components, 1 seizures, P6 rule [0, 1, 15], ICLabel eye [1, 5], 134 s
+wrote C:\Projects\python\eeg-fusion-benchmark\results_v2\iclabel\PN00

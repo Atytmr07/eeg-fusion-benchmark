@@ -12,3 +12,5 @@ numpy==2.5.3
 mne==1.13.2
 gedai==0.60
 jamica==0.3.0
+# ICLabel check of the P6 ocular rule (src/iclabel_check.py); uses the torch backend
+mne-icalabel==0.10.0

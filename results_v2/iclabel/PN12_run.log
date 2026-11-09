@@ -1,0 +1,4 @@
+PN12-1.2.edf: 30 components, 2 seizures, P6 rule [3, 7, 12, 14], ICLabel eye [3, 4, 7, 12], 2564 s
+PN12-3.edf: 30 components, 1 seizures, P6 rule [2, 4, 8], ICLabel eye [7, 8], 216 s
+PN12-4.edf: 30 components, 1 seizures, P6 rule [4, 5, 19], ICLabel eye [4, 5, 19], 1023 s
+wrote C:\Projects\python\eeg-fusion-benchmark\results_v2\iclabel\PN12
