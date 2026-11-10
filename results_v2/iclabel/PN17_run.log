@@ -1,0 +1,3 @@
+PN17-1.edf: 30 components, 1 seizures, P6 rule [1, 2, 4, 9, 10], ICLabel eye [1, 2, 14], 639 s
+PN17-2.edf: 30 components, 1 seizures, P6 rule [1, 2, 3, 5], ICLabel eye [1, 2], 648 s
+wrote C:\Projects\python\eeg-fusion-benchmark\results_v2\iclabel\PN17

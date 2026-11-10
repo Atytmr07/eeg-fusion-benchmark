@@ -1,6 +1,6 @@
 {
   "subject": "PN12",
-  "selection": "Left temporal IAS: most seizures per recording hour among the left-sided 29-electrode patients. Chosen before any result.",
+  "selection": "Left temporal IAS: most seizures per recording hour among the left-sided patients listed with 29 electrodes in subject_info.csv. Chosen before any result.",
   "lateralization": null,
   "records": [
     "PN12-1.2.edf",

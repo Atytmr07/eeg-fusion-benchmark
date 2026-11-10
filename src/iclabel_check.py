@@ -40,7 +40,7 @@ overlaps with ICLabel on an ICLabel-conformant ICA, not that the P6 components w
 validated. With one patient it is descriptive.
 
 The patient is chosen from subject_info.csv alone, before any result: the patient with
-the most seizures per recording hour among those with the full 29 electrodes
+the most seizures per recording hour among those listed with 29 EEG electrodes
 (pick_subject; PN00), so that the short run covers as many seizures as possible.
 --lateralization L picks the same way among left-sided patients.
 
@@ -83,7 +83,7 @@ CLASSES = ("brain", "muscle artifact", "eye blink", "heart beat", "line noise",
            "channel noise", "other")
 NEW_NAMES = {old: new for new, old in OLD_NAMES.items()}     # T3 -> T7, ...
 SELECTION = ("the patient with the most seizures per recording hour among those with "
-             "the full 29 electrodes (subject_info.csv), so that a short run covers as "
+             "29 EEG electrodes in subject_info.csv, so that a short run covers as "
              "many seizures as possible.")
 
 
@@ -190,7 +190,7 @@ def check_record(subject, name, out):
         row = {"record": name, "component": i,
                "iclabel": CLASSES[int(np.argmax(proba[i]))],
                "iclabel_p": float(proba[i].max()),
-               "p6_rule": i in p6, "p6_max_abs_z": p6.get(i, np.nan),
+               "p6_rule": i in p6, "p6_max_abs_corr": p6.get(i, np.nan),
                "explained_variance": float(ev)}
         row |= {f"p_{c.split()[0]}": float(p) for c, p in zip(CLASSES, proba[i])}
         if ictal.any():

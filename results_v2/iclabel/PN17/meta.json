@@ -1,0 +1,40 @@
+{
+  "subject": "PN17",
+  "selection": "Second right temporal IAS: most seizures per recording hour among right-sided patients listed with 29 electrodes in subject_info.csv other than PN00 with at least two seizures. Chosen before any result.",
+  "lateralization": null,
+  "records": [
+    "PN17-1.edf",
+    "PN17-2.edf"
+  ],
+  "band": [
+    1.0,
+    100.0
+  ],
+  "notch": [
+    50.0,
+    100.0
+  ],
+  "eog_band": [
+    0.5,
+    40.0
+  ],
+  "reference": "average",
+  "ica": "extended infomax",
+  "fit_decim": 8,
+  "max_iter": 1000,
+  "eog_proxy": [
+    "FP1-F7",
+    "FP1-F3",
+    "FP2-F4",
+    "FP2-F8"
+  ],
+  "eog_z": 3.0,
+  "gamma": [
+    30.0,
+    100.0
+  ],
+  "mne": "1.13.2",
+  "mne_icalabel": "0.10.0",
+  "python": "3.12.7",
+  "cpu": "Intel64 Family 6 Model 170 Stepping 4, GenuineIntel"
+}

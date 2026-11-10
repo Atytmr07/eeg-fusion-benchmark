@@ -85,8 +85,8 @@ def p6_removed(ica, y):
     info = mne.create_info(list(TARGET_CHANNELS), FS_CHB, ch_types="eeg", verbose=False)
 
     def removed(z):
-        r = mne.io.RawArray(z, info, verbose=False)
-        return z - ica.apply(r).get_data()
+        r = mne.io.RawArray(z.copy(), info, verbose=False)    # RawArray does not copy, and
+        return z - ica.apply(r).get_data()                    # apply works in place
     return removed(y) - removed(np.zeros((y.shape[0], 1)))
 
 
@@ -105,7 +105,19 @@ def match_record(subject, name, out):
     from mne_icalabel.iclabel import iclabel_label_components
     path = record_path(subject, name)
 
-    p6, excluded, power_kept = p6_ica(path)
+    stem = name.removesuffix(".edf")
+    keep = out / "ica"                       # fitted decompositions, so reruns skip the fits
+    keep.mkdir(exist_ok=True)
+    p6_file, p6_meta = keep / f"p6a_{stem}-ica.fif", keep / f"p6a_{stem}.json"
+    if p6_file.exists():
+        p6 = mne.preprocessing.read_ica(p6_file, verbose=False)
+        m = json.loads(p6_meta.read_text(encoding="utf-8"))
+        excluded, power_kept = m["removed"], m["power_kept"]
+    else:
+        p6, excluded, power_kept = p6_ica(path)
+        p6.save(p6_file, overwrite=True, verbose=False)
+        p6_meta.write_text(json.dumps({"removed": excluded, "power_kept": power_kept}),
+                           encoding="utf-8")
     log = json.loads((P6_LOG / f"{name}.json").read_text(encoding="utf-8"))
     p6_same = (excluded == log["removed"])
     p6_power_diff = abs(power_kept - log["power_kept"])
@@ -115,14 +127,24 @@ def match_record(subject, name, out):
     raw = prepare(read_referential(path))
     eeg = raw.copy().pick("eeg")
     n_eeg = len(eeg.ch_names)
-    ica = mne.preprocessing.ICA(n_components=n_eeg - 1, method="infomax",
-                                fit_params=dict(extended=True),
-                                max_iter=ICA_MAX_ITER["infomax"],
-                                random_state=zlib.crc32(name.encode()) % (2 ** 32))
-    ica.fit(raw, picks="eeg", decim=ICA_FIT_DECIM)
+    icl_file = keep / f"iclabel_{stem}-ica.fif"
+    if icl_file.exists():
+        ica = mne.preprocessing.read_ica(icl_file, verbose=False)
+    else:
+        ica = mne.preprocessing.ICA(n_components=n_eeg - 1, method="infomax",
+                                    fit_params=dict(extended=True),
+                                    max_iter=ICA_MAX_ITER["infomax"],
+                                    random_state=zlib.crc32(name.encode()) % (2 ** 32))
+        ica.fit(raw, picks="eeg", decim=ICA_FIT_DECIM)
+        ica.save(icl_file, overwrite=True, verbose=False)
     proba = iclabel_label_components(eeg, ica, inplace=False)
     labels = [CLASSES[int(np.argmax(p))] for p in proba]
-    stored = pd.read_csv(out / f"components_{name.removesuffix('.edf')}.csv")
+    part = out / f"components_{name.removesuffix('.edf')}.csv"
+    if part.exists():
+        stored = pd.read_csv(part)
+    else:                                    # runs from before the per-record checkpoints
+        stored = pd.read_csv(out / "components.csv")
+        stored = stored[stored["record"] == name].reset_index(drop=True)
     icl_same = labels == list(stored["iclabel"])
     print(f"{name}: ICLabel classes {'match' if icl_same else 'DIFFER from'} the stored run",
           flush=True)
@@ -178,6 +200,8 @@ def main():
     ap.add_argument("--records", nargs="+",
                     help="default: the recordings in which the rule flagged a component "
                          "that ICLabel calls brain (components.csv)")
+    ap.add_argument("--force", action="store_true",
+                    help="recompute removed_share even if p6_match_<record>.csv exists")
     args = ap.parse_args()
     out = OUT_ROOT / args.subject
     if not args.records:
@@ -190,7 +214,7 @@ def main():
     dfs = []
     for name in args.records:
         part = out / f"p6_match_{name.removesuffix('.edf')}.csv"
-        dfs.append(pd.read_csv(part) if part.exists() else match_record(args.subject, name, out))
+        dfs.append(pd.read_csv(part) if part.exists() and not args.force else match_record(args.subject, name, out))
     df = pd.concat(dfs, ignore_index=True)
     (out / "p6_match.md").write_text(summarise(df, args.subject), encoding="utf-8")
     print(f"wrote {out / 'p6_match.md'}")

@@ -1,0 +1,44 @@
+{
+  "subject": "PN10",
+  "selection": "Frontal, bilateral FBTC: the only patient with focal to bilateral tonic-clonic seizures. Chosen before any result.",
+  "lateralization": null,
+  "records": [
+    "PN10-10.edf",
+    "PN10-1.edf",
+    "PN10-2.edf",
+    "PN10-3.edf",
+    "PN10-4.5.6.edf",
+    "PN10-7.8.9.edf"
+  ],
+  "band": [
+    1.0,
+    100.0
+  ],
+  "notch": [
+    50.0,
+    100.0
+  ],
+  "eog_band": [
+    0.5,
+    40.0
+  ],
+  "reference": "average",
+  "ica": "extended infomax",
+  "fit_decim": 8,
+  "max_iter": 1000,
+  "eog_proxy": [
+    "FP1-F7",
+    "FP1-F3",
+    "FP2-F4",
+    "FP2-F8"
+  ],
+  "eog_z": 3.0,
+  "gamma": [
+    30.0,
+    100.0
+  ],
+  "mne": "1.13.2",
+  "mne_icalabel": "0.10.0",
+  "python": "3.12.7",
+  "cpu": "Intel64 Family 6 Model 170 Stepping 4, GenuineIntel"
+}

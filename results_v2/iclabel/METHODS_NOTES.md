@@ -5,7 +5,7 @@ Batch: `scripts/run_iclabel_siena.cmd`. Per patient output in `results_v2/iclabe
 
 ## Data
 
-- Siena Scalp EEG, raw referential EDF, all EEG electrodes (29; PN10 has 20), 512 Hz.
+- Siena Scalp EEG, raw referential EDF, all EEG electrodes in the file (29 in PN00, 31 in the others), 512 Hz.
   Old names mapped to 10-05 (T3 -> T7, T4 -> T8, T5 -> P7, T6 -> P8); standard_1005 positions.
 - All recordings of each patient. Seizure times and excluded intervals as in the main
   pipeline (`src/siena.py`: `seizures_in_record`); excluded intervals count as neither
@@ -26,7 +26,7 @@ Batch: `scripts/run_iclabel_siena.cmd`. Per patient output in `results_v2/iclabe
 | band-pass | 1 to 100 Hz (ICLabel's training preprocessing) |
 | reference | common average |
 | algorithm | extended Infomax (MNE), max_iter 1000 |
-| components | number of EEG electrodes in the file minus 1 (rank after average reference): 28 for PN00 (29 electrodes), 30 for PN12 and PN14 (31: P9 and P10 as well), 19 for PN10 (20) |
+| components | number of EEG electrodes in the file minus 1 (rank after average reference): 28 for PN00 (29 electrodes), 30 for PN12, PN14, PN10 and PN17 (31: P9 and P10 as well). subject_info.csv lists 29 (PN10: 20); the files hold more |
 | fit | every 8th sample (`ICA_FIT_DECIM = 8`, as P6) |
 | seed | CRC32 of the recording name |
 | classifier | mne-icalabel 0.10.0 (torch backend); class = argmax of the 7 probabilities |
@@ -55,16 +55,16 @@ component in this decomposition", not "P6 removed this component".
 
 | patient | group | rule |
 |---|---|---|
-| PN00 | right temporal IAS | most seizures per recording hour among 29-electrode patients |
+| PN00 | right temporal IAS | most seizures per recording hour among patients listed with 29 electrodes in subject_info.csv |
 | PN12 | left temporal IAS | same, among left-sided patients |
 | PN14 | WIAS | the only WIAS patient |
-| PN10 | frontal, bilateral FBTC | the only FBTC patient (20 electrodes) |
+| PN10 | frontal, bilateral FBTC | the only FBTC patient |
 | PN17 | right temporal IAS, second | same rule among right-sided patients other than PN00 with at least 2 seizures |
 
 ## Files per patient
 
 - `components.csv`: one row per component. Columns: record, component, iclabel (class),
-  iclabel_p, p6_rule (flagged), p6_max_abs_z, explained_variance, p_brain ... p_other,
+  iclabel_p, p6_rule (flagged), p6_max_abs_corr (largest |correlation| returned by find_bads_eog over the four proxies; the |z| > 3 threshold is applied to these scores), explained_variance, p_brain ... p_other,
   ictal_power_ratio, ictal_gamma_ratio.
 - `components_<record>.csv`: the same per recording (checkpoints).
 - `summary.md`: overlap table, flagged components, class table, top ictal components.

@@ -1,6 +1,6 @@
 {
   "subject": "PN00",
-  "selection": "The patient with the most seizures per recording hour among those with the full 29 electrodes (subject_info.csv), so that a short run covers as many seizures as possible. Chosen before any result.",
+  "selection": "The patient with the most seizures per recording hour among those listed with 29 EEG electrodes in subject_info.csv, so that a short run covers as many seizures as possible. Chosen before any result.",
   "lateralization": null,
   "records": [
     "PN00-1.edf",
