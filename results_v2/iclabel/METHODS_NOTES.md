@@ -14,6 +14,10 @@ Batch: `scripts/run_iclabel_siena.cmd`. Per patient output in `results_v2/iclabe
   (must reproduce the cache log, docs/ICA_REPRO.md) and reports, per ICLabel component,
   the share of its bipolar 0.5 to 40 Hz signal that P6 removes. Runs after the batch,
   alone on the laptop that built the P6 caches.
+- Seizure and background power kept by rules A, B, C and the actual P6:
+  `src/iclabel_power.py` -> `power_kept.csv`, `power_kept.md`. Uses the cached ICAs of the
+  P6 match (no new fit); bipolar 18 channels, 256 Hz, 0.5 to 40 Hz. Kept power can exceed 1
+  when removed and kept components partly cancel.
 - CHB-MIT: not run yet. Bipolar montage; FT9-FT10 links the left and right chains, so an
   exact common average over the 18 lateral electrodes is possible where FT9-FT10 exists;
   FZ, CZ, PZ form a separate group and must be dropped. Per-recording check pending.
