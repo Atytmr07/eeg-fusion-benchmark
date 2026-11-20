@@ -10,8 +10,7 @@ Antalya Bilim University
 
 A fusion operator that achieves the highest EEG seizure-detection score in one
 experiment may not remain superior when preprocessing, random seeds or evaluation
-conditions change. Yet architectural comparisons rarely test the robustness of such
-conclusions. We investigated whether fusion superiority survives these analytical
+conditions change. Yet comparisons of fusion architectures rarely test this. We investigated whether fusion superiority survives these analytical
 choices. Four parameter-matched fusion architectures (early, late, gated and attention)
 and a separately evaluated score-fusion ensemble were compared with single-branch and
 classical baselines across nine preprocessing pipelines and five seed sets. Evaluation
@@ -73,7 +72,10 @@ analytical dependencies. Rather than selecting a single defensible pipeline, mul
 analysis examines how conclusions change across alternative analytical decisions (Steegen
 et al. 2016; Clayson 2024). In EEG research, this approach has revealed substantial
 variability in data quality, statistical outcomes and decoding performance across
-preprocessing configurations (Kessler et al. 2025; Šoškić et al. 2024).
+preprocessing configurations (Kessler et al. 2025; Šoškić et al. 2024). At a larger
+scale, the EEGManyPipelines project had independent analyst teams analyse the same EEG
+dataset to test the same hypotheses, to measure how analysis choices shape EEG findings
+(Trübutschek et al. 2024).
 Importantly, these studies establish the relevance of preprocessing multiverses but do not
 directly determine whether the relative ranking of competing seizure-detection fusion
 operators is preserved across such choices.
@@ -321,7 +323,8 @@ uncertainty, and how much the alternative would change the windows.
 **Harmonisation.** Siena is converted to the CHB-MIT form before anything else: the
 18 bipolar channels are formed as electrode differences of the referential signals,
 and the continuous recording is resampled from 512 to 256 Hz with a polyphase filter
-(`scipy.signal.resample_poly`, factor 1/2). Both
+(`scipy.signal.resample_poly`, factor 1/2, whose built-in FIR low-pass filter attenuates
+content above the new Nyquist frequency before downsampling). Both
 corpora then pass through identical code. Seizure times are converted to seconds from
 each recording's first sample using the EDF header start time (modulo 24 h for
 recordings past midnight).
@@ -361,7 +364,7 @@ one.
 Following the multiverse-analysis perspective of Steegen et al. (2016), the experimental
 design crosses defensible preprocessing choices with alternative fusion architectures,
 allowing the robustness of comparative conclusions to be examined across analytical
-configurations rather than inferred from a single selected pipeline. Each pipeline changes one hypothesis-driven aspect; windows, labels,
+configurations rather than inferred from a single selected pipeline. Each pipeline changes one hypothesis-driven aspect, and combinations of these changes are not tested; windows, labels,
 spectrogram settings, models, training and evaluation are fixed.
 
 | Pipeline | Band-pass | Notch | Artefact handling | Normalisation | Question |
@@ -763,10 +766,11 @@ metrics.
 
 **Reproducibility of artefact removal.** Fixing seeds and package versions did not
 make P6 reproducible across machines and execution contexts.
-AMICA removed the same components in every recording on every machine and in every
-execution context; the power it kept differed by at most 0.003 between machines and
-0.0007 between two runs on the same machine. Extended Infomax removed different components in
-recordings whose component lay near the |z| = 3 rule: 2.5 percent of recordings between
+With AMICA, the component rejection rule (Section 2.2) removed the same components in
+every recording on every machine and
+in every execution context; the power kept differed by at most 0.003 between machines and
+0.0007 between two runs on the same machine. With Extended Infomax, it removed different
+components in recordings whose component lay near the |z| = 3 threshold: 2.5 percent of recordings between
 two machines and 1.2 percent between two runs on the same machine with different
 process parallelism. GEDAI was deterministic on each machine but gave a different
 result on the second machine in 27 percent of recordings, often by a large amount.
@@ -1045,11 +1049,12 @@ The three artefact removal procedures (Extended Infomax, GEDAI and AMICA) were e
 for their effect on classification and also for signal preservation, computational cost
 and reproducibility (Figure 6).
 
-Infomax and AMICA removed a median of one component per recording and kept a median of
-78 percent of the signal's power; GEDAI kept 99.9 percent in most recordings but removed
+With Infomax and AMICA, the frontopolar rule (Section 2.2) removed a median of one
+component per recording, and the cleaned signal kept a median of 78 percent of the power; GEDAI kept 99.9 percent in most recordings but removed
 more than half of the power in 21 percent of them. They differed strongly in cost:
 cleaning the 670 CHB-MIT recordings took 8.5 CPU hours with Infomax, 4.7 with GEDAI and
-73 with AMICA. Infomax and AMICA removed mostly delta power and, within a recording,
+73 with AMICA. The components removed under Infomax and AMICA carried mostly delta power
+and, within a recording, the cleaning removed
 slightly less from ictal than from non-ictal windows (a median difference of 0.010 and
 0.017 of the power kept, Wilcoxon p < 0.001). Over the whole corpus, GEDAI's default
 preset kept a median of 63 percent of the power of CHB-MIT's ictal windows against 93
@@ -1065,11 +1070,11 @@ than the others for every operator and setting.
 
 A separate analysis showed that the procedures differed in reproducibility (Section 2.7).
 With the same code, package versions and seeds, GEDAI cleaned about 27 percent of
-recordings differently on a second machine. Extended Infomax removed different
-components in about 2.5 percent of recordings between machines and in about 1.2 percent
-between two runs on the same machine with different process parallelism. AMICA removed
-the same components in every recording on both machines, and its retained power differed
-by at most 0.003. Experiments with a third machine of another architecture and with
+recordings differently on a second machine. With Extended Infomax, the rule removed
+different components in about 2.5 percent of recordings between machines and in about
+1.2 percent between two runs on the same machine with different process parallelism.
+With AMICA, it removed the same components in every recording on both machines, and the
+retained power differed by at most 0.003. Experiments with a third machine of another architecture and with
 rounding-level perturbations of the input suggest that some cleaning decisions are
 sensitive to floating-point variation near the algorithms' decision thresholds.
 
@@ -1520,9 +1525,10 @@ A further contribution of the study concerns the reproducibility of EEG artefact
 removal. Even with fixed random seeds and software versions, preprocessing outcomes were
 not fully preserved across computational environments. GEDAI produced different cleaning
 outcomes for approximately 27 percent of CHB-MIT recordings when repeated on another
-machine, while Extended Infomax changed its component decision in 2.5 percent of
-recordings between machines and in 1.2 percent between two runs on one machine. AMICA
-removed the same components in every recording under the evaluated conditions.
+machine, while the decision of the component rejection rule under Extended Infomax changed in 2.5
+percent of recordings between machines and in 1.2 percent between two runs on one
+machine. Under AMICA it removed the same components in every recording under the
+evaluated conditions.
 
 These differences were not merely numerical discrepancies without downstream
 consequences. Applying the same trained models to differently cleaned signals changed
@@ -1607,7 +1613,13 @@ preprocessing was offline: filters and artefact cleaning see the complete record
 the results do not describe a causal, real-time detector. The artefact removal settings
 (16 components, frontopolar channels as EOG proxies, no muscle rejection) and the
 projection of GEDAI's reference onto a bipolar montage are our choices for montages
-without EOG, and GEDAI was designed for referential, high-density recordings. Finally,
+without EOG, and GEDAI was designed for referential, high-density recordings. GEDAI
+was used with one threshold preset (the conservative one; the default was examined only
+for signal retention, Section 2.2) and otherwise with the package defaults, although its
+settings can make the cleaning more or less aggressive. Each pipeline changes one aspect
+of preprocessing, so combinations of these changes, such as GEDAI cleaning followed by
+an ICA whose unmixing is fitted on a differently filtered copy, and the interactions
+between preprocessing steps were not evaluated. Finally,
 the cross-dataset experiment combines multiple sources of domain shift and cannot
 identify their individual contributions. Further details concern the data: 13 of
 CHB-MIT's 198 seizures lie in recordings without the standard montage and were not used;
