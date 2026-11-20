@@ -3,8 +3,8 @@
 
 # Do Fusion Methods Really Matter? A Robustness Benchmark for EEG-Based Seizure Detection
 
-Emre Atay Tümer, Hasan Berk Berber, Sevgi Şengül Ayan
-Antalya Bilim University
+Emre Atay Tümer, Hasan Berk Berber, Sevgi Şengül Ayan, Zakaria Djebbara
+Antalya Bilim University (Tümer, Berber, Ayan); Aalborg University (Djebbara)
 
 ## Abstract
 

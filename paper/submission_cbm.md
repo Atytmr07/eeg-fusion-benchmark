@@ -43,6 +43,8 @@ Writing – review and editing.
 Supervision, Project administration, Writing – original draft, Writing – review and
 editing.
 
+**Zakaria Djebbara:** Writing – review and editing.
+
 ### Ethics statement
 
 This study used only publicly available, de-identified EEG recordings (CHB-MIT,

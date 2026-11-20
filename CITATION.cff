@@ -12,6 +12,9 @@ authors:
   - family-names: "Ayan"
     given-names: "Sevgi Şengül"
     affiliation: "Antalya Bilim University"
+  - family-names: "Djebbara"
+    given-names: "Zakaria"
+    affiliation: "Aalborg University"
 repository-code: "https://github.com/Atytmr07/eeg-fusion-benchmark"
 license: MIT
 date-released: "2026-11-01"

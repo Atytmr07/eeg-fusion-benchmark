@@ -160,7 +160,7 @@ If you use this code or the stored results, please cite:
 
 ```bibtex
 @misc{tumer2026fusion,
-  author       = {T{\"u}mer, Emre Atay and Berber, Hasan Berk and Ayan, Sevgi {\c{S}}eng{\"u}l},
+  author       = {T{\"u}mer, Emre Atay and Berber, Hasan Berk and Ayan, Sevgi {\c{S}}eng{\"u}l and Djebbara, Zakaria},
   title        = {Do Fusion Methods Really Matter? A Robustness Benchmark for {EEG}-Based Seizure Detection},
   year         = {2026},
   howpublished = {\url{https://github.com/Atytmr07/eeg-fusion-benchmark}}
@@ -171,7 +171,8 @@ The entry will be replaced by the paper once it is published (`CITATION.cff`).
 
 ## Authors
 
-Emre Atay Tümer, Hasan Berk Berber and Sevgi Şengül Ayan, Antalya Bilim University.
+Emre Atay Tümer, Hasan Berk Berber and Sevgi Şengül Ayan (Antalya Bilim University),
+and Zakaria Djebbara (Aalborg University).
 
 ## License
 
